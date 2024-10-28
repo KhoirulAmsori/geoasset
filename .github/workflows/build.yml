@@ -40,6 +40,7 @@ jobs:
         env:
           LICENSE_KEY: ${{ secrets.MAXMIND_GEOLITE2_LICENSE }}
         run: |
+          mkdir -p publish
           mkdir -p output
           #curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./output/GeoLite2-ASN.tar.gz
           #curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./output/GeoLite2-ASN-CSV.zip
@@ -116,7 +117,8 @@ jobs:
 
       - name: Move files
         run: |
-          install -Dp ./geosite-build/publish/geosite.dat ./output/geosite.dat
+          install -Dp ./output/geoip.dat ./publish/geoip.dat
+          install -Dp ./geosite-build/publish/geosite.dat ./publish/geosite.dat
 
       - name: Purge jsdelivr CDN
         run: |
@@ -132,7 +134,7 @@ jobs:
           tag_name: ${{ env.TAG_NAME }}
           draft: false
           prerelease: false
-          files: ./output/*
+          files: ./publish/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
