@@ -1,0 +1,55 @@
+{
+  "input": [
+    {
+      "type": "maxmindGeoLite2CountryCSV",
+      "action": "add",
+      "args": {
+        "country": "./geoip-build/geolite2/GeoLite2-Country-Locations-en.csv",
+        "ipv4": "./geoip-build/geolite2/GeoLite2-Country-Blocks-IPv4.csv",
+        "wantedList": ["id", "cn"]
+      }
+    },
+    {
+      "type": "maxmindGeoLite2ASNCSV",
+      "action": "add",
+      "args": {
+        "ipv4": "./geoip-build/geolite2/GeoLite2-ASN-Blocks-IPv4.csv",
+        "wantedList": {
+          "facebook": ["AS63293", "AS54115", "AS32934"],
+          "twitter": ["AS8945", "AS63179", "AS54888", "AS35995", "AS13414"]
+        }
+      }
+    },
+    {
+      "type": "private",
+      "action": "add"
+    },
+    {
+      "type": "text",
+      "action": "add",
+      "args": {
+        "name": "lokal",
+        "uri": "./geoip-build/asset/lokal.txt",
+        "onlyIPType": "ipv4"
+      }
+    },
+  ],
+  "output": [
+    {
+      "type": "v2rayGeoIPDat",
+      "action": "output",
+      "args": {
+        "outputDir": "./output",
+        "outputName": "geoip.dat"
+      }
+    },
+    {
+      "type": "clashRuleSetClassical",
+      "action": "output"
+    },
+    {
+      "type": "clashRuleSet",
+      "action": "output"
+    }
+  ]
+}

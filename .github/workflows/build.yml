@@ -1,0 +1,143 @@
+name: Build GEO Asset
+on:
+  schedule:
+    - cron: "0 17 * * *"
+  workflow_dispatch:
+  repository_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout codebase
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ./geoip-build/go.mod
+
+      - name: Set variables
+        run: |
+          # Set timezone to Asia/Jakarta
+          export TZ="Asia/Jakarta"
+          echo "TAG_NAME=$(date +'%d%m%Y-%H%M')" >> $GITHUB_ENV
+          echo "RELEASE_NAME=$(date +'%d%m%Y-%H%M')" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Delete old releases and tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get the list of all tags
+          TAGS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/git/refs/tags | \
+            jq -r '.[].ref' | sed 's|refs/tags/||')
+
+          # Loop through tags and delete them
+          for TAG in $TAGS; do
+            echo "Deleting tag: $TAG"
+            curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$TAG"
+          done
+
+          # Get the list of all draft releases and delete them
+          DRAFTS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/releases | \
+            jq -r '.[] | select(.draft == true) | .id')
+
+          for DRAFT in $DRAFTS; do
+            echo "Deleting draft release ID: $DRAFT"
+            curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/$DRAFT"
+          done
+
+          # Get the list of all published releases and delete them
+          PUBLISHED_RELEASES=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/releases | \
+            jq -r '.[] | select(.draft == false) | .id')
+
+          for RELEASE in $PUBLISHED_RELEASES; do
+            echo "Deleting published release ID: $RELEASE"
+            curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE"
+          done
+
+      - name: Download GeoLite2 databases
+        env:
+          LICENSE_KEY: ${{ secrets.MAXMIND_GEOLITE2_LICENSE }}
+        run: |
+          mkdir -p output
+          #curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./output/GeoLite2-ASN.tar.gz
+          #curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./output/GeoLite2-ASN-CSV.zip
+          #curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./output/GeoLite2-Country.tar.gz
+          #curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./output/GeoLite2-Country-CSV.zip
+
+          cp ./geoip-build/asset/* ./output/
+
+      - name: Prepare GeoLite2 databases
+        run: |
+          cp ./output/{*.gz,*.zip} ./geoip-build/
+          cd ./geoip-build/
+          unzip GeoLite2-Country-CSV.zip
+          unzip GeoLite2-ASN-CSV.zip
+          tar -xvzf GeoLite2-Country.tar.gz
+          tar -xvzf GeoLite2-ASN.tar.gz
+
+          cp GeoLite2-Country_*/*.mmdb ./output/
+          cp GeoLite2-ASN_*/*.mmdb ./output/
+          cp GeoLite2-Country-CSV_*/{GeoLite2-Country-Blocks-*,GeoLite2-Country-Locations-en}.csv ./output/
+          cp GeoLite2-ASN-CSV_*/*.csv ./output/
+
+          mkdir -p geolite2
+          cp GeoLite2-Country-CSV_*/*.csv ./geoip-build/geolite2/
+          cp GeoLite2-ASN-CSV_*/*.csv ./geoip-build/geolite2/
+
+      - name: Build geoip files
+        run: |
+          cd ./geoip-build/
+          go build ./
+          ./geoip convert -c ./config.json
+
+      - name: Git push assets to "release" branch
+        run: |
+          cd output || exit 1
+          git init
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b release
+          git add -A
+          git commit -m "${{ env.RELEASE_NAME }}"
+          git remote add geoip "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git push -f -u geoip release
+
+      - name: Purge jsdelivr CDN
+        run: |
+          cd output || exit 1
+          for file in $(ls); do
+            curl -i "https://purge.jsdelivr.net/gh/${{ github.repository }}@release/${file}"
+          done
+
+      - name: Remove some files to avoid publishing to GitHub release
+        run: |
+          rm -rf ./output/lokal.txt
+          rm -rf ./output/*.{gz,zip}
+          rm -rf ./output/GeoLite2-*.csv
+          rm -rf ./output/GeoLite2-*.mmdb
+          rm -rf ./output/{clash,dat,text}
+
+      - name: Upload files to GitHub release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file_glob: true
+          file: ./output/*
+          release_name: ${{ env.RELEASE_NAME }}
+          tag: ${{ env.TAG_NAME }}
+
