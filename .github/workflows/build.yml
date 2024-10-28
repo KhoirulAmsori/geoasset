@@ -125,7 +125,7 @@ jobs:
           go-version-file: ./geosite-build/go.mod
           cache-dependency-path: ./geosite-build/go.sum
         env:
-          GOPATH: /tmp/go-geoip-build
+          GOPATH: /tmp/go-geosite-build
 
       - name: Create lists
         run: |
@@ -165,6 +165,9 @@ jobs:
 
       - name: Move files
         run: |
+          ls -lFh
+          ls -lFh geoip-build
+          ls -lFh geosite-build
           install -Dp ./publish/geosite.dat ./output/geosite.dat
 
       - name: Upload files to GitHub release
