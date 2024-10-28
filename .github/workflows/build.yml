@@ -73,6 +73,14 @@ jobs:
           go build ./
           ./geoip convert -c ./config.json
 
+      - name: Verify mmdb files
+        run: |
+          cd ./output || exit 1
+          go install -v github.com/maxmind/mmdbverify@latest
+          for name in $(ls *.mmdb); do
+            $(go env GOPATH)/bin/mmdbverify -file ${name}
+          done
+
       # Build GEOSITE
       - name: Checkout v2fly/domain-list-community
         uses: actions/checkout@v4

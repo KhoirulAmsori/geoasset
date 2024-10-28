@@ -44,6 +44,20 @@
       }
     },
     {
+      "type": "maxmindMMDB",
+      "action": "output",
+      "args": {
+        "outputDir": "./output",
+        "outputName": "Country.mmdb",
+        "overwriteList": [
+          "cn",
+          "private",
+          "facebook",
+          "twitter"
+        ]
+      }
+    },
+    {
       "type": "clashRuleSetClassical",
       "action": "output"
     },
