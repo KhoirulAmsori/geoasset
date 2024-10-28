@@ -23,6 +23,9 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: ./geoip-build/go.mod
+          cache-dependency-path: ./geoip-build/go.sum
+        env:
+          GOPATH: /tmp/go-geoip-build
 
       - name: Set variables
         run: |
@@ -120,6 +123,9 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: ./geosite-build/go.mod
+          cache-dependency-path: ./geosite-build/go.sum
+        env:
+          GOPATH: /tmp/go-geoip-build
 
       - name: Create lists
         run: |
@@ -157,14 +163,16 @@ jobs:
           rm -rf ./output/GeoLite2-*.mmdb
           rm -rf ./output/{clash,dat,text}
 
+      - name: Move files
+        run: |
+          install -Dp ./publish/geosite.dat ./output/geosite.dat
+
       - name: Upload files to GitHub release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file_glob: true
-          file: |
-            ./output/*
-            ./publish/*
+          file: ./output/*
           release_name: ${{ env.RELEASE_NAME }}
           tag: ${{ env.TAG_NAME }}
 
