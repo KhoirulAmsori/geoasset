@@ -110,6 +110,13 @@ jobs:
         run: |
           install -Dp ./geosite-build/publish/geosite.dat ./output/geosite.dat
 
+      - name: Purge jsdelivr CDN
+        run: |
+          cd output || exit 1
+          for file in $(ls); do
+            curl -i "https://purge.jsdelivr.net/gh/${{ github.repository }}@release/${file}"
+          done
+
       - name: Release and upload assets
         uses: softprops/action-gh-release@v2
         with:
@@ -120,13 +127,6 @@ jobs:
           files: ./output/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Purge jsdelivr CDN
-        run: |
-          cd output || exit 1
-          for file in $(ls); do
-            curl -i "https://purge.jsdelivr.net/gh/${{ github.repository }}@release/${file}"
-          done
 
       - name: Delete Old Release
         uses: dev-drprasad/delete-older-releases@v0.3.4
