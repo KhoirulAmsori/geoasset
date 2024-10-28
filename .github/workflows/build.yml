@@ -166,8 +166,10 @@ jobs:
       - name: Move files
         run: |
           ls -lFh
+          ls -lFh community
+          ls -lFh output
           ls -lFh geoip-build
-          ls -lFh geosite-build
+          ls -lFh geosite-build/publish
           install -Dp ./publish/geosite.dat ./output/geosite.dat
 
       - name: Upload files to GitHub release
