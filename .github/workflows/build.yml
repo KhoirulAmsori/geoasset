@@ -18,15 +18,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Build GEOIP
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: ./geoip-build/go.mod
-
-      - name: Verify go.sum location
-        run: |
-          ls -la ./geoip-build/
-          cat ./geoip-build/go.sum
+          cache-dependency-path: ./geoip-build/go.sum
 
       - name: Set variables
         run: |
@@ -34,6 +31,7 @@ jobs:
           export TZ="Asia/Jakarta"
           echo "TAG_NAME=$(date +'%d%m%Y-%H%M')" >> $GITHUB_ENV
           echo "RELEASE_NAME=$(date +'%d%m%Y-%H%M')" >> $GITHUB_ENV
+          echo "OISD_SMALL=https://small.oisd.nl/dnsmasq" >> $GITHUB_ENV
         shell: bash
 
       - name: Delete old releases and tags
@@ -110,6 +108,29 @@ jobs:
           cd ./geoip-build/
           go build ./
           ./geoip convert -c ./config.json
+
+      # Build GEOSITE
+      - name: Checkout v2fly/domain-list-community
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          repository: v2fly/domain-list-community
+          path: community
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ./geosite-build/go.mod
+          cache-dependency-path: ./geosite-build/go.sum
+
+      - name: Create lists
+        run: |
+          curl -sSL $OISD_SMALL | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' > ./community/data/oisd-small
+
+      - name: Build geosite.dat file
+        run: |
+          cd geosite-build
+          go run ./ --datapath=../community/data
 
       - name: Git push assets to "release" branch
         run: |
