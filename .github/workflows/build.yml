@@ -111,7 +111,7 @@ jobs:
         run: |
           ls -lFh ./output/
           install -Dp ./output/geoip.dat ./publish/geoip.dat
-          #install -Dp ./output/country ./publish/geoip.dat
+          install -Dp ./output/GeoLite2-ASN.mmdb ./publish/GeoLite2-ASN.mmdb
           install -Dp ./geosite-build/publish/geosite.dat ./publish/geosite.dat
 
       - name: Release and upload assets
