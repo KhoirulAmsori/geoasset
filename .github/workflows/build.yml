@@ -139,14 +139,19 @@ jobs:
       - name: Delete Old Tags
         run: |
           TAGS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            https://api.github.com/repos/${{ github.repository }}/git/refs/tags | \
-            jq -r '.[].ref' | sed 's|refs/tags/||')
+            https://api.github.com/repos/${{ github.repository }}/git/refs/tags)
 
-          # Loop through tags and delete them
-          for TAG in $TAGS; do
-            echo "Deleting tag: $TAG"
-            curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
-              "https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$TAG"
-          done
+          if [ -n "$TAGS" ]; then
+            echo "$TAGS" | jq -r '.[].ref' | while read -r TAG; do
+              TAG_NAME=$(echo "$TAG" | sed 's|refs/tags/||')
+              echo "Deleting tag: $TAG_NAME"
+              curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+                "https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$TAG_NAME"
+            done
+          else
+            echo "No tags found to delete."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
