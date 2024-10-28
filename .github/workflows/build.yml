@@ -23,7 +23,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: ./geoip-build/go.mod
-          cache-dependency-path: ./geoip-build/go.sum
 
       - name: Set variables
         run: |
@@ -121,7 +120,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: ./geosite-build/go.mod
-          cache-dependency-path: ./geosite-build/go.sum
 
       - name: Create lists
         run: |
