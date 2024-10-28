@@ -100,8 +100,10 @@ jobs:
           echo "GEOLITE2"
 
           ls -lFh geolite2
-          cp GeoLite2-Country-CSV_*/*.csv geolite2
-          cp GeoLite2-ASN-CSV_*/*.csv geolite2
+          cp GeoLite2-Country-CSV_*/*.csv ./geolite2/
+          cp GeoLite2-ASN-CSV_*/*.csv ./geolite2/
+          echo "DEBUG GEOLITE2"
+          ls -lFh geolite2
 
       - name: Build geoip files
         run: |
