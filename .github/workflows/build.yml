@@ -96,14 +96,9 @@ jobs:
           cp GeoLite2-ASN_*/*.mmdb ../output/
           cp GeoLite2-Country-CSV_*/{GeoLite2-Country-Blocks-*,GeoLite2-Country-Locations-en}.csv ../output/
           cp GeoLite2-ASN-CSV_*/*.csv ../output/
-          ls -lFh
-          echo "GEOLITE2"
 
-          ls -lFh geolite2
           cp GeoLite2-Country-CSV_*/*.csv ./geolite2/
           cp GeoLite2-ASN-CSV_*/*.csv ./geolite2/
-          echo "DEBUG GEOLITE2"
-          ls -lFh geolite2
 
       - name: Build geoip files
         run: |
