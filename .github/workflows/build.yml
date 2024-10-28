@@ -117,7 +117,9 @@ jobs:
 
       - name: Move files
         run: |
+          ls -lFh ./output/
           install -Dp ./output/geoip.dat ./publish/geoip.dat
+          #install -Dp ./output/country ./publish/geoip.dat
           install -Dp ./geosite-build/publish/geosite.dat ./publish/geosite.dat
 
       - name: Purge jsdelivr CDN
