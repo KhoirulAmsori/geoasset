@@ -83,21 +83,22 @@ jobs:
 
       - name: Prepare GeoLite2 databases
         run: |
-          cp ./output/{*.gz,*.zip} ./geoip-build/
+          cd geoip-build
+          cp ../output/{*.gz,*.zip} ./
+          
           unzip GeoLite2-Country-CSV.zip
           unzip GeoLite2-ASN-CSV.zip
           tar -xvzf GeoLite2-Country.tar.gz
           tar -xvzf GeoLite2-ASN.tar.gz
-
+          
           cp GeoLite2-Country_*/*.mmdb ./output/
           cp GeoLite2-ASN_*/*.mmdb ./output/
           cp GeoLite2-Country-CSV_*/{GeoLite2-Country-Blocks-*,GeoLite2-Country-Locations-en}.csv ./output/
           cp GeoLite2-ASN-CSV_*/*.csv ./output/
 
           mkdir -p geolite2
-          cp GeoLite2-Country-CSV_*/*.csv ./geoip-build/geolite2/
-          cp GeoLite2-ASN-CSV_*/*.csv ./geoip-build/geolite2/
-          ls -lFh
+          cp GeoLite2-Country-CSV_*/*.csv geolite2/
+          cp GeoLite2-ASN-CSV_*/*.csv geolite2/
 
       - name: Build geoip files
         run: |
