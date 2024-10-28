@@ -98,9 +98,9 @@ jobs:
           cp GeoLite2-ASN-CSV_*/*.csv ../output/
           ls -lFh
 
-          cp GeoLite2-Country-CSV_*/*.csv ./geoip-build/geolite2/
-          cp GeoLite2-ASN-CSV_*/*.csv ./geoip-build/geolite2/
           ls -lFh geolite2
+          cp GeoLite2-Country-CSV_*/*.csv geolite2/
+          cp GeoLite2-ASN-CSV_*/*.csv geolite2/
 
       - name: Build geoip files
         run: |
