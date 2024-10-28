@@ -99,9 +99,9 @@ jobs:
           ls -lFh
           echo "GEOLITE2"
 
-          ls -lFh ../output/
-          #cp GeoLite2-Country-CSV_*/*.csv geolite2/
-          #cp GeoLite2-ASN-CSV_*/*.csv geolite2/
+          ls -lFh geolite2
+          cp GeoLite2-Country-CSV_*/*.csv geolite2
+          cp GeoLite2-ASN-CSV_*/*.csv geolite2
 
       - name: Build geoip files
         run: |
