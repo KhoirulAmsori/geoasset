@@ -107,27 +107,12 @@ jobs:
           cd geosite-build
           go run ./ --datapath=../community/data
 
-      - name: Remove some files to avoid publishing to GitHub release
-        run: |
-          rm -rf ./output/lokal.txt
-          rm -rf ./output/*.{gz,zip}
-          rm -rf ./output/GeoLite2-*.csv
-          rm -rf ./output/GeoLite2-*.mmdb
-          rm -rf ./output/{clash,dat,text}
-
       - name: Move files
         run: |
           ls -lFh ./output/
           install -Dp ./output/geoip.dat ./publish/geoip.dat
           #install -Dp ./output/country ./publish/geoip.dat
           install -Dp ./geosite-build/publish/geosite.dat ./publish/geosite.dat
-
-      - name: Purge jsdelivr CDN
-        run: |
-          cd output || exit 1
-          for file in $(ls); do
-            curl -i "https://purge.jsdelivr.net/gh/${{ github.repository }}@release/${file}"
-          done
 
       - name: Release and upload assets
         uses: softprops/action-gh-release@v2
@@ -139,6 +124,13 @@ jobs:
           files: ./publish/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Purge jsdelivr CDN
+        run: |
+          cd output || exit 1
+          for file in $(ls); do
+            curl -i "https://purge.jsdelivr.net/gh/${{ github.repository }}@release/${file}"
+          done
 
       - name: Delete Old Release
         uses: dev-drprasad/delete-older-releases@v0.3.4
