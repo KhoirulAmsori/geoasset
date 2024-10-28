@@ -109,10 +109,10 @@ jobs:
 
       - name: Move files
         run: |
-          ls -lFh ./output/
-          install -Dp ./output/geoip.dat ./publish/geoip.dat
+          install -Dp ./output/geoip.dat ./publish/GeoIP.dat
+          install -Dp ./output/Country.mmdb ./publish/Country.mmdb
           install -Dp ./output/GeoLite2-ASN.mmdb ./publish/GeoLite2-ASN.mmdb
-          install -Dp ./geosite-build/publish/geosite.dat ./publish/geosite.dat
+          install -Dp ./geosite-build/publish/geosite.dat ./publish/GeoSite.dat
 
       - name: Release and upload assets
         uses: softprops/action-gh-release@v2
@@ -127,7 +127,7 @@ jobs:
 
       - name: Purge jsdelivr CDN
         run: |
-          cd output || exit 1
+          cd publish || exit 1
           for file in $(ls); do
             curl -i "https://purge.jsdelivr.net/gh/${{ github.repository }}@release/${file}"
           done
