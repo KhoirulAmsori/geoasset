@@ -22,21 +22,11 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: ./geoip-build/go.mod
-          cache: true
 
-      - name: Restore Go dependencies cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('geoip-build/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-        
-      - name: Install dependencies
-        working-directory: ./geoip-build
-        run: go mod download
+      - name: Verify go.sum location
+        run: |
+          ls -la ./geoip-build/
+          cat ./geoip-build/go.sum
 
       - name: Set variables
         run: |
