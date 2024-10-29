@@ -46,10 +46,29 @@ jobs:
         run: |
           mkdir -p publish
           mkdir -p output
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-ASN.tar.gz
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-ASN-CSV.zip
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-Country.tar.gz
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-Country-CSV.zip
+          #curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-ASN.tar.gz
+          #curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-ASN-CSV.zip
+          #curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-Country.tar.gz
+          #curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-Country-CSV.zip
+          
+          curl -L "https://github.com/MetaCubeX/mihomo/releases/download/v1.18.9/mihomo-windows-amd64-v1.18.9.zip" -o ./geoip-build/asset/mihomo-windows-amd64-v1.18.9.zip
+          curl -L "https://github.com/MetaCubeX/mihomo/releases/download/v1.18.9/mihomo-linux-arm64-v1.18.9.gz" -o ./geoip-build/asset/mihomo-linux-arm64-v1.18.9.gz
+
+      # Push downloaded GeoLite2 files
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Add and Commit Changes
+        run: |
+          git add geoip-build/asset/{*.gz,*.zip}
+          git commit -m "Add updated GeoLite2 ASN database"
+
+      - name: Push Changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: git push
 
       - name: Prepare GeoLite2 databases
         run: |
