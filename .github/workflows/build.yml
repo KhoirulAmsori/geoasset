@@ -101,7 +101,6 @@ jobs:
         env:
           GOPATH: /tmp/go-geosite-build
 
-
       - name: Update Go dependencies
         run: go mod tidy
 
