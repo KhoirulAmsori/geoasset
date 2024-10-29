@@ -60,7 +60,7 @@ jobs:
       - name: Add and Commit Changes
         run: |
           git add geoip-build/asset/{*.gz,*.zip}
-          git commit -m "Add updated GeoLite2 asset"
+          git commit -m "Update geo asset."
 
       - name: Push Changes
         env:
