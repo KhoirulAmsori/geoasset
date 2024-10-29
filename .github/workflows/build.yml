@@ -27,7 +27,8 @@ jobs:
         env:
           GOPATH: /tmp/go-geoip-build
 
-      - name: Update Go dependencies
+      - name: Update Go dependencies for GEOIP
+        working-directory: ./geoip-build
         run: go mod tidy
 
       - name: Set variables
@@ -101,7 +102,8 @@ jobs:
         env:
           GOPATH: /tmp/go-geosite-build
 
-      - name: Update Go dependencies
+      - name: Update Go dependencies for GEOSITE
+        working-directory: ./geosite-build
         run: go mod tidy
 
       - name: Create lists
