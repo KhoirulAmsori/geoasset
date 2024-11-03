@@ -1,37 +1,21 @@
 name: Delete Old Workflow Runs
 on:
   schedule:
-    - cron: '0 0 * * 0'  # Setiap minggu pada hari Minggu pukul 00:00
+    - cron: '00 20 * * *'
   workflow_dispatch:
   repository_dispatch:
 
 jobs:
-  delete-old-runs:
+  del_runs:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
     steps:
-      - name: Delete Old Workflow Runs
-        run: |
-          # Set retention days
-          RETAIN_DAYS=7
-          # Get the current date in UNIX timestamp
-          CURRENT_DATE=$(date +%s)
-          # Calculate the cutoff date
-          CUTOFF_DATE=$((CURRENT_DATE - RETAIN_DAYS * 86400))
-
-          # Fetch all workflow runs
-          WORKFLOW_RUNS=$(curl -s -H "Authorization: token ${{ secrets.AUTH_PAT }}" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs")
-
-          # Loop through workflow runs and delete the old ones
-          echo "$WORKFLOW_RUNS" | jq -c '.workflow_runs[]' | while read run; do
-            RUN_ID=$(echo "$run" | jq -r '.id')
-            RUN_CREATED_AT=$(echo "$run" | jq -r '.created_at')
-            RUN_CREATED_DATE=$(date -d "$RUN_CREATED_AT" +%s)
-
-            if [ "$RUN_CREATED_DATE" -lt "$CUTOFF_DATE" ]; then
-              echo "Deleting workflow run ID: $RUN_ID (Created at: $RUN_CREATED_AT)"
-              curl -X DELETE -H "Authorization: token ${{ secrets.AUTH_PAT }}" \
-                "https://api.github.com/repos/${{ github.repository }}/actions/runs/$RUN_ID"
-            fi
-          done
-
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 0
+          keep_minimum_runs: 1
