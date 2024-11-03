@@ -59,8 +59,14 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add geoip-build/asset/{*.gz,*.zip}
-          git commit -m "Update geo asset."
-          git push origin main
+
+          # Check if there are any changes
+          if ! git diff --cached --quiet; then
+            git commit -m "Update geo asset."
+            git push origin main
+          else
+            echo "No changes to commit."
+          fi
 
       - name: Prepare GeoLite2 databases
         run: |
