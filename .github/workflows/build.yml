@@ -47,10 +47,10 @@ jobs:
         run: |
           mkdir -p publish
           mkdir -p output
-#          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-ASN.tar.gz
-#          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-ASN-CSV.zip
-#          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-Country.tar.gz
-#          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-Country-CSV.zip
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-ASN.tar.gz
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-ASN-CSV.zip
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-Country.tar.gz
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-Country-CSV.zip
 
       # Push downloaded GeoLite2 files
       - name: Commit and Push Changes
@@ -123,16 +123,16 @@ jobs:
         working-directory: ./geosite-build
         run: go mod tidy
 
-#      - name: Create lists
-#        run: |
-#          curl -sSL $OISD_SMALL | perl -ne '
-#            if (/^server=\/([^\/]+)\//) {
-#                my $domain = $1;
-#                if ($domain !~ /^(googlesyndication\.com|pagead2\.googlesyndication\.com|gambar123\.com)$/) {
-#                    print "$domain\n";
-#                }
-#            }
-#          ' > ./community/data/oisd-small
+      - name: Create lists
+        run: |
+          curl -sSL $OISD_SMALL | perl -ne '
+            if (/^server=\/([^\/]+)\//) {
+                my $domain = $1;
+                if ($domain !~ /^(googlesyndication\.com|pagead2\.googlesyndication\.com|gambar123\.com)$/) {
+                    print "$domain\n";
+                }
+            }
+          ' > ./community/data/oisd-small
 
 
       - name: Build geosite.dat file
