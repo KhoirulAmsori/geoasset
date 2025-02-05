@@ -39,6 +39,8 @@ jobs:
           # echo "RELEASE_NAME=$(date +'%d%m%Y-%H%M')" >> $GITHUB_ENV
           echo "BUILDTIME=$(TZ=Asia/Jakarta date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
           echo "OISD_SMALL=https://small.oisd.nl/dnsmasq" >> $GITHUB_ENV
+          echo "OISD_NSFW=https://nsfw.oisd.nl/dnsmasq" >> $GITHUB_ENV
+          echo "OISD_NSFW_SMALL=https://nsfw-small.oisd.nl/dnsmasq" >> $GITHUB_ENV
         shell: bash
 
       - name: Download GeoLite2 databases
@@ -133,6 +135,8 @@ jobs:
                 }
             }
           ' > ./community/data/oisd-small
+          curl -sSL $OISD_NSFW | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' > ./community/data/oisd-nsfw
+          curl -sSL $OISD_NSFW_SMALL | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' > ./community/data/oisd-nsfw-small
 
 
       - name: Build geosite.dat file
