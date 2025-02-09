@@ -137,8 +137,7 @@ jobs:
           ' > ./community/data/oisd-small
           # curl -sSL $OISD_NSFW | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' > ./community/data/oisd-nsfw
           # curl -sSL $OISD_NSFW_SMALL | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' > ./community/data/oisd-nsfw-small
-          curl -sSL $OISD_NSFW_SMALL | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' | grep -vE '\.id$' > ./community/data/oisd-nsfw-small
-
+          curl -sSL $OISD_NSFW_SMALL | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' | grep -vE '\.id$|^gridoto\.com$' > ./community/data/oisd-nsfw-small
 
       - name: Build geosite.dat file
         run: |
