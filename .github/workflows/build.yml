@@ -146,7 +146,7 @@ jobs:
       - name: Build geosite.dat file
         run: |
           cd geosite-build
-          cp raven_nsfw ./community/data/raven_nsfw
+          cp raven_nsfw ../community/data/raven_nsfw
           go run ./ --datapath=../community/data
 
       - name: Move files
