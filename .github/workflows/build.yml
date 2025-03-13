@@ -49,10 +49,10 @@ jobs:
         run: |
           mkdir -p publish
           mkdir -p output
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-ASN.tar.gz
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-ASN-CSV.zip
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-Country.tar.gz
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-Country-CSV.zip
+          #curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-ASN.tar.gz
+          #curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-ASN-CSV.zip
+          #curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-Country.tar.gz
+          #curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-Country-CSV.zip
 
       # Push downloaded GeoLite2 files
       - name: Commit and Push Changes
@@ -135,13 +135,9 @@ jobs:
                 }
             }
           ' > ./community/data/oisd-small
-
-          # curl -sSL $OISD_NSFW | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' > ./community/data/oisd-nsfw
-          # curl -sSL $OISD_NSFW_SMALL | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' > ./community/data/oisd-nsfw-small
-          # curl -sSL $OISD_NSFW_SMALL | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' | grep -vE '\.id$|^gridoto\.com$' > ./community/data/oisd-nsfw-small
-
-          exclude_domain=".id|.co.id|.or.id|gridoto.com"
-          curl -sSL $OISD_NSFW_SMALL | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' | grep -vE "$exclude_domain" > ./community/data/oisd-nsfw-small
+          
+          exclude_domain=$(paste -sd'|' ./geosite-build/exclude_list.txt)
+          curl -sSL "$OISD_NSFW_SMALL" | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' | grep -vE "$exclude_domain" > ./community/data/oisd-nsfw-small
 
       - name: Build geosite.dat file
         run: |
