@@ -10,6 +10,14 @@
       }
     },
     {
+      "type": "text",
+      "action": "add",
+      "args": {
+        "name": "telegram",
+        "uri": "https://core.telegram.org/resources/cidr.txt"
+      }
+    },
+    {
       "type": "json",
       "action": "add",
       "args": {
@@ -57,7 +65,8 @@
             "AS139190",
             "AS139070"
           ],
-          "twitter": ["AS8945", "AS63179", "AS54888", "AS35995", "AS13414"]
+          "twitter": ["AS8945", "AS63179", "AS54888", "AS35995", "AS13414"],
+          "telegram": ["AS62041", "AS62014", "AS59930", "AS44907", "AS211157"]
         }
       }
     },
@@ -96,7 +105,8 @@
           "private",
           "facebook",
           "google",
-          "twitter"
+          "twitter",
+          "telegram"
         ]
       }
     }
