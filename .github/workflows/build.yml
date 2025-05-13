@@ -1,7 +1,7 @@
 name: Build GEO Asset
 on:
   schedule:
-    - cron: "0 17 * * *"
+    - cron: "0 17 */2 * *"
   workflow_dispatch:
   repository_dispatch:
 
