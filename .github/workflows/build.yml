@@ -49,10 +49,10 @@ jobs:
         run: |
           mkdir -p publish
           mkdir -p output
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-ASN.tar.gz
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-ASN-CSV.zip
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-Country.tar.gz
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-Country-CSV.zip
+          # curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-ASN.tar.gz
+          # curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-ASN-CSV.zip
+          # curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-Country.tar.gz
+          # curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-Country-CSV.zip
 
       # Push downloaded GeoLite2 files
       - name: Commit and Push Changes
@@ -157,6 +157,22 @@ jobs:
           NO_SKIP: true
         run: |
           mkdir -p sing-rule/geo/geosite && mkdir -p sing-rule/geo/geoip
+          curl -s -o nice.rsc http://ixp.mikrotik.co.id/download/nice.rsc
+          
+          # Convert RSC to JSON
+          echo '{' > nice.json
+          echo '  "version": 2,' >> nice.json
+          echo '  "rules": [' >> nice.json
+          echo '    {' >> nice.json
+          echo '        "ip_cidr": [' >> nice.json
+          grep -oP 'address="\K[0-9./]+' nice.rsc | grep '/' | \
+          sed 's/.*/            "&",/' >> nice.json
+          sed -i '$ s/,$//' nice.json
+          echo '        ]' >> nice.json
+          echo '    }' >> nice.json
+          echo '  ]' >> nice.json
+          echo '}' >> nice.json
+          cp nice.json ../sing-rule/geo/geoip
           cd convert
           go run ./ geosite -f ../geosite-build/publish/geosite.dat -o ../sing-rule/geo/geosite -t sing-box
           go run ./ geoip -f ../output/geoip.dat -o ../sing-rule/geo/geoip -t sing-box
