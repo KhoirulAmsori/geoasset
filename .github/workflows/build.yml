@@ -152,6 +152,17 @@ jobs:
           path: convert
 
       # Build Sing-Box asset
+      - name: Build db and metadb file
+        env:
+          NO_SKIP: true
+        run: |
+          ls
+          go install -trimpath -ldflags="-s -w -buildid=" github.com/metacubex/geo/cmd/geo@master
+          echo "setelah go"
+          ls
+          geo convert site -i v2ray -o sing -f geosite.db ./geosite-build/publish/geosite.dat
+          geo convert ip -i v2ray -o sing -f geoip.db ./output/geoip.dat
+
       - name: Convert geo to sing-rule-set
         env:
           NO_SKIP: true
