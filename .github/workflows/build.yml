@@ -172,7 +172,10 @@ jobs:
           echo '    }' >> nice.json
           echo '  ]' >> nice.json
           echo '}' >> nice.json
-          cp nice.json ../sing-rule/geo/geoip/nice.json
+          ls
+          echo "ls ../"
+          ls ../
+          # cp nice.json ../sing-rule/geo/geoip/nice.json
           cd convert
           go run ./ geosite -f ../geosite-build/publish/geosite.dat -o ../sing-rule/geo/geosite -t sing-box
           go run ./ geoip -f ../output/geoip.dat -o ../sing-rule/geo/geoip -t sing-box
