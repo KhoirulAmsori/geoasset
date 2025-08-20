@@ -49,10 +49,10 @@ jobs:
         run: |
           mkdir -p publish
           mkdir -p output
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-ASN.tar.gz
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-ASN-CSV.zip
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-Country.tar.gz
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-Country-CSV.zip
+          # curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-ASN.tar.gz
+          # curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-ASN-CSV.zip
+          # curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o ./geoip-build/asset/GeoLite2-Country.tar.gz
+          # curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o ./geoip-build/asset/GeoLite2-Country-CSV.zip
 
       # Push downloaded GeoLite2 files
       - name: Commit and Push Changes
@@ -156,9 +156,10 @@ jobs:
         env:
           NO_SKIP: true
         run: |
+          ls
           mkdir -p sing-rule/geo/geosite && mkdir -p sing-rule/geo/geoip
           cd convert
-          go run ./ geosite -f ../custom/publish/geosite.dat -o ../sing-rule/geo/geosite -t sing-box
+          go run ./ geosite -f ./geosite-build/publish/geosite.dat -o ../sing-rule/geo/geosite -t sing-box
           go run ./ geoip -f ../geoip.dat -o ../sing-rule/geo/geoip -t sing-box
           ls
           echo "convert"
@@ -168,6 +169,7 @@ jobs:
         env:
           NO_SKIP: true
         run: |
+          ls
           mkdir -p sing-rule/geo-lite/geosite && mkdir -p sing-rule/geo-lite/geoip
           cd convert
           go run ./ geosite -f ../community/geosite-lite.dat -o ../sing-rule/geo-lite/geosite -t sing-box
@@ -180,6 +182,7 @@ jobs:
         env:
           NO_SKIP: true
         run: |
+          ls
           mkdir -p meta-rule/asn && mkdir -p sing-rule/asn
           cd convert
           wget https://raw.githubusercontent.com/xishang0128/geoip/release/GeoLite2-ASN.mmdb
