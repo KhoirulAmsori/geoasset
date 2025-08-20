@@ -145,6 +145,51 @@ jobs:
           cp raven_nsfw ../community/data/raven_nsfw
           go run ./ --datapath=../community/data
 
+      - name: Checkout MetaCubeX/meta-rules-converter
+        uses: actions/checkout@v4
+        with:
+          repository: MetaCubeX/meta-rules-converter
+          path: convert
+
+      # Build Sing-Box asset
+      - name: Convert geo to sing-rule-set
+        env:
+          NO_SKIP: true
+        run: |
+          mkdir -p sing-rule/geo/geosite && mkdir -p sing-rule/geo/geoip
+          cd convert
+          go run ./ geosite -f ../custom/publish/geosite.dat -o ../sing-rule/geo/geosite -t sing-box
+          go run ./ geoip -f ../geoip.dat -o ../sing-rule/geo/geoip -t sing-box
+          ls
+          echo "convert"
+          ls convert
+
+      - name: Convert geo-lite to sing-rule-set
+        env:
+          NO_SKIP: true
+        run: |
+          mkdir -p sing-rule/geo-lite/geosite && mkdir -p sing-rule/geo-lite/geoip
+          cd convert
+          go run ./ geosite -f ../community/geosite-lite.dat -o ../sing-rule/geo-lite/geosite -t sing-box
+          go run ./ geoip -f ../geoip-lite.dat -o ../sing-rule/geo-lite/geoip -t sing-box
+          ls
+          echo "convert"
+          ls convert
+
+      - name: Convert ASN
+        env:
+          NO_SKIP: true
+        run: |
+          mkdir -p meta-rule/asn && mkdir -p sing-rule/asn
+          cd convert
+          wget https://raw.githubusercontent.com/xishang0128/geoip/release/GeoLite2-ASN.mmdb
+          go run ./ asn -o ../meta-rule/asn
+          go run ./ asn -o ../sing-rule/asn -t sing-box
+          ls
+          echo "convert"
+          ls convert
+
+      # Pindahkan berkas hasil build
       - name: Move files
         run: |
           install -Dp ./output/geoip.dat ./publish/GeoIP.dat
