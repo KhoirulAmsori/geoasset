@@ -172,12 +172,8 @@ jobs:
           echo '    }' >> nice.json
           echo '  ]' >> nice.json
           echo '}' >> nice.json
-          ls
-          echo "SATUUUUUUUUUUUUU"
-          ls sing-rule/geo/geoip
-          echo "DUAAAAAAAAAAAAAA"
-          ls ../sing-rule/geo/geoip
-          # cp nice.json ../sing-rule/geo/geoip/nice.json
+          cp nice.json ./output/nice.json
+
           cd convert
           go run ./ geosite -f ../geosite-build/publish/geosite.dat -o ../sing-rule/geo/geosite -t sing-box
           go run ./ geoip -f ../output/geoip.dat -o ../sing-rule/geo/geoip -t sing-box
@@ -207,6 +203,7 @@ jobs:
       # Pindahkan berkas hasil build
       - name: Move files
         run: |
+          install -Dp ./output/nice.json ./publish/nice.json
           install -Dp ./output/geoip.dat ./publish/GeoIP.dat
           install -Dp ./output/Country.mmdb ./publish/Country.mmdb
           install -Dp ./output/GeoLite2-ASN.mmdb ./publish/GeoLite2-ASN.mmdb
