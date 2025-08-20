@@ -145,35 +145,14 @@ jobs:
           cp raven_nsfw ../community/data/raven_nsfw
           go run ./ --datapath=../community/data
 
-      - name: Checkout MetaCubeX/meta-rules-converter
-        uses: actions/checkout@v4
-        with:
-          repository: MetaCubeX/meta-rules-converter
-          path: convert
-
       # Build Sing-Box asset
-      - name: Build db and metadb file
-        env:
-          NO_SKIP: true
+      - name: Convert to Sing-Box geoassets
         run: |
+          wget https://github.com/KhoirulAmsori/v2box/releases/download/v2box/v2box
+          chmod +x v2box
+          ./v2box migrate geoip -i ./output/geoip.dat -o GeoIP.db
+          ./v2box migrate geosite -i ./geosite-build/publish/geosite.dat -o GeoSite.db
           ls
-          go install -trimpath -ldflags="-s -w -buildid=" github.com/metacubex/geo/cmd/geo@master
-          echo "setelah go"
-          ls
-          geo convert site -i v2ray -o sing -f geosite.db ./geosite-build/publish/geosite.dat
-          geo convert ip -i v2ray -o sing -f geoip.db ./output/geoip.dat
-
-      - name: Convert geo to sing-rule-set
-        env:
-          NO_SKIP: true
-        run: |
-          ls
-          cd convert
-          go run ./ geosite -f ../geosite-build/publish/geosite.dat -o ../output -t sing-box
-          go run ./ geoip -f ../output/geoip.dat -o ../output -t sing-box
-          ls
-          echo "folder output"
-          ls ../output
 
       # Pindahkan berkas hasil build
       - name: Move files
