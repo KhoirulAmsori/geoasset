@@ -162,7 +162,7 @@ jobs:
           go run ./ geoip -f ../output/geoip.dat -o ../output -t sing-box
           ls
           echo "folder output"
-          ls
+          ls ../output
 
       # Pindahkan berkas hasil build
       - name: Move files
