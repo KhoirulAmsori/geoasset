@@ -150,9 +150,8 @@ jobs:
         run: |
           wget https://github.com/KhoirulAmsori/v2box/releases/download/v2box/v2box
           chmod +x v2box
-          ./v2box migrate geoip -i ./output/geoip.dat -o GeoIP.db
-          ./v2box migrate geosite -i ./geosite-build/publish/geosite.dat -o GeoSite.db
-          ls
+          ./v2box migrate geoip -i ./output/geoip.dat -o ./output/GeoIP.db
+          ./v2box migrate geosite -i ./geosite-build/publish/geosite.dat -o ./output/GeoSite.db
 
       # Pindahkan berkas hasil build
       - name: Move files
@@ -161,6 +160,8 @@ jobs:
           install -Dp ./output/Country.mmdb ./publish/Country.mmdb
           install -Dp ./output/GeoLite2-ASN.mmdb ./publish/GeoLite2-ASN.mmdb
           install -Dp ./geosite-build/publish/geosite.dat ./publish/GeoSite.dat
+          install -Dp ./output/GeoIP.db ./publish/GeoIP.db
+          install -Dp ./output/GeoSite.db ./publish/GeoSite.db
 
       - name: Delete current release assets
         uses: andreaswilli/delete-release-assets-action@v4.0.0
