@@ -161,7 +161,7 @@ jobs:
           
           # Convert RSC to JSON
           echo '{' > nice.json
-          echo '  "version": 4,' >> nice.json
+          echo '  "version": 3,' >> nice.json
           echo '  "rules": [' >> nice.json
           echo '    {' >> nice.json
           echo '        "ip_cidr": [' >> nice.json
