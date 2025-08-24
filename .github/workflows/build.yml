@@ -161,7 +161,7 @@ jobs:
           
           # Convert RSC to JSON
           echo '{' > nice.json
-          echo '  "version": 3,' >> nice.json
+          echo '  "version": 4,' >> nice.json
           echo '  "rules": [' >> nice.json
           echo '    {' >> nice.json
           echo '        "ip_cidr": [' >> nice.json
@@ -176,7 +176,7 @@ jobs:
           
           # Convert JSON to SRS
           sudo -E apt-get -y update
-          curl -fsSL https://sing-box.app/install.sh | sh
+          curl -fsSL https://sing-box.app/install.sh | sh -s -- --beta
           sing-box rule-set compile --output ./output/nice.srs nice.json
 
           cd convert
