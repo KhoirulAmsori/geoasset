@@ -211,6 +211,7 @@ jobs:
       - name: Move files
         run: |
           install -Dp ./output/nice.json ./publish/nice.json
+          install -Dp ./output/nice.srs ./publish/nice.srs
           install -Dp ./output/geoip.dat ./publish/GeoIP.dat
           install -Dp ./output/Country.mmdb ./publish/Country.mmdb
           install -Dp ./output/GeoLite2-ASN.mmdb ./publish/GeoLite2-ASN.mmdb
