@@ -35,7 +35,7 @@ jobs:
         with:
           ref: asset
           fetch-depth: 1
-          path: downloaded_asset
+          path: asset
 
       # Build GEOIP
       - name: Set up Go
@@ -52,15 +52,12 @@ jobs:
 
       - name: Prepare GeoLite2 databases
         run: |
-          ls
-          echo "debug"
-          ls downloaded_asset
-          echo "end debug"
           cd geoip-build
-          # cp lokal.txt ../output/
-          cp ../asset/* ../output/
-          mkdir -p geolite2
-          cp ../output/{*.gz,*.zip} ./
+          cp lokal.txt ../output/
+          # cp ../asset/* ../output/
+          # mkdir -p geolite2
+          cp ../asset/{*.gz,*.zip} ./
+          echo "debug"; ls
           
           unzip GeoLite2-Country-CSV.zip
           unzip GeoLite2-ASN-CSV.zip
@@ -72,8 +69,8 @@ jobs:
           cp GeoLite2-Country-CSV_*/{GeoLite2-Country-Blocks-*,GeoLite2-Country-Locations-en}.csv ../output/
           cp GeoLite2-ASN-CSV_*/*.csv ../output/
 
-          cp GeoLite2-Country-CSV_*/*.csv ./geolite2/
-          cp GeoLite2-ASN-CSV_*/*.csv ./geolite2/
+          # cp GeoLite2-Country-CSV_*/*.csv ./geolite2/
+          # cp GeoLite2-ASN-CSV_*/*.csv ./geolite2/
 
       - name: Build geoip files
         run: |
