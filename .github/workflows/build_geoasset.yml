@@ -76,6 +76,7 @@ jobs:
           
           pwd
           ls geolite2
+          readlink -f geolite2/GeoLite2-ASN.mmdb
 
           # Build geoip
           go build ./
