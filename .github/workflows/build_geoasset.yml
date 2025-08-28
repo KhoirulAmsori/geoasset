@@ -73,10 +73,6 @@ jobs:
           cp asset/GeoLite2-ASN_*/*.mmdb geolite2/
           cp asset/GeoLite2-ASN-CSV_*/*.csv geolite2/
           cp asset/GeoLite2-Country-CSV_*/*.csv geolite2/
-          
-          pwd
-          ls geolite2
-          readlink -f geolite2/GeoLite2-ASN.mmdb
 
           # Build geoip
           go build ./
@@ -166,8 +162,10 @@ jobs:
           NO_SKIP: true
         run: |
           mkdir -p sing-rule/asn
+          ls geoip-build
+          ls geoip-build/geolite2
           cd convert
-          cp ./geoip-build/GeoLite2-ASN.mmdb .
+          cp ./geoip-build/geolite2/GeoLite2-ASN.mmdb .
           go run ./ asn -o ../sing-rule/asn -t sing-box
 
       - name: Git push assets to "sing-rule" branch
