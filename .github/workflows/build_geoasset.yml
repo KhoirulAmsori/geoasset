@@ -31,12 +31,12 @@ jobs:
           git clone --depth 1 -b asset https://github.com/${{ github.repository }} geoip-build/asset
 
       - name: Setup Go for GEOIP
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: ./geoip-build/go.mod
-        cache-dependency-path: ./geoip-build/go.sum
-      env:
-        GOPATH: /tmp/go-geoip-build
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ./geoip-build/go.mod
+          cache-dependency-path: ./geoip-build/go.sum
+        env:
+          GOPATH: /tmp/go-geoip-build
 
       - name: Build GEOIP
         uses: actions/setup-go@v5
