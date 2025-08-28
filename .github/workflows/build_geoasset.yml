@@ -70,8 +70,6 @@ jobs:
           mkdir -p geolite2
           cp asset/GeoLite2-Country-CSV_*/*.csv geolite2/
           cp asset/GeoLite2-ASN-CSV_*/*.csv geolite2/
-          echo "ls after geo" && ls
-          echo "ls geolite" && ls geolite2
 
           # Build geoip
           go build ./
@@ -79,7 +77,6 @@ jobs:
 
           # Verify mmdb files
           cd ../publish
-          ls
           go install -v github.com/maxmind/mmdbverify@latest
           for name in $(ls *.mmdb); do
             $(go env GOPATH)/bin/mmdbverify -file ${name}
@@ -153,12 +150,12 @@ jobs:
           echo '    }' >> nice.json
           echo '  ]' >> nice.json
           echo '}' >> nice.json
-          cp nice.json ./output/nice.json
+          cp nice.json ./publish/nice.json
           
           # Convert JSON to SRS
           # sudo -E apt-get -y update
           curl -fsSL https://sing-box.app/install.sh | sh -s -- --beta
-          sing-box rule-set compile --output ./output/nice.srs nice.json
+          sing-box rule-set compile --output ./publish/nice.srs nice.json
 
           cd convert
           go run ./ geosite -f ../geosite-build/publish/geosite.dat -o ../sing-rule/geo/geosite -t sing-box
@@ -168,10 +165,9 @@ jobs:
         env:
           NO_SKIP: true
         run: |
-          mkdir -p meta-rule/asn && mkdir -p sing-rule/asn
+          mkdir -p sing-rule/asn
           cd convert
-          cp ../output/GeoLite2-ASN.mmdb .
-          go run ./ asn -o ../meta-rule/asn
+          cp ../geoip-build/asset/GeoLite2-ASN.mmdb .
           go run ./ asn -o ../sing-rule/asn -t sing-box
 
       - name: Git push assets to "sing-rule" branch
@@ -189,8 +185,6 @@ jobs:
       # Pindahkan berkas hasil build
       - name: Move files
         run: |
-          install -Dp ./output/nice.json ./publish/nice.json
-          install -Dp ./output/nice.srs ./publish/nice.srs
           install -Dp ./geoip-build/asset/GeoLite2-ASN.mmdb ./publish/GeoLite2-ASN.mmdb
           install -Dp ./geosite-build/publish/geosite.dat ./publish/GeoSite.dat
 
