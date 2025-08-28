@@ -61,6 +61,9 @@ jobs:
           cp asset/GeoLite2-Country-CSV_*/{GeoLite2-Country-Blocks-IPv4*,GeoLite2-Country-Locations-en}.csv geolite2/
           
           # Salin aset untuk diterbitkann
+          ls
+          echo "debug"
+          ls ..
           cp geolite2/GeoLite2-ASN.mmdb ../publish/GeoLite2-ASN.mmdb
           
           # Jalankan pembangunan
