@@ -72,6 +72,7 @@ jobs:
           cp asset/GeoLite2-ASN_*/*.mmdb geolite2/
           cp asset/GeoLite2-ASN-CSV_*/*.csv geolite2/
           cp asset/GeoLite2-Country-CSV_*/*.csv geolite2/
+          cp asset/GeoLite2-Country-CSV_*/{GeoLite2-Country-Blocks-IPv4*,GeoLite2-Country-Locations-en}.csv geolite2/
 
           # Build geoip
           go build ./
@@ -180,7 +181,7 @@ jobs:
       # Pindahkan berkas hasil build
       - name: Move files
         run: |
-          install -Dp ./geoip-build/asset/GeoLite2-ASN.mmdb ./publish/GeoLite2-ASN.mmdb
+          install -Dp ./geoip-build/geolite2/GeoLite2-ASN.mmdb ./publish/GeoLite2-ASN.mmdb
           install -Dp ./geosite-build/publish/geosite.dat ./publish/GeoSite.dat
 
       - name: Delete current release assets
