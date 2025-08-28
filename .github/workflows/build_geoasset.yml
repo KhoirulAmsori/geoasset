@@ -65,12 +65,6 @@ jobs:
                   unzip "$file"
               fi
           done
-          
-          # Verify mmdb files
-          go install -v github.com/maxmind/mmdbverify@latest
-          for name in $(ls *.mmdb); do
-            $(go env GOPATH)/bin/mmdbverify -file ${name}
-          done
 
           cd ./geoip-build
           mkdir -p geolite2
@@ -81,6 +75,14 @@ jobs:
           cd ./geoip-build
           go build ./
           ./geoip convert -c ./config.json
+
+          # Verify mmdb files
+          cd ./publish
+          ls
+          go install -v github.com/maxmind/mmdbverify@latest
+          for name in $(ls *.mmdb); do
+            $(go env GOPATH)/bin/mmdbverify -file ${name}
+          done
 
       # Build GEOSITE
       - name: Checkout v2fly/domain-list-community
