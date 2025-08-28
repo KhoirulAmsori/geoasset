@@ -70,6 +70,8 @@ jobs:
           mkdir -p geolite2
           cp asset/GeoLite2-Country-CSV_*/*.csv geolite2/
           cp asset/GeoLite2-ASN-CSV_*/*.csv geolite2/
+          echo "ls after geo" && ls
+          echo "ls geolite" && ls geolite2
 
           # Build geoip
           go build ./
