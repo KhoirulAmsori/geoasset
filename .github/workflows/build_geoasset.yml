@@ -77,7 +77,7 @@ jobs:
 
       - name: Build Sing-Box assets
         run: |
-          git clone --depth 1 https://github.com/MetaCubeX/meta-rules-converter convert
+          git clone --depth 1 https://github.com/MetaCubeX/meta-rules-converter meta-rules-converter
           mkdir -p sing-rule/geo/{geosite,geoip} sing-rule/asn
           curl -s -o nice.rsc http://ixp.mikrotik.co.id/download/nice.rsc
           echo '{"version":4,"rules":[{"ip_cidr":[' > nice.json
@@ -87,10 +87,10 @@ jobs:
           cp nice.json ./publish/nice.json
           curl -fsSL https://sing-box.app/install.sh | sh -s -- --beta
           sing-box rule-set compile --output ./publish/nice.srs nice.json
-          cd convert
+          cd meta-rules-converter
           go run ./ geosite -f ../geosite-build/publish/geosite.dat -o ../sing-rule/geo/geosite -t sing-box
           go run ./ geoip -f ../publish/GeoIP.dat -o ../sing-rule/geo/geoip -t sing-box
-          cp ../geoip-build/geolite2/GeoLite2-ASN.mmdb ./asn/
+          cp ../geoip-build/geolite2/GeoLite2-ASN.mmdb .
           go run ./ asn -o ../sing-rule/asn -t sing-box
 
       - name: Push sing-box branch
