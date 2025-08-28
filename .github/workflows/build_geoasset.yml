@@ -64,9 +64,6 @@ jobs:
           cp asset/GeoLite2-Country-CSV_*/{GeoLite2-Country-Blocks-IPv4*,GeoLite2-Country-Locations-en}.csv geolite2/
           
           # Salin aset untuk diterbitkann
-          ls
-          echo "debug"
-          ls ..
           cp geolite2/GeoLite2-ASN.mmdb ../publish/GeoLite2-ASN.mmdb
           
           # Jalankan pembangunan
@@ -111,11 +108,21 @@ jobs:
           # Convert RSC to JSON
           curl -s -o nice.rsc http://ixp.mikrotik.co.id/download/nice.rsc
           grep -oP 'address="\K[0-9./]+' nice.rsc | grep '/' | \
-          awk 'BEGIN {print "{\n  \"version\": 4,\n  \"rules\": [\n    {\n      \"ip_cidr\": ["}
-              {print "        \"" $0 "\","}
-              END {print "      ]\n    }\n  ]\n}"}' > nice.json
-
-          cp nice.json ./publish/nice.json
+          awk '
+          BEGIN {
+            print "{\n  \"version\": 4,\n  \"rules\": [\n    {\n      \"ip_cidr\": ["
+          }
+          {
+            ips[NR] = $0
+          }
+          END {
+               for (i=1; i<=NR; i++) {
+               printf "        \"%s\"", ips[i]
+               if (i<NR) { printf "," }
+               printf "\n"
+              }
+              print "      ]\n    }\n  ]\n}"
+          }' > ./publish/nice.json
 
           # Pasang binari sing-box dan konversi
           curl -fsSL https://sing-box.app/install.sh | sh -s -- --beta
