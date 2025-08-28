@@ -33,7 +33,7 @@ jobs:
       - name: Checkout downloaded asset
         uses: actions/checkout@v4
         with:
-          reff: asset
+          ref: asset
           fetch-depth: 1
           path: downloaded_asset
 
@@ -55,6 +55,7 @@ jobs:
           ls
           echo "debug"
           ls downloaded_asset
+          echo "end debug"
           cd geoip-build
           # cp lokal.txt ../output/
           cp ../asset/* ../output/
