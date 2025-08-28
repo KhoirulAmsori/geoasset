@@ -53,6 +53,7 @@ jobs:
       - name: Prepare GeoLite2 databases
         run: |
           cd geoip-build
+          cp lokal.txt ../output/
           cp ../asset/* ../output/
           mkdir -p geolite2
           cp ../output/{*.gz,*.zip} ./
