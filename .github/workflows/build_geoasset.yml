@@ -39,12 +39,6 @@ jobs:
           GOPATH: /tmp/go-geoip-build
 
       - name: Build GEOIP
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: ./geoip-build/go.mod
-          cache-dependency-path: ./geoip-build/go.sum
-        env:
-          GOPATH: /tmp/go-geoip-build
         run: |
           cd geoip-build/asset
           for file in *.{tar.gz,zip}; do
