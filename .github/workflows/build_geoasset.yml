@@ -66,18 +66,18 @@ jobs:
               fi
           done
 
-          cd ./geoip-build
+          cd ..
           mkdir -p geolite2
           cp asset/GeoLite2-Country-CSV_*/*.csv geolite2/
           cp asset/GeoLite2-ASN-CSV_*/*.csv /geolite2/
 
           # Build geoip
-          cd ./geoip-build
+          cd ..
           go build ./
           ./geoip convert -c ./config.json
 
           # Verify mmdb files
-          cd ./publish
+          cd ../publish
           ls
           go install -v github.com/maxmind/mmdbverify@latest
           for name in $(ls *.mmdb); do
