@@ -68,8 +68,14 @@ jobs:
 
           cd ..
           mkdir -p geolite2
+          cp asset/GeoLite2-Country_*/*.mmdb geolite2/
+          cp asset/GeoLite2-ASN_*/*.mmdb geolite2/
+          cp asset/GeoLite2-Country-CSV_*/{GeoLite2-Country-Blocks-*,GeoLite2-Country-Locations-en}.csv geolite2/
+          cp asset/GeoLite2-ASN-CSV_*/*.csv geolite2/
           cp asset/GeoLite2-Country-CSV_*/*.csv geolite2/
           cp asset/GeoLite2-ASN-CSV_*/*.csv geolite2/
+          pwd
+          ls geolite2
 
           # Build geoip
           go build ./
