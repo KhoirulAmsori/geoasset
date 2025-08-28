@@ -24,9 +24,8 @@ jobs:
         run: |
           export TZ="Asia/Jakarta"
           sudo locale-gen id_ID.UTF-8
-          echo "BUILD_DATE=$(LC_TIME=id_ID.UTF-8 date '+%A, %d %B %Y - %H:%M:%S')" >> $GITHUB_ENV
+          echo "BUILDTIME=$(LC_TIME=id_ID.UTF-8 date '+%A, %d %B %Y - %H:%M:%S')" >> $GITHUB_ENV
           echo "TAG_NAME=$(date +'%d%m%Y-%H%M')" >> $GITHUB_ENV
-          echo "BUILDTIME=$(date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
           echo "OISD_SMALL=https://small.oisd.nl/dnsmasq" >> $GITHUB_ENV
           echo "OISD_NSFW=https://nsfw.oisd.nl/dnsmasq" >> $GITHUB_ENV
           echo "OISD_NSFW_SMALL=https://nsfw-small.oisd.nl/dnsmasq" >> $GITHUB_ENV
@@ -36,6 +35,11 @@ jobs:
           
           # Kloning repo ke geoip-build/asset
           git clone --depth 1 -b asset https://github.com/${{ github.repository }} geoip-build/asset
+
+      - name: Prepare Go cache folder
+        run: |
+          mkdir -p /tmp/go-geoip-build/pkg/mod
+          mkdir -p /tmp/go-geosite-build/pkg/mod
 
       - name: Setup Go for GEOIP
         uses: actions/setup-go@v5
@@ -73,7 +77,7 @@ jobs:
           go build ./
           ./geoip convert -c ./config.json
 
-      - name: Setup Go for GEOIP
+      - name: Setup Go for GEOSITE
         uses: actions/setup-go@v5
         with:
           go-version-file: ./geosite-build/go.mod
@@ -161,4 +165,4 @@ jobs:
           overwrite: true
           file: Publish/*
           body: |
-            ## Build Date: ${{ env.BUILD_DATE }} ##
+            ## Build Date: ${{ env.BUILDTIME }} ##
