@@ -69,7 +69,7 @@ jobs:
           cd ..
           mkdir -p geolite2
           cp asset/GeoLite2-Country-CSV_*/*.csv geolite2/
-          cp asset/GeoLite2-ASN-CSV_*/*.csv /geolite2/
+          cp asset/GeoLite2-ASN-CSV_*/*.csv geolite2/
 
           # Build geoip
           cd ..
