@@ -15,7 +15,8 @@ jobs:
       - name: Set variables
         run: |
           export TZ="Asia/Jakarta"
-          echo "BUILDTIME=$(TZ=Asia/Jakarta date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
+          sudo locale-gen id_ID.UTF-8
+          echo "BUILDTIME=$(LC_TIME=id_ID.UTF-8 date '+%A, %d %B %Y - %H:%M:%S')" >> $GITHUB_ENV
 
       - name: Checkout codebase
         uses: actions/checkout@v4
