@@ -15,7 +15,6 @@ jobs:
   Build:
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout main repo
         uses: actions/checkout@v4
         with:
@@ -31,7 +30,14 @@ jobs:
           echo "OISD_NSFW_SMALL=https://nsfw-small.oisd.nl/dnsmasq" >> $GITHUB_ENV
           git clone --depth 1 -b asset https://github.com/${{ github.repository }} geoip-build/asset
 
-      # Build GEOIP
+      - name: Setup Go for GEOIP
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: ./geoip-build/go.mod
+        cache-dependency-path: ./geoip-build/go.sum
+      env:
+        GOPATH: /tmp/go-geoip-build
+
       - name: Build GEOIP
         uses: actions/setup-go@v5
         with:
@@ -56,14 +62,15 @@ jobs:
           go build ./
           ./geoip convert -c ./config.json
 
-      # Build GEOSITE
-      - name: Build GEOSITE
+      - name: Setup Go for GEOIP
         uses: actions/setup-go@v5
         with:
           go-version-file: ./geosite-build/go.mod
           cache-dependency-path: ./geosite-build/go.sum
         env:
           GOPATH: /tmp/go-geosite-build
+
+      - name: Build GEOSITE
         run: |
           git clone --depth 1 https://github.com/v2fly/domain-list-community community
           cd geosite-build
@@ -74,7 +81,6 @@ jobs:
           cp raven_nsfw ../community/data/raven_nsfw
           go run ./ --datapath=../community/data
 
-      # Build Sing-Box asset
       - name: Build Sing-Box assets
         run: |
           git clone --depth 1 https://github.com/MetaCubeX/meta-rules-converter convert
@@ -93,7 +99,6 @@ jobs:
           cp ../geoip-build/geolite2/GeoLite2-ASN.mmdb ./asn/
           go run ./ asn -o ../sing-rule/asn -t sing-box
 
-      # Push sing-rule branch
       - name: Push sing-box branch
         run: |
           cd sing-rule
