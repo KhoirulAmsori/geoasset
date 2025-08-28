@@ -16,7 +16,6 @@ jobs:
       - name: Checkout codebase
         uses: actions/checkout@v4
         with:
-          ref: main
           fetch-depth: 0
 
       # Build GEOIP
@@ -155,6 +154,7 @@ jobs:
 
       - name: Convert geo to sing-rule-set
         env:
+          GITHUB_TOKEN: ${{ secrets.AUTH_PAT }}
           NO_SKIP: true
         run: |
           mkdir -p sing-rule/geo/geosite && mkdir -p sing-rule/geo/geoip
@@ -177,7 +177,7 @@ jobs:
           
           # Convert JSON to SRS
           # sudo -E apt-get -y update
-          wget https://sing-box.app/install.sh | sh -s -- --beta
+          curl -fsSL https://sing-box.app/install.sh | sh -s -- --beta
           sing-box rule-set compile --output ./output/nice.srs nice.json
 
           cd convert
