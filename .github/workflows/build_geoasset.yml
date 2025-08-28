@@ -23,6 +23,8 @@ jobs:
       - name: Setup environment & download asset
         run: |
           export TZ="Asia/Jakarta"
+          sudo locale-gen id_ID.UTF-8
+          echo "BUILD_DATE=$(LC_TIME=id_ID.UTF-8 date '+%A, %d %B %Y - %H:%M:%S')" >> $GITHUB_OUTPUT
           echo "TAG_NAME=$(date +'%d%m%Y-%H%M')" >> $GITHUB_ENV
           echo "BUILDTIME=$(date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
           echo "OISD_SMALL=https://small.oisd.nl/dnsmasq" >> $GITHUB_ENV
@@ -30,7 +32,7 @@ jobs:
           echo "OISD_NSFW_SMALL=https://nsfw-small.oisd.nl/dnsmasq" >> $GITHUB_ENV
           
           # Folder untuk penerbitan
-          mkdir -p publish
+          mkdir -p Publish
           
           # Kloning repo ke geoip-build/asset
           git clone --depth 1 -b asset https://github.com/${{ github.repository }} geoip-build/asset
@@ -64,7 +66,7 @@ jobs:
           cp asset/GeoLite2-Country-CSV_*/{GeoLite2-Country-Blocks-IPv4*,GeoLite2-Country-Locations-en}.csv geolite2/
           
           # Salin aset untuk diterbitkann
-          cp geolite2/GeoLite2-ASN.mmdb ../publish/GeoLite2-ASN.mmdb
+          cp geolite2/GeoLite2-ASN.mmdb ../Publish/GeoLite2-ASN.mmdb
           
           # Jalankan pembangunan
           go mod tidy
@@ -105,10 +107,8 @@ jobs:
           # Folder untuk branch sing-box
           mkdir -p sing-rule/geo/{geosite,geoip} sing-rule/asn
 
-          # Convert RSC to JSON
+          # Unduh dan konversi RSC ke JSON
           curl -s -o nice.rsc http://ixp.mikrotik.co.id/download/nice.rsc
-          ls
-          readlink -f nice.rsc
           grep -oP 'address="\K[0-9./]+' nice.rsc | grep '/' | \
           awk '
           BEGIN {
@@ -124,16 +124,16 @@ jobs:
                printf "\n"
               }
               print "      ]\n    }\n  ]\n}"
-          }' > ./publish/nice.json
+          }' > ./Publish/nice.json
 
           # Pasang binari sing-box dan konversi
           curl -fsSL https://sing-box.app/install.sh | sh -s -- --beta
-          sing-box rule-set compile --output ./publish/nice.srs ./publish/nice.json
+          sing-box rule-set compile --output ./Publish/nice.srs ./Publish/nice.json
           
           # Jalankan pembangunan geo dan asn
           cd meta-rules-converter
-          go run ./ geosite -f ../publish/GeoSite.dat -o ../sing-rule/geo/geosite -t sing-box
-          go run ./ geoip -f ../publish/GeoIP.dat -o ../sing-rule/geo/geoip -t sing-box
+          go run ./ geosite -f ../Publish/GeoSite.dat -o ../sing-rule/geo/geosite -t sing-box
+          go run ./ geoip -f ../Publish/GeoIP.dat -o ../sing-rule/geo/geoip -t sing-box
           
           cp ../geoip-build/geolite2/GeoLite2-ASN.mmdb .
           go run ./ asn -o ../sing-rule/asn -t sing-box
@@ -151,10 +151,6 @@ jobs:
           git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
           git push -f -u origin sing-box
 
-      - name: Move final assets
-        run: |
-          ls publish
-
       - name: Upload release
         uses: svenstaro/upload-release-action@v2
         with:
@@ -163,4 +159,6 @@ jobs:
           tag: latest
           file_glob: true
           overwrite: true
-          file: ./publish/*
+          file: Publish/*
+          body: |
+            ## Build Date: ${{ BUILD_DATE }} ##

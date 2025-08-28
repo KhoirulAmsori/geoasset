@@ -89,7 +89,7 @@
       "type": "v2rayGeoIPDat",
       "action": "output",
       "args": {
-        "outputDir": "../publish",
+        "outputDir": "../Publish",
         "outputName": "GeoIP.dat"
       }
     },
@@ -97,7 +97,7 @@
       "type": "maxmindMMDB",
       "action": "output",
       "args": {
-        "outputDir": "../publish",
+        "outputDir": "../Publish",
         "outputName": "Country.mmdb",
         "overwriteList": [
           "id",
