@@ -29,6 +29,9 @@ jobs:
           echo "OISD_NSFW=https://nsfw.oisd.nl/dnsmasq" >> $GITHUB_ENV
           echo "OISD_NSFW_SMALL=https://nsfw-small.oisd.nl/dnsmasq" >> $GITHUB_ENV
           
+          # Folder untuk penerbitan
+          mkdir -p publish
+          
           # Kloning repo ke geoip-build/asset
           git clone --depth 1 -b asset https://github.com/${{ github.repository }} geoip-build/asset
 
