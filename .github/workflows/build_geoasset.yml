@@ -38,7 +38,7 @@ jobs:
         with:
           ref: asset
           fetch-depth: 1
-          path: output
+          path: geoip-build/asset
 
       # Build GEOIP
       - name: Set up Go
@@ -56,27 +56,52 @@ jobs:
       - name: Prepare GeoLite2 databases
         run: |
           cd geoip-build
-          # mkdir -p geolite2
+          cp ./asset/* ../output/
+          mkdir -p geolite2
+          cp ../output/{*.gz,*.zip} ./
           
-          unzip ../output/*.zip
-          tar -xvzf ../output/*.gz
+          unzip GeoLite2-Country-CSV.zip
+          unzip GeoLite2-ASN-CSV.zip
+          tar -xvzf GeoLite2-Country.tar.gz
+          tar -xvzf GeoLite2-ASN.tar.gz
+          
+          cp GeoLite2-Country_*/*.mmdb ../output/
+          cp GeoLite2-ASN_*/*.mmdb ../output/
+          cp GeoLite2-Country-CSV_*/{GeoLite2-Country-Blocks-*,GeoLite2-Country-Locations-en}.csv ../output/
+          cp GeoLite2-ASN-CSV_*/*.csv ../output/
 
-          # cp GeoLite2-Country-CSV_*/*.csv ./geolite2/
-          # cp GeoLite2-ASN-CSV_*/*.csv ./geolite2/
+          cp GeoLite2-Country-CSV_*/*.csv ./geolite2/
+          cp GeoLite2-ASN-CSV_*/*.csv ./geolite2/
 
       - name: Build geoip files
         run: |
-          cd ./geoip-build/
-          go build ./
-          ./geoip convert -c ./config.json
+          
+          cd geoip-build/asset
 
-      - name: Verify mmdb files
-        run: |
-          cd ./output || exit 1
+          # Ekstrak semua .tar.gz dan .zip
+          for file in *.{tar.gz,zip}; do
+              if [[ $file == *.tar.gz ]]; then
+                  tar -xzf "$file"
+              elif [[ $file == *.zip ]]; then
+                  unzip "$file"
+              fi
+          done
+          
+          # Verify mmdb files
           go install -v github.com/maxmind/mmdbverify@latest
           for name in $(ls *.mmdb); do
             $(go env GOPATH)/bin/mmdbverify -file ${name}
           done
+
+          cd ./geoip-build
+          mkdir -p geolite2
+          cp asset/GeoLite2-Country-CSV_*/*.csv geolite2/
+          cp asset/GeoLite2-ASN-CSV_*/*.csv /geolite2/
+
+          # Build geoip
+          cd ./geoip-build
+          go build ./
+          ./geoip convert -c ./config.json
 
       # Build GEOSITE
       - name: Checkout v2fly/domain-list-community
@@ -184,9 +209,7 @@ jobs:
         run: |
           install -Dp ./output/nice.json ./publish/nice.json
           install -Dp ./output/nice.srs ./publish/nice.srs
-          install -Dp ./output/geoip.dat ./publish/GeoIP.dat
-          install -Dp ./output/Country.mmdb ./publish/Country.mmdb
-          install -Dp ./output/GeoLite2-ASN.mmdb ./publish/GeoLite2-ASN.mmdb
+          install -Dp ./geoip-build/asset/GeoLite2-ASN.mmdb ./publish/GeoLite2-ASN.mmdb
           install -Dp ./geosite-build/publish/geosite.dat ./publish/GeoSite.dat
 
       - name: Delete current release assets
