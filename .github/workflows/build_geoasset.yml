@@ -35,7 +35,7 @@ jobs:
         with:
           reff: asset
           fetch-depth: 1
-          path: asset
+          path: downloaded_asset
 
       # Build GEOIP
       - name: Set up Go
@@ -54,7 +54,7 @@ jobs:
         run: |
           ls
           echo "debug"
-          ls asset
+          ls downloaded_asset
           cd geoip-build
           # cp lokal.txt ../output/
           cp ../asset/* ../output/
