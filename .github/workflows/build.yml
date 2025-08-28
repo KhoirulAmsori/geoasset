@@ -16,6 +16,7 @@ jobs:
       - name: Checkout codebase
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       # Build GEOIP
