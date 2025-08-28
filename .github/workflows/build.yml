@@ -175,8 +175,8 @@ jobs:
           cp nice.json ./output/nice.json
           
           # Convert JSON to SRS
-          sudo -E apt-get -y update
-          curl -fsSL https://sing-box.app/install.sh | sh -s -- --beta
+          # sudo -E apt-get -y update
+          wget https://sing-box.app/install.sh | sh -s -- --beta
           sing-box rule-set compile --output ./output/nice.srs nice.json
 
           cd convert
