@@ -160,8 +160,7 @@ jobs:
         run: |
           mkdir -p sing-rule/asn
           cd convert
-          echo "pwd"; pwd
-          cp ./geoip-build/asset/GeoLite2-ASN.mmdb .
+          cp geoip-build/asset/GeoLite2-ASN.mmdb .
           go run ./ asn -o ../sing-rule/asn -t sing-box
 
       - name: Git push assets to "sing-rule" branch
