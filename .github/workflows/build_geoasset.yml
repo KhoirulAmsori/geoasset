@@ -72,7 +72,6 @@ jobs:
           cp asset/GeoLite2-ASN-CSV_*/*.csv geolite2/
 
           # Build geoip
-          cd ..
           go build ./
           ./geoip convert -c ./config.json
 
