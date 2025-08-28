@@ -12,8 +12,8 @@ import (
 
 var (
 	dataPath     = flag.String("datapath", filepath.Join("./geosite-build", "data"), "Path to your custom 'data' directory")
-	datName      = flag.String("datname", "geosite.dat", "Name of the generated dat file")
-	outputPath   = flag.String("outputpath", "./publish", "Output path to the generated files")
+	datName      = flag.String("datname", "GeoSite.dat", "Name of the generated dat file")
+	outputPath   = flag.String("outputpath", "../publish", "Output path to the generated files")
 	exportLists  = flag.String("exportlists", "", "Lists to be exported in plaintext format, separated by ',' comma")
 	excludeAttrs = flag.String("excludeattrs", "cn@!cn@ads,geolocation-cn@!cn@ads,geolocation-!cn@cn@ads", "Exclude rules with certain attributes in certain lists, seperated by ',' comma, support multiple attributes in one list. Example: geolocation-!cn@cn@ads,geolocation-cn@!cn")
 	toGFWList    = flag.String("togfwlist", "geolocation-!cn", "List to be exported in GFWList format")
