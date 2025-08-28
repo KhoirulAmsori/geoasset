@@ -161,4 +161,4 @@ jobs:
           overwrite: true
           file: Publish/*
           body: |
-            ## Build Date: ${{ BUILD_DATE }} ##
+            ## Build Date: ${{ env.BUILD_DATE }} ##
