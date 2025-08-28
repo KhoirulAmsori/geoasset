@@ -1,7 +1,7 @@
 name: Build GEO Asset
 on:
   schedule:
-    - cron: "0 17 */2 * *"
+    - cron: "0 17 * * *"
   workflow_dispatch:
   repository_dispatch:
   push:
@@ -12,60 +12,37 @@ permissions:
   contents: write
 
 jobs:
-  Build:
-    name: Build GEO Asset
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Set variables
-        run: |
-          # Set timezone to Asia/Jakarta
+
+      - name: Setup environment & checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - run: |
           export TZ="Asia/Jakarta"
           echo "TAG_NAME=$(date +'%d%m%Y-%H%M')" >> $GITHUB_ENV
-          # echo "RELEASE_NAME=$(date +'%d%m%Y-%H%M')" >> $GITHUB_ENV
-          echo "BUILDTIME=$(TZ=Asia/Jakarta date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
+          echo "BUILDTIME=$(date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
           echo "OISD_SMALL=https://small.oisd.nl/dnsmasq" >> $GITHUB_ENV
           echo "OISD_NSFW=https://nsfw.oisd.nl/dnsmasq" >> $GITHUB_ENV
           echo "OISD_NSFW_SMALL=https://nsfw-small.oisd.nl/dnsmasq" >> $GITHUB_ENV
-        shell: bash
-
-      - name: Checkout codebase
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Checkout downloaded asset
-        uses: actions/checkout@v4
-        with:
-          ref: asset
-          fetch-depth: 1
-          path: geoip-build/asset
+          git clone --depth 1 -b asset https://github.com/${{ github.repository }} geoip-build/asset
 
       # Build GEOIP
-      - name: Set up Go
+      - name: Build GEOIP
         uses: actions/setup-go@v5
         with:
           go-version-file: ./geoip-build/go.mod
           cache-dependency-path: ./geoip-build/go.sum
         env:
           GOPATH: /tmp/go-geoip-build
-
-      - name: Update Go dependencies for GEOIP
-        working-directory: ./geoip-build
-        run: go mod tidy
-
-      - name: Build geoip files
         run: |
           cd geoip-build/asset
-
-          # Ekstrak semua .tar.gz dan .zip
           for file in *.{tar.gz,zip}; do
-              if [[ $file == *.tar.gz ]]; then
-                  tar -xvzf "$file"
-              elif [[ $file == *.zip ]]; then
-                  unzip "$file"
-              fi
+            [[ $file == *.tar.gz ]] && tar -xvzf "$file"
+            [[ $file == *.zip ]] && unzip "$file"
           done
-
           cd ..
           mkdir -p geolite2
           cp asset/GeoLite2-Country_*/*.mmdb geolite2/
@@ -73,102 +50,51 @@ jobs:
           cp asset/GeoLite2-ASN-CSV_*/*.csv geolite2/
           cp asset/GeoLite2-Country-CSV_*/*.csv geolite2/
           cp asset/GeoLite2-Country-CSV_*/{GeoLite2-Country-Blocks-IPv4*,GeoLite2-Country-Locations-en}.csv geolite2/
-
-          # Build geoip
+          go mod tidy
           go build ./
           ./geoip convert -c ./config.json
 
       # Build GEOSITE
-      - name: Checkout v2fly/domain-list-community
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          repository: v2fly/domain-list-community
-          path: community
-
-      - name: Setup Go
+      - name: Build GEOSITE
         uses: actions/setup-go@v5
         with:
           go-version-file: ./geosite-build/go.mod
           cache-dependency-path: ./geosite-build/go.sum
         env:
           GOPATH: /tmp/go-geosite-build
-
-      - name: Update Go dependencies for GEOSITE
-        working-directory: ./geosite-build
-        run: go mod tidy
-
-      - name: Create lists
         run: |
-          curl -sSL $OISD_SMALL | perl -ne '
-            if (/^server=\/([^\/]+)\//) {
-                my $domain = $1;
-                if ($domain !~ /^(googlesyndication\.com|pagead2\.googlesyndication\.com|gambar123\.com)$/) {
-                    print "$domain\n";
-                }
-            }
-          ' > ./community/data/oisd-small
-          
-          exclude_domain=$(paste -sd'|' ./geosite-build/exclude_list.txt)
-          curl -sSL "$OISD_NSFW_SMALL" | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' | grep -vE "$exclude_domain" > ./community/data/oisd-nsfw-small
-
-      - name: Build geosite.dat file
-        run: |
+          git clone --depth 1 https://github.com/v2fly/domain-list-community community
           cd geosite-build
+          go mod tidy
+          curl -sSL $OISD_SMALL | perl -ne 'if(/^server=\/([^\/]+)\//){$d=$1;if($d!~/^(googlesyndication\.com|pagead2\.googlesyndication\.com|gambar123\.com)$/){print "$d\n"}}' > ../community/data/oisd-small
+          exclude=$(paste -sd'|' exclude_list.txt)
+          curl -sSL $OISD_NSFW_SMALL | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' | grep -vE "$exclude" > ../community/data/oisd-nsfw-small
           cp raven_nsfw ../community/data/raven_nsfw
           go run ./ --datapath=../community/data
 
       # Build Sing-Box asset
-      - name: Checkout MetaCubeX/meta-rules-converter
-        uses: actions/checkout@v4
-        with:
-          repository: MetaCubeX/meta-rules-converter
-          path: convert
-
-      - name: Convert geo to sing-rule-set
-        env:
-          GITHUB_TOKEN: ${{ secrets.AUTH_PAT }}
-          NO_SKIP: true
+      - name: Build Sing-Box assets
         run: |
-          mkdir -p sing-rule/geo/geosite && mkdir -p sing-rule/geo/geoip
+          git clone --depth 1 https://github.com/MetaCubeX/meta-rules-converter convert
+          mkdir -p sing-rule/geo/{geosite,geoip} sing-rule/asn
           curl -s -o nice.rsc http://ixp.mikrotik.co.id/download/nice.rsc
-          
-          # Convert RSC to JSON
-          echo '{' > nice.json
-          echo '  "version": 4,' >> nice.json
-          echo '  "rules": [' >> nice.json
-          echo '    {' >> nice.json
-          echo '        "ip_cidr": [' >> nice.json
-          grep -oP 'address="\K[0-9./]+' nice.rsc | grep '/' | \
-          sed 's/.*/            "&",/' >> nice.json
+          echo '{"version":4,"rules":[{"ip_cidr":[' > nice.json
+          grep -oP 'address="\K[0-9./]+' nice.rsc | grep '/' | sed 's/.*/"&",/' >> nice.json
           sed -i '$ s/,$//' nice.json
-          echo '        ]' >> nice.json
-          echo '    }' >> nice.json
-          echo '  ]' >> nice.json
-          echo '}' >> nice.json
+          echo ']}]}' >> nice.json
           cp nice.json ./publish/nice.json
-          
-          # Convert JSON to SRS
-          # sudo -E apt-get -y update
           curl -fsSL https://sing-box.app/install.sh | sh -s -- --beta
           sing-box rule-set compile --output ./publish/nice.srs nice.json
-
           cd convert
           go run ./ geosite -f ../geosite-build/publish/geosite.dat -o ../sing-rule/geo/geosite -t sing-box
           go run ./ geoip -f ../publish/GeoIP.dat -o ../sing-rule/geo/geoip -t sing-box
-
-      - name: Convert ASN
-        env:
-          NO_SKIP: true
-        run: |
-          mkdir -p sing-rule/asn
-          cp geoip-build/geolite2/GeoLite2-ASN.mmdb convert/
-          cd convert
+          cp ../geoip-build/geolite2/GeoLite2-ASN.mmdb ./asn/
           go run ./ asn -o ../sing-rule/asn -t sing-box
 
-      - name: Git push assets to "sing-rule" branch
+      # Push sing-rule branch
+      - name: Push sing-box branch
         run: |
-          cd sing-rule || exit 1
+          cd sing-rule
           git init
           git config --local user.name "github-actions[bot]"
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -178,21 +104,12 @@ jobs:
           git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
           git push -f -u origin sing-box
 
-      # Pindahkan berkas hasil build
-      - name: Move files
+      - name: Move final assets
         run: |
           install -Dp ./geoip-build/geolite2/GeoLite2-ASN.mmdb ./publish/GeoLite2-ASN.mmdb
           install -Dp ./geosite-build/publish/geosite.dat ./publish/GeoSite.dat
 
-      - name: Delete current release assets
-        uses: andreaswilli/delete-release-assets-action@v4.0.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: latest
-          deleteOnlyFromDrafts: false
-
-      - name: Create and Upload Release
-        id: upload_release
+      - name: Upload release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
