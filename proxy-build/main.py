@@ -553,4 +553,4 @@ if __name__ == "__main__":
 
     process_proxy("./server_list.txt")
 
-    write_proxy_urls_file("./Proxy/proxy_urls.txt", extracted_proxies)
+    write_proxy_urls_file("./proxy_list.txt", extracted_proxies)
