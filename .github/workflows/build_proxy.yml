@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  Download:
+  Build:
     runs-on: ubuntu-latest
     steps:
       - name: Set variables
@@ -40,6 +40,11 @@ jobs:
         run: |
           cd proxy-build
           pip install -r requirements.txt
+          python main.py
+
+      - name: Build proxy list
+        run: |
+          cd proxy-build
           python main.py
 
       - name: Git push assets to "asset" branch
