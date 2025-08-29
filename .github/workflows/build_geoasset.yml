@@ -56,7 +56,7 @@ jobs:
             [[ $file == *.zip ]] && unzip "$file"
           done
           
-          cd ..
+          cd ../../
           pwd
           ls
           mkdir -p geolite2
