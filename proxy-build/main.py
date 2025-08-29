@@ -531,7 +531,11 @@ def process_proxy(urls_file):
 
             urls = expand_range(line)
             for url_part in urls:
-                full_url = f"{base_url}{url_part}{suffix_map[current_type]}"
+                if url_part.startswith("http"):  
+                    full_url = url_part
+                else:
+                    full_url = f"{base_url}{url_part}{suffix_map[current_type]}"
+
                 try:
                     response = urllib.request.urlopen(full_url)
                     data = response.read().decode("utf-8")
