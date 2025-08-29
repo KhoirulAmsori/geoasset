@@ -18,6 +18,11 @@ jobs:
           sudo locale-gen id_ID.UTF-8
           echo "BUILDTIME=$(LC_TIME=id_ID.UTF-8 date '+%A, %d %B %Y - %H:%M:%S')" >> $GITHUB_ENV
 
+      - name: Checkout codebase
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
       - name: Set up Python version
         uses: actions/setup-python@v5
         with:
@@ -46,12 +51,11 @@ jobs:
 
       - name: Git push Proxy to "asset" branch
         run: |
-          git init
           git config --local user.name "github-actions[bot]"
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
           git fetch origin asset || true
           git checkout -b asset origin/asset || git checkout -b asset
+          
           mkdir -p Proxy
           cp -r proxy-build/Proxy/* ./Proxy/ 2>/dev/null || true
           git add Proxy
