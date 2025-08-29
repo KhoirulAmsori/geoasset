@@ -4,9 +4,6 @@ on:
     - cron: "0 17 * * *"
   workflow_dispatch:
   repository_dispatch:
-  push:
-    branches:
-      - main
 
 permissions:
   contents: write
