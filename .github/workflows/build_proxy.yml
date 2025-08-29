@@ -55,7 +55,7 @@ jobs:
           mkdir -p Proxy
           cd proxy-build
           python main.py
-          cp -r Proxy/* ../Proxy/
+          cp -r proxy_list.txt ../Proxy/
           cd ..
 
       - name: Checkout "asset" branch
