@@ -26,10 +26,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout "asset" branch
+      # Build proxy list
+      - name: Checkout main
         run: |
-          git fetch origin asset || true
-          git checkout -B asset origin/asset || git checkout -B asset
+          git checkout main
 
       - name: Set up Python version
         uses: actions/setup-python@v5
@@ -46,8 +46,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pwd
-          ls
           cd proxy-build
           pip install -r requirements.txt
           cd ..
@@ -59,6 +57,11 @@ jobs:
           python main.py
           cp -r Proxy/* ../Proxy/
           cd ..
+
+      - name: Checkout "asset" branch
+        run: |
+          git fetch origin asset || true
+          git checkout -B asset origin/asset || git checkout -B asset
 
       - name: Commit & push Output
         run: |
