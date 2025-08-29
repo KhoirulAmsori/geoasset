@@ -1,5 +1,8 @@
 name: Build Proxy List
 on:
+  push:
+    paths:
+      - "proxy-build/server_list.txt"
   schedule:
     - cron: "0 */12 * * *"
   workflow_dispatch:
