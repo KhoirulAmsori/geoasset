@@ -39,26 +39,30 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies
-        run: |
-          cd proxy-build
-          pip install -r requirements.txt
-          cd ..
-
       - name: Build proxy list
         run: |
-          mkdir -p Proxy
+          mkdir -p tmp_output
           cd proxy-build
+          pip install -r requirements.txt
           python main.py
-          cp -r proxy_list.txt ../Proxy/
-          pwd
-          ls
+          cp proxy_list.txt ../tmp_output/
           cd ..
 
       - name: Checkout "asset" branch
         run: |
           git fetch origin asset || true
           git checkout -B asset origin/asset || git checkout -B asset
+
+      - name: Copy build results to asset branch
+        run: |
+          mkdir -p Proxy
+          cp -r tmp_output/* Proxy/
+          rm -rf tmp_output
+
+      - name: Set git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Commit & push Output
         run: |
