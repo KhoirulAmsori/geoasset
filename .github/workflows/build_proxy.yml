@@ -59,16 +59,10 @@ jobs:
           cp -r tmp_output/* Proxy/
           rm -rf tmp_output
 
-      - name: Set git identity
+      - name: Commit & push Output
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Commit & push Output
-        run: |
-          pwd
-          ls
-          ls Proxy
           git add Proxy
           git commit -m "Update proxy list on ${{ env.BUILDTIME }}" || echo "No changes to commit"
           git push origin asset
