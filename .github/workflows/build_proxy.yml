@@ -24,7 +24,12 @@ jobs:
       - name: Checkout codebase
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+
+      - name: Checkout "asset" branch
+        run: |
+          git fetch origin asset || true
+          git checkout -B asset origin/asset || git checkout -B asset
 
       - name: Set up Python version
         uses: actions/setup-python@v5
@@ -43,24 +48,18 @@ jobs:
         run: |
           cd proxy-build
           pip install -r requirements.txt
+          cd ..
 
       - name: Build proxy list
         run: |
-          mkdir -p proxy-build/Proxy
+          mkdir -p Proxy
           cd proxy-build
           python main.py
-          
+          cp -r Proxy/* ../Proxy/
           cd ..
 
-      - name: Git push Proxy to "asset" branch
+      - name: Commit & push Output
         run: |
-          git config --local user.name "github-actions[bot]"
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin asset || true
-          git checkout -b asset origin/asset || git checkout -b asset
-          
-          mkdir -p Proxy
-          cp -r proxy-build/Proxy/* ./Proxy/ 2>/dev/null || true
           git add Proxy
-          git commit -m "Update Proxy list on ${{ env.BUILDTIME }}" || echo "No changes to commit"
+          git commit -m "Update proxy list on ${{ env.BUILDTIME }}" || echo "No changes to commit"
           git push origin asset

@@ -18,7 +18,17 @@ jobs:
           sudo locale-gen id_ID.UTF-8
           echo "BUILDTIME=$(LC_TIME=id_ID.UTF-8 date '+%A, %d %B %Y - %H:%M:%S')" >> $GITHUB_ENV
 
-      - name: Download GeoLite2 databases
+      - name: Checkout codebase
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # penting supaya fetch semua branch termasuk asset
+
+      - name: Checkout "asset" branch
+        run: |
+          git fetch origin asset || true
+          git checkout -B asset origin/asset || git checkout -B asset
+
+      - name: Download Maxmind asset
         env:
           LICENSE_KEY: ${{ secrets.MAXMIND_GEOLITE2_LICENSE }}
         run: |
@@ -28,17 +38,8 @@ jobs:
           curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o GEO/GeoLite2-Country.tar.gz
           curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o GEO/GeoLite2-Country-CSV.zip
 
-      - name: Git push GEO to "asset" branch
+      - name: Commit & push GEO
         run: |
-          git init
-          git config --local user.name "github-actions[bot]"
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
-          git fetch origin asset || true
-          git checkout -b asset origin/asset || git checkout -b asset
-          mkdir -p GEO
-          cp -r GEO/* ./GEO/ 2>/dev/null || true
           git add GEO
           git commit -m "Update GEO on ${{ env.BUILDTIME }}" || echo "No changes to commit"
           git push origin asset
-
