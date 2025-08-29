@@ -46,6 +46,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pwd
+          ls
           cd proxy-build
           pip install -r requirements.txt
           cd ..
