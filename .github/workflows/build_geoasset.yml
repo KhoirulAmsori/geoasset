@@ -125,11 +125,11 @@ jobs:
                printf "\n"
               }
               print "      ]\n    }\n  ]\n}"
-          }' > ./Publish/nice.json
+          }' > ./sing-rule/geo/geosite/nice.json
 
           # Pasang binari sing-box dan konversi
           curl -fsSL https://sing-box.app/install.sh | sh -s -- --beta
-          sing-box rule-set compile --output ./Publish/nice.srs ./Publish/nice.json
+          sing-box rule-set compile --output ./sing-rule/geo/geosite/nice.srs ./sing-rule/geo/geosite/nice.json
           
           # Jalankan pembangunan geo dan asn
           cd meta-rules-converter
