@@ -1,0 +1,55 @@
+name: Build Proxy List
+on:
+  schedule:
+    - cron: "0 17 * * *"
+  workflow_dispatch:
+  repository_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  Download:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set variables
+        run: |
+          export TZ="Asia/Jakarta"
+          sudo locale-gen id_ID.UTF-8
+          echo "BUILDTIME=$(LC_TIME=id_ID.UTF-8 date '+%A, %d %B %Y - %H:%M:%S')" >> $GITHUB_ENV
+
+      - name: Checkout codebase
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+
+      - name: Cache PIP packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          cd proxy-build
+          pip install -r requirements.txt
+          python main.py
+
+      - name: Git push assets to "asset" branch
+        run: |
+          cd proxy-build/Output || exit 1
+          git init
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b asset
+          git add .
+          git commit -m "Released on ${{ env.BUILDTIME }}"
+          git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git push -f -u origin asset
