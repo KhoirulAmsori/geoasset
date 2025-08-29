@@ -40,11 +40,11 @@ jobs:
         run: |
           cd proxy-build
           pip install -r requirements.txt
-          python main.py
 
       - name: Build proxy list
         run: |
           cd proxy-build
+          mkdir -p Output
           python main.py
 
       - name: Git push assets to "asset" branch
