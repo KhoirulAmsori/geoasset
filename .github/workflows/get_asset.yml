@@ -27,20 +27,23 @@ jobs:
         env:
           LICENSE_KEY: ${{ secrets.MAXMIND_GEOLITE2_LICENSE }}
         run: |
-          mkdir -p Downloaded
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o Downloaded/GeoLite2-ASN.tar.gz
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o Downloaded/GeoLite2-ASN-CSV.zip
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o Downloaded/GeoLite2-Country.tar.gz
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o Downloaded/GeoLite2-Country-CSV.zip
+          mkdir -p GEO
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o GEO/GeoLite2-ASN.tar.gz
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o GEO/GeoLite2-ASN-CSV.zip
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o GEO/GeoLite2-Country.tar.gz
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o GEO/GeoLite2-Country-CSV.zip
 
-      - name: Git push assets to "asset" branch
+      - name: Git push GEO to "asset" branch
         run: |
-          cd Downloaded || exit 1
           git init
           git config --local user.name "github-actions[bot]"
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b asset
-          git add .
-          git commit -m "Released on ${{ env.BUILDTIME }}"
           git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
-          git push -f -u origin asset
+          git fetch origin asset || true
+          git checkout -b asset origin/asset || git checkout -b asset
+          mkdir -p GEO
+          cp -r GEO/* ./GEO/ 2>/dev/null || true
+          git add GEO
+          git commit -m "Update GEO on ${{ env.BUILDTIME }}" || echo "No changes to commit"
+          git push origin asset
+
