@@ -42,14 +42,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Build proxy list
+      - name: Install deps & build proxy list
         run: |
           cd source/proxy-build
           pip install -r requirements.txt -qq
           python main.py
           cd ../..
-          mkdir -p tmp_output
-          cp source/proxy-build/proxy_list.txt tmp_output/
 
       # Siapkan repo lokal baru untuk branch 'asset' di folder 'asset/'
       # Jika 'asset' belum ada di remote → buat orphan branch
