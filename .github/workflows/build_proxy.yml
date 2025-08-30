@@ -80,5 +80,5 @@ jobs:
         run: |
           cd asset
           git add Proxy
-          git commit -m "Update proxy list on ${{ env.BUILDTIME }}" --allow-empty
+          git commit -m "Update proxy list on ${{ env.BUILDTIME }}" || echo "No changes to commit"
           git push -u origin asset
