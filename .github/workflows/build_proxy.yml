@@ -48,7 +48,7 @@ jobs:
           cp proxy_list.txt ../tmp_output/
           cd ..
 
-      - name: Checkout "asset" branch
+      - name: Checkout asset branch
         run: |
           git fetch origin asset || true
           git checkout -B asset origin/asset || git checkout -B asset
@@ -59,7 +59,7 @@ jobs:
           cp -r tmp_output/* Proxy/
           rm -rf tmp_output
 
-      - name: Commit & push Output
+      - name: Commit & push Proxy
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
