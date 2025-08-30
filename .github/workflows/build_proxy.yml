@@ -21,10 +21,13 @@ jobs:
           sudo locale-gen id_ID.UTF-8
           echo "BUILDTIME=$(LC_TIME=id_ID.UTF-8 date '+%A, %d %B %Y - %H:%M:%S')" >> $GITHUB_ENV
 
-      - name: Checkout codebase
+      # Checkout branch main untuk ambil source proxy-build
+      - name: Checkout main branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
+          path: source   # <== disimpan di folder source/
 
       - name: Set up Python version
         uses: actions/setup-python@v5
@@ -41,26 +44,29 @@ jobs:
 
       - name: Build proxy list
         run: |
-          mkdir -p tmp_output
-          cd proxy-build
-          pip install -r requirements.txt
+          cd source/proxy-build
+          pip install -r requirements.txt -qq
           python main.py
-          cp proxy_list.txt ../tmp_output/
-          cd ..
+          cd ../..
+          mkdir -p tmp_output
+          cp source/proxy-build/proxy_list.txt tmp_output/
 
+      # Checkout asset branch ke folder berbeda
       - name: Checkout asset branch
-        run: |
-          git fetch origin asset || true
-          git checkout -B asset origin/asset || git checkout -B asset
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: asset
+          path: asset    # <== branch asset di folder asset/
 
-      - name: Copy build results to asset branch
+      - name: Copy build results to asset
         run: |
-          mkdir -p Proxy
-          cp -r tmp_output/* Proxy/
-          rm -rf tmp_output
+          mkdir -p asset/Proxy
+          cp -r tmp_output/* asset/Proxy/
 
       - name: Commit & push Proxy
         run: |
+          cd asset
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add Proxy
