@@ -48,8 +48,6 @@ jobs:
           pip install -r requirements.txt -qq
           python main.py
           cd ../..
-          mkdir -p tmp_output
-          cp source/proxy-build/proxy_list.txt tmp_output/
 
       # Siapkan repo lokal baru untuk branch 'asset' di folder 'asset/'
       # Jika 'asset' belum ada di remote → buat orphan branch
@@ -82,5 +80,5 @@ jobs:
         run: |
           cd asset
           git add Proxy
-          git commit -m "Update proxy list on ${{ env.BUILDTIME }}" || echo "No changes to commit"
+          git commit -m "Update proxy list on ${{ env.BUILDTIME }}" --allow-empty
           git push -u origin asset
