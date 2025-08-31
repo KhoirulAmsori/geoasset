@@ -1,7 +1,7 @@
 name: Build Proxy List
 on:
   schedule:
-    - cron: "0 */3 * * *" # 3 jam sekali
+    - cron: "0 * * * *"
   workflow_dispatch:
   repository_dispatch:
 
@@ -15,7 +15,7 @@ jobs:
       GithubApiToken: ${{ secrets.GITHUB_TOKEN }}
       GithubUser: ${{ github.repository_owner }}
       GithubRepo: geoasset
-      Timeout: 5000
+      Timeout: 6000
       MaxThreadCount: 96
       SingboxPath: sing-box
       V2rayFormatResultPath: proxy-build/asset/proxy_list.txt
