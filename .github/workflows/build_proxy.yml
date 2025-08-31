@@ -47,12 +47,19 @@ jobs:
           ref: main
           path: source   # <== disimpan di folder source/
 
+      - name: Install sing-box
+        run: |
+          sudo -E apt-get -y update
+          sudo -E apt-get -y install sing-box
+          sing-box version
+
       - name: Build proxy list
         run: |
-          pwd
           cd source/proxy-build
           dotnet restore
           dotnet run --configuration Release --project .
+          pwd
+          ls
           cd ../..
 
       # Siapkan repo lokal baru untuk branch 'asset' di folder 'asset/'
