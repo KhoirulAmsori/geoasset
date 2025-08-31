@@ -5,4 +5,5 @@
 - [v2fly](https://github.com/v2fly)
 - [MetaCubeX](https://github.com/MetaCubeX)
 - [rtaserver](https://github.com/rtaserver)
+- [Mahdi0024](https://github.com/Mahdi0024)
 - Dan semuanya yang berkontribusi pada kode di repositori ini.
