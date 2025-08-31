@@ -49,8 +49,9 @@ jobs:
 
       - name: Install sing-box
         run: |
-          sudo -E apt-get -y update
-          sudo -E apt-get -y install sing-box
+          cd source/proxy-build
+          sudo dpkg -i sing-box.deb
+          sudo apt-get install -f
           sing-box version
 
       - name: Build proxy list
