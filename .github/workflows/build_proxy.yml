@@ -20,9 +20,9 @@ jobs:
       SingboxPath: sing-box
       V2rayFormatResultPath: proxy-build/asset/proxy_list.txt
       Sources: |
-        # https://raw.githubusercontent.com/mahdibland/ShadowsocksAggregator/master/Eternity.txt
-        # https://raw.githubusercontent.com/Surfboardv2ray/Proxy-sorter/main/output/US.txt
-        # https://raw.githubusercontent.com/Surfboardv2ray/TGParse/main/splitted/mixed
+        https://raw.githubusercontent.com/mahdibland/ShadowsocksAggregator/master/Eternity.txt
+        https://raw.githubusercontent.com/Surfboardv2ray/Proxy-sorter/main/output/US.txt
+        https://raw.githubusercontent.com/Surfboardv2ray/TGParse/main/splitted/mixed
         https://raw.githubusercontent.com/LalatinaHub/Mineral/master/result/nodes
         https://raw.githubusercontent.com/mheidari98/.proxy/main/all
 
@@ -49,7 +49,6 @@ jobs:
         run: |
           sudo dpkg -i proxy-build/asset/sing-box.deb
           sudo apt-get install -f
-          sing-box version
 
       - name: Build proxy list
         run: |
