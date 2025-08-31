@@ -22,9 +22,7 @@ jobs:
       - name: Checkout main branch
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          ref: main
-          path: source   # <== disimpan di folder source/
+          fetch-depth: 1
 
       - name: Download Maxmind asset
         env:
