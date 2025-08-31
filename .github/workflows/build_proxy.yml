@@ -39,9 +39,6 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Restore dependencies
-        run: dotnet restore
-
       # Checkout branch main untuk ambil source proxy-build
       - name: Checkout main branch
         uses: actions/checkout@v4
@@ -50,10 +47,14 @@ jobs:
           ref: main
           path: source   # <== disimpan di folder source/
 
+      - name: Restore dependencies
+        run: |
+          cd source/proxy-build
+          dotnet restore
 
       - name: Build proxy list
         run: |
-          cd source/proxy-build
+          pwd
           dotnet run --configuration Release --project .
           cd ../..
 
