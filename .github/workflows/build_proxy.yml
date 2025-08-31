@@ -18,7 +18,7 @@ jobs:
       Timeout: 5000
       MaxThreadCount: 96
       SingboxPath: sing-box
-      V2rayFormatResultPath: Asset/proxy-build/proxy_list.txt
+      V2rayFormatResultPath: asset/proxy_list.txt
       Sources: |
         # https://raw.githubusercontent.com/mahdibland/ShadowsocksAggregator/master/Eternity.txt
         # https://raw.githubusercontent.com/Surfboardv2ray/Proxy-sorter/main/output/US.txt
@@ -48,7 +48,7 @@ jobs:
       - name: Install sing-box
         run: |
           cd proxy-build
-          sudo dpkg -i Asset/sing-box.deb
+          sudo dpkg -i asset/sing-box.deb
           sudo apt-get install -f
           sing-box version
 
