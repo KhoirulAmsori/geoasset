@@ -47,7 +47,6 @@ jobs:
 
       - name: Install sing-box
         run: |
-          cd proxy-build
           sudo dpkg -i asset/sing-box.deb
           sudo apt-get install -f
           sing-box version
