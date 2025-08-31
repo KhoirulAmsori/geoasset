@@ -1,8 +1,4 @@
 name: Build Proxy List
-on:
-  push:
-    paths:
-      - "proxy-build/server_list.txt"
   schedule:
     - cron: "0 */12 * * *"
   workflow_dispatch:
@@ -14,12 +10,36 @@ permissions:
 jobs:
   Build:
     runs-on: ubuntu-latest
+    env:
+      GithubApiToken: ${{ secrets.GITHUB_TOKEN }}
+      GithubUser: ${{ github.repository_owner }}
+      GithubRepo: geoasset
+      Timeout: 5000
+      MaxThreadCount: 96
+      SingboxPath: sing-box
+      V2rayFormatResultPath: proxy_list.
+      Sources: |
+        https://raw.githubusercontent.com/mahdibland/ShadowsocksAggregator/master/Eternity.txt
+        https://raw.githubusercontent.com/Surfboardv2ray/Proxy-sorter/main/output/US.txt
+        https://raw.githubusercontent.com/Surfboardv2ray/TGParse/main/splitted/mixed
+        https://raw.githubusercontent.com/LalatinaHub/Mineral/master/result/nodes
+        https://raw.githubusercontent.com/mheidari98/.proxy/main/all
+
     steps:
       - name: Set variables
         run: |
           export TZ="Asia/Jakarta"
           sudo locale-gen id_ID.UTF-8
           echo "BUILDTIME=$(LC_TIME=id_ID.UTF-8 date '+%A, %d %B %Y - %H:%M:%S')" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
 
       # Checkout branch main untuk ambil source proxy-build
       - name: Checkout main branch
@@ -29,24 +49,11 @@ jobs:
           ref: main
           path: source   # <== disimpan di folder source/
 
-      - name: Set up Python version
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.13
 
-      - name: Cache PIP packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install deps & build proxy list
+      - name: Build proxy list
         run: |
           cd source/proxy-build
-          pip install -r requirements.txt -qq
-          python main.py
+          dotnet run --configuration Release --project .
           cd ../..
 
       # Siapkan repo lokal baru untuk branch 'asset' di folder 'asset/'
