@@ -18,12 +18,12 @@ jobs:
       Timeout: 5000
       MaxThreadCount: 96
       SingboxPath: sing-box
-      V2rayFormatResultPath: proxy-build/proxy_list.txt
+      V2rayFormatResultPath: Asset/proxy-build/proxy_list.txt
       Sources: |
-        https://raw.githubusercontent.com/mahdibland/ShadowsocksAggregator/master/Eternity.txt
-        https://raw.githubusercontent.com/Surfboardv2ray/Proxy-sorter/main/output/US.txt
+        # https://raw.githubusercontent.com/mahdibland/ShadowsocksAggregator/master/Eternity.txt
+        # https://raw.githubusercontent.com/Surfboardv2ray/Proxy-sorter/main/output/US.txt
         https://raw.githubusercontent.com/Surfboardv2ray/TGParse/main/splitted/mixed
-        https://raw.githubusercontent.com/LalatinaHub/Mineral/master/result/nodes
+        # https://raw.githubusercontent.com/LalatinaHub/Mineral/master/result/nodes
         https://raw.githubusercontent.com/mheidari98/.proxy/main/all
 
     steps:
@@ -43,56 +43,17 @@ jobs:
       - name: Checkout main branch
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          ref: main
-          path: source   # <== disimpan di folder source/
+          fetch-depth: 1
 
       - name: Install sing-box
         run: |
-          cd source/proxy-build
-          sudo dpkg -i sing-box.deb
+          cd proxy-build
+          sudo dpkg -i Asset/sing-box.deb
           sudo apt-get install -f
           sing-box version
 
       - name: Build proxy list
         run: |
-          cd source/proxy-build
+          cd proxy-build
           dotnet restore
           dotnet run --configuration Release --project .
-          pwd
-          ls
-          cd ../..
-
-      # Siapkan repo lokal baru untuk branch 'asset' di folder 'asset/'
-      # Jika 'asset' belum ada di remote → buat orphan branch
-      - name: Prepare local repo for 'asset' branch (create if missing)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          rm -rf asset
-          mkdir -p asset
-          cd asset
-          git init
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote add origin "https://${{ github.actor }}:${GH_TOKEN}@github.com/${{ github.repository }}"
-          if git ls-remote --exit-code --heads origin asset; then
-            git fetch origin asset
-            git checkout -b asset origin/asset
-          else
-            git checkout --orphan asset
-          fi
-          cd ..
-
-      # Salin hanya hasil build ke branch 'asset'
-      - name: Copy build results to asset/Proxy
-        run: |
-          mkdir -p asset/Proxy
-          cp ${{ env.V2rayFormatResultPath }} asset/Proxy/
-
-      - name: Commit & push Proxy
-        run: |
-          cd asset
-          git add Proxy
-          git commit -m "Update proxy list on ${{ env.BUILDTIME }}" || echo "No changes to commit"
-          git push -u origin asset
