@@ -1,7 +1,7 @@
 name: Build Proxy List
 on:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "*/30 * * * *"
   workflow_dispatch:
   repository_dispatch:
 
@@ -23,6 +23,13 @@ jobs:
         https://raw.githubusercontent.com/Surfboardv2ray/TGParse/main/splitted/mixed
         https://raw.githubusercontent.com/LalatinaHub/Mineral/master/result/nodes
         https://raw.githubusercontent.com/mheidari98/.proxy/main/all
+        https://raw.githubusercontent.com/MrMohebi/xray-proxy-grabber-telegram/master/collected-proxies/row-url/actives.txt
+        https://raw.githubusercontent.com/mahdibland/ShadowsocksAggregator/master/Eternity.txt
+        https://raw.githubusercontent.com/snakem982/proxypool/refs/heads/main/source/v2ray-2.txt
+        https://raw.githubusercontent.com/hkaa0/permalink/main/proxy/V2ray.txt
+        https://raw.githubusercontent.com/Barabama/FreeNodes/master/nodes/yudou66.txt
+        https://raw.githubusercontent.com/kaoxindalao/v2raycheshi/main/v2raycheshi
+        https://raw.githubusercontent.com/MhdiTaheri/V2rayCollector_Py/main/sub/Singapore/config.txt
 
     steps:
       - name: Set variables
@@ -41,6 +48,7 @@ jobs:
       - name: Checkout main branch
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 1
 
       - name: Install sing-box
