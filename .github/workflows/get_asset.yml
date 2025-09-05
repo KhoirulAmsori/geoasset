@@ -18,7 +18,6 @@ jobs:
           sudo locale-gen id_ID.UTF-8
           echo "BUILDTIME=$(LC_TIME=id_ID.UTF-8 date '+%A, %d %B %Y - %H:%M:%S')" >> $GITHUB_ENV
 
-      # Checkout branch main untuk ambil source proxy-build
       - name: Checkout main branch
         uses: actions/checkout@v5
         with:
@@ -28,15 +27,15 @@ jobs:
         env:
           LICENSE_KEY: ${{ secrets.MAXMIND_GEOLITE2_LICENSE }}
         run: |
-          mkdir -p asset
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o asset/GeoLite2-ASN.tar.gz
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o asset/GeoLite2-ASN-CSV.zip
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o asset/GeoLite2-Country.tar.gz
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o asset/GeoLite2-Country-CSV.zip
+          mkdir -p GEO
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o GEO/GeoLite2-ASN.tar.gz
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o GEO/GeoLite2-ASN-CSV.zip
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o GEO/GeoLite2-Country.tar.gz
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o GEO/GeoLite2-Country-CSV.zip
 
       - name: Push downloaded asset to asset branch
         run: |
-          cd asset
+          cd GEO
           git init
           git config --local user.name "github-actions[bot]"
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"

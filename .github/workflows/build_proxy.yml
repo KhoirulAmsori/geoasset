@@ -31,7 +31,7 @@ jobs:
         https://raw.githubusercontent.com/hkaa0/permalink/main/proxy/V2ray.txt
         https://raw.githubusercontent.com/Barabama/FreeNodes/master/nodes/yudou66.txt
         https://raw.githubusercontent.com/kaoxindalao/v2raycheshi/main/v2raycheshi
-        https://raw.githubusercontent.com/MhdiTaheri/V2rayCollector_Py/main/sub/Singapore/config.txt
+        https://raw.githubusercontent.com/MhdiTaheri/V2rayCollector_Py/main/sub/Mix/mix.txt
 
     steps:
       - name: Set variables
@@ -46,20 +46,53 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      # Checkout branch main untuk ambil source proxy-build
       - name: Checkout main branch
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           ref: main
-          fetch-depth: 1
+          path: source
 
       - name: Install sing-box
         run: |
-          sudo dpkg -i proxy-build/sing-box.deb
+          sudo dpkg -i source/proxy-build/sing-box.deb
           sudo apt-get install -f
 
       - name: Build proxy list
         run: |
-          cd proxy-build
+          cd source/proxy-build
           dotnet restore
           dotnet run --configuration Release --project .
+          cd ../..
+
+      - name: Prepare local repo for 'asset' branch (create if missing)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          rm -rf asset
+          mkdir -p asset
+          cd asset
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://${{ github.actor }}:${GH_TOKEN}@github.com/${{ github.repository }}"
+          if git ls-remote --exit-code --heads origin asset; then
+            git fetch origin asset
+            git checkout -b asset origin/asset
+          else
+            git checkout --orphan asset
+          fi
+          cd ..
+
+      # Salin hanya hasil build ke branch 'asset'
+      - name: Copy build results to asset/Proxy
+        run: |
+          mkdir -p asset/Proxy
+          cp source/proxy-build/proxy_list.txt asset/Proxy/
+
+      - name: Commit & push Proxy
+        run: |
+          cd asset
+          git add Proxy
+          git commit -m "Update proxy list on ${{ env.BUILDTIME }}" || echo "No changes to commit"
+          git push -u origin asset
