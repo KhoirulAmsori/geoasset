@@ -26,6 +26,7 @@ public class CollectorConfig
             GithubApiToken = Environment.GetEnvironmentVariable("GithubApiToken")!,
             GithubUser = Environment.GetEnvironmentVariable("GithubUser")!,
             GithubRepo = Environment.GetEnvironmentVariable("GithubRepo")!,
+            MaxProxiesPerCountry = Environment.GetEnvironmentVariable("MaxProxiesPerCountry")!,
             V2rayFormatResultPath = Environment.GetEnvironmentVariable("V2rayFormatResultPath")!,
             SingboxFormatResultPath = Environment.GetEnvironmentVariable("SingboxFormatResultPath")!,
             SingboxPath = Environment.GetEnvironmentVariable("SingboxPath")!,
