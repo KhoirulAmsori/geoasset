@@ -18,7 +18,7 @@ jobs:
   Build:
     runs-on: ubuntu-latest
     env:
-      MaxProxiesPerCountry: ${{ github.event.inputs.max_proxies_per_country }}
+      MaxProxiesPerCountry: ${{ github.event.inputs.max_proxies_per_country || 2 }}
       Timeout: 6000
       MaxThreadCount: 96
       SingboxPath: sing-box
