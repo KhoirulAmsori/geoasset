@@ -52,7 +52,7 @@ public class ProxyCollector
             (
                 x => x.OrderBy(x => x.TestResult.Delay)
                     .WithIndex()
-                    .Take(5) // <-- ambil maksimal 5 proxy per country
+                    .Take(3) // <-- ambil maksimal 5 proxy per country
                     .Select(x =>
                     {
                         var profile = x.Item.TestResult.Profile;
