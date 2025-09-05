@@ -18,9 +18,6 @@ jobs:
   Build:
     runs-on: ubuntu-latest
     env:
-      GithubApiToken: ${{ secrets.GITHUB_TOKEN }}
-      GithubUser: ${{ github.repository_owner }}
-      GithubRepo: geoasset
       MaxProxiesPerCountry: ${{ github.event.inputs.max_proxies_per_country }}
       Timeout: 6000
       MaxThreadCount: 96
@@ -58,7 +55,7 @@ jobs:
 
       - name: Install sing-box
         run: |
-          sudo dpkg -i proxy-build/Asset/sing-box.deb
+          sudo dpkg -i proxy-build/sing-box.deb
           sudo apt-get install -f
 
       - name: Build proxy list
@@ -66,6 +63,3 @@ jobs:
           cd proxy-build
           dotnet restore
           dotnet run --configuration Release --project .
-          pwd
-          ls
-          cat proxy_list.txt
