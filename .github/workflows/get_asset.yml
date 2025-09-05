@@ -21,26 +21,50 @@ jobs:
       - name: Checkout main branch
         uses: actions/checkout@v5
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+          ref: main
+          path: source
 
       - name: Download Maxmind asset
         env:
           LICENSE_KEY: ${{ secrets.MAXMIND_GEOLITE2_LICENSE }}
         run: |
-          mkdir -p GEO
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o GEO/GeoLite2-ASN.tar.gz
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o GEO/GeoLite2-ASN-CSV.zip
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o GEO/GeoLite2-Country.tar.gz
-          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o GEO/GeoLite2-Country-CSV.zip
+          cd source
+          mkdir -p geo_output
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${LICENSE_KEY}&suffix=tar.gz" -o geo_output/GeoLite2-ASN.tar.gz
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o geo_output/GeoLite2-ASN-CSV.zip
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${LICENSE_KEY}&suffix=tar.gz" -o geo_output/GeoLite2-Country.tar.gz
+          curl -L "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${LICENSE_KEY}&suffix=zip" -o geo_output/GeoLite2-Country-CSV.zip
+          
+          cd ..
 
-      - name: Push downloaded asset to asset branch
+      - name: Prepare local repo for 'asset' branch (create if missing)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd GEO
+          rm -rf asset
+          mkdir -p asset
+          cd asset
           git init
-          git config --local user.name "github-actions[bot]"
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b asset
-          git add .
-          git commit -m "Released on ${{ env.BUILDTIME }}"
-          git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
-          git push -f -u origin asset
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://${{ github.actor }}:${GH_TOKEN}@github.com/${{ github.repository }}"
+          if git ls-remote --exit-code --heads origin asset; then
+            git fetch origin asset
+            git checkout -b asset origin/asset
+          else
+            git checkout --orphan asset
+          fi
+          cd ..
+
+      - name: Copy downloaded asset  to asset/GEO
+        run: |
+          mkdir -p asset/GEO
+          cp -r source/geo_output/* asset/GEO/
+
+      - name: Commit & push
+        run: |
+          cd asset
+          git add GEO
+          git commit -m "Update GEO on ${{ env.BUILDTIME }}" || echo "No changes to commit"
+          git push -u origin asset

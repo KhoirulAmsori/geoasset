@@ -22,7 +22,7 @@ jobs:
       Timeout: 6000
       MaxThreadCount: 96
       SingboxPath: sing-box
-      V2rayFormatResultPath: proxy_list.txt
+      V2rayFormatResultPath: list.txt
       Sources: |
         https://raw.githubusercontent.com/Surfboardv2ray/TGParse/main/splitted/mixed
         https://raw.githubusercontent.com/LalatinaHub/Mineral/master/result/nodes
@@ -47,7 +47,7 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Checkout main branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: main
@@ -84,11 +84,10 @@ jobs:
           fi
           cd ..
 
-      # Salin hanya hasil build ke branch 'asset'
       - name: Copy build results to asset/Proxy
         run: |
           mkdir -p asset/Proxy
-          cp source/proxy-build/proxy_list.txt asset/Proxy/
+          cp source/proxy-build/list.txt asset/Proxy/
 
       - name: Commit & push Proxy
         run: |

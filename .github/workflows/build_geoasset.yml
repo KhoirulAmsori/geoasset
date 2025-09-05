@@ -48,7 +48,7 @@ jobs:
 
       - name: Build GEOIP
         run: |
-          cd geoip-build/asset/
+          cd geoip-build/asset/GEO
           
           # Ekstrak semua aset
           for file in *.{tar.gz,zip}; do
@@ -56,15 +56,15 @@ jobs:
             [[ $file == *.zip ]] && unzip "$file"
           done
           
-          cd ..
+          cd ../../
           mkdir -p geolite2
           
           # Pindahkah aset terunduh ke geolite2
-          cp asset/GeoLite2-Country_*/*.mmdb geolite2/
-          cp asset/GeoLite2-ASN_*/*.mmdb geolite2/
-          cp asset/GeoLite2-ASN-CSV_*/*.csv geolite2/
-          cp asset/GeoLite2-Country-CSV_*/*.csv geolite2/
-          cp asset/GeoLite2-Country-CSV_*/{GeoLite2-Country-Blocks-IPv4*,GeoLite2-Country-Locations-en}.csv geolite2/
+          cp asset/GEO/GeoLite2-Country_*/*.mmdb geolite2/
+          cp asset/GEO/GeoLite2-ASN_*/*.mmdb geolite2/
+          cp asset/GEO/GeoLite2-ASN-CSV_*/*.csv geolite2/
+          cp asset/GEO/GeoLite2-Country-CSV_*/*.csv geolite2/
+          cp asset/GEO/GeoLite2-Country-CSV_*/{GeoLite2-Country-Blocks-IPv4*,GeoLite2-Country-Locations-en}.csv geolite2/
           
           # Salin aset untuk diterbitkann
           cp geolite2/GeoLite2-ASN.mmdb ../Publish/GeoLite2-ASN.mmdb
