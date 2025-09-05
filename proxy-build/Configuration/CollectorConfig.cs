@@ -6,6 +6,7 @@ public class CollectorConfig
     public required string GithubApiToken { get; init; }
     public required string GithubUser { get; init; }
     public required string GithubRepo { get; init; }
+    public required string MaxProxiesPerCountry { get; init; }
     public required string SingboxPath { get; init; }
     public required string V2rayFormatResultPath { get; init; }
     public required string SingboxFormatResultPath { get; init; }
