@@ -181,7 +181,17 @@ public class ProxyCollector
             finalResult.AppendLine(profile.ToProfileUrl());
             profile.Name = profileName;
         }
-        await CommitFileToGithub(finalResult.ToString(), _config.V2rayFormatResultPath);
+        // await CommitFileToGithub(finalResult.ToString(), _config.V2rayFormatResultPath);
+
+        var outputPath = _config.V2rayFormatResultPath;
+
+        // Pastikan folder tujuan ada
+        var dir = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            Directory.CreateDirectory(dir);
+
+        await File.WriteAllTextAsync(outputPath, finalResult.ToString());
+        LogToConsole($"Subscription file written to {outputPath}");
     }
 
     private async Task CommitFileToGithub(string content, string path)
