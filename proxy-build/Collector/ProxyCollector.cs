@@ -75,100 +75,6 @@ public class ProxyCollector
     {
         LogToConsole($"Uploading V2ray Subscription...");
         await CommitV2raySubscriptionResult(profiles);
-        // LogToConsole($"Uploading sing-box Subscription...");
-        // await CommitSingboxSubscription(profiles);
-    }
-
-    private async Task CommitSingboxSubscription(List<ProfileItem> profiles)
-    {
-        var outbounds = new List<OutboundConfig>(profiles.Count + 3);
-        foreach (var profile in profiles)
-        {
-            var outbound = profile.ToOutboundConfig();
-            outbound.Tag = profile.Name;
-            outbounds.Add(outbound);
-        }
-
-        var allOutboundTags = profiles.Select(profile => profile.Name!).ToList();
-        var selector = new SelectorOutbound
-        {
-            Outbounds = new List<string>(profiles.Count + 1)
-            {
-               "auto"
-            },
-            Default = "auto"
-        };
-        selector.Outbounds.AddRange(allOutboundTags);
-
-        outbounds.Add(selector);
-        outbounds.Add(new DnsOutbound());
-
-        var urlTest = new UrlTestOutbound
-        {
-            Outbounds = allOutboundTags,
-            Interval = "10m",
-            Tolerance = 200,
-            Url = "https://www.gstatic.com/generate_204",
-        };
-        outbounds.Add(urlTest);
-
-        var config = new SingBoxConfig
-        {
-            Outbounds = outbounds,
-            Inbounds = new()
-            {
-                new TunInbound
-                {
-                    InterfaceName = "tun0",
-                    INet4Address = "172.19.0.1/30",
-                    Mtu = 1500,
-                    AutoRoute = true,
-                    Stack = TunStacks.System,
-                    EndpointIndependantNat = true,
-                    StrictRoute = true,
-                    Sniff = true,
-                    SniffOverrideDestination = true,
-                    DomainStrategy = DomainStrategies.PreferIPV4
-                },
-                new MixedInbound
-                {
-                    Listen = "127.0.0.1",
-                    ListenPort = 2080,
-                    Sniff = true,
-                    SniffOverrideDestination = true,
-                    DomainStrategy = DomainStrategies.PreferIPV4
-                }
-            },
-            Route = new()
-            {
-                AutoDetectInterface = true,
-                OverrideAndroidVpn = true,
-                Final = "selector-out",
-                Rules = new()
-                {
-                    new RouteRule
-                    {
-                        Port = new() { 53},
-                        Outbound = "dns-out"
-                    },
-                }
-            }
-            //,
-            //Experimental = new()
-            //{
-            //    ClashApi = new()
-            //    {
-            //        ExternalController = "127.0.0.1:9090",
-            //        ExternalUi = "yacd",
-            //        ExternalUiDownloadUrl = "https://github.com/MetaCubeX/Yacd-meta/archive/gh-pages.zip",
-            //        StoreSelected = true,
-            //        CacheFile = "clash.db",
-            //    }
-            //}
-        };
-        var finalResult = config.ToJson();
-
-        await CommitFileToGithub(finalResult, _config.SingboxFormatResultPath);
     }
 
     private async Task CommitV2raySubscriptionResult(List<ProfileItem> profiles)
@@ -181,7 +87,6 @@ public class ProxyCollector
             finalResult.AppendLine(profile.ToProfileUrl());
             profile.Name = profileName;
         }
-        // await CommitFileToGithub(finalResult.ToString(), _config.V2rayFormatResultPath);
 
         var outputPath = _config.V2rayFormatResultPath;
 
@@ -192,38 +97,6 @@ public class ProxyCollector
 
         await File.WriteAllTextAsync(outputPath, finalResult.ToString());
         LogToConsole($"Subscription file written to {outputPath}");
-    }
-
-    private async Task CommitFileToGithub(string content, string path)
-    {
-        string? sha = null;
-        var client = new GitHubClient(new ProductHeaderValue("ProxyCollector"))
-        {
-            Credentials = new Credentials(_config.GithubApiToken)
-        };
-        try
-        {
-            var contents = await client.Repository.Content.GetAllContents(_config.GithubUser, _config.GithubRepo, path);
-            sha = contents.FirstOrDefault()?.Sha;
-        }
-        catch { }
-
-        if (sha is null)
-        {
-            await client.Repository
-                .Content
-                .CreateFile(_config.GithubUser, _config.GithubRepo, path,
-                new CreateFileRequest("Added subscription file", content));
-            LogToConsole("Result file did not exist, created a new file.");
-        }
-        else
-        {
-            await client.Repository
-                .Content
-                .UpdateFile(_config.GithubUser, _config.GithubRepo, path,
-                new UpdateFileRequest("Updated subscription", content, sha));
-            LogToConsole("Subscription file updated successfully.");
-        }
     }
 
     private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles)

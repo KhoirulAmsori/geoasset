@@ -3,13 +3,9 @@
 public class CollectorConfig
 {
     public static CollectorConfig Instance { get; private set; }
-    public required string GithubApiToken { get; init; }
-    public required string GithubUser { get; init; }
-    public required string GithubRepo { get; init; }
     public required int MaxProxiesPerCountry { get; init; }
     public required string SingboxPath { get; init; }
     public required string V2rayFormatResultPath { get; init; }
-    public required string SingboxFormatResultPath { get; init; }
     public required int MaxThreadCount { get; init; }
     public required int Timeout { get; init; }
     public required string[] Sources { get; init; }
@@ -29,7 +25,6 @@ public class CollectorConfig
             GithubRepo = Environment.GetEnvironmentVariable("GithubRepo")!,
             MaxProxiesPerCountry = int.Parse(Environment.GetEnvironmentVariable("MaxProxiesPerCountry")!),
             V2rayFormatResultPath = Environment.GetEnvironmentVariable("V2rayFormatResultPath")!,
-            SingboxFormatResultPath = Environment.GetEnvironmentVariable("SingboxFormatResultPath")!,
             SingboxPath = Environment.GetEnvironmentVariable("SingboxPath")!,
             MaxThreadCount = int.Parse(Environment.GetEnvironmentVariable("MaxThreadCount")!),
             Timeout = int.Parse(Environment.GetEnvironmentVariable("Timeout")!),
