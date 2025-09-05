@@ -6,7 +6,7 @@ public class CollectorConfig
     public required string GithubApiToken { get; init; }
     public required string GithubUser { get; init; }
     public required string GithubRepo { get; init; }
-    public required string MaxProxiesPerCountry { get; init; }
+    public required int MaxProxiesPerCountry { get; init; }
     public required string SingboxPath { get; init; }
     public required string V2rayFormatResultPath { get; init; }
     public required string SingboxFormatResultPath { get; init; }
@@ -27,7 +27,7 @@ public class CollectorConfig
             GithubApiToken = Environment.GetEnvironmentVariable("GithubApiToken")!,
             GithubUser = Environment.GetEnvironmentVariable("GithubUser")!,
             GithubRepo = Environment.GetEnvironmentVariable("GithubRepo")!,
-            MaxProxiesPerCountry = Environment.GetEnvironmentVariable("MaxProxiesPerCountry")!,
+            MaxProxiesPerCountry = int.Parse(Environment.GetEnvironmentVariable("MaxProxiesPerCountry")!),
             V2rayFormatResultPath = Environment.GetEnvironmentVariable("V2rayFormatResultPath")!,
             SingboxFormatResultPath = Environment.GetEnvironmentVariable("SingboxFormatResultPath")!,
             SingboxPath = Environment.GetEnvironmentVariable("SingboxPath")!,
