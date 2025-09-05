@@ -4,6 +4,11 @@ on:
     - cron: "*/30 * * * *"
   workflow_dispatch:
   repository_dispatch:
+    inputs:
+      max_proxies_per_country:
+        description: "Batas maksimal proxy per country"
+        required: false
+        default: "3"
 
 permissions:
   contents: write
@@ -15,6 +20,7 @@ jobs:
       GithubApiToken: ${{ secrets.GITHUB_TOKEN }}
       GithubUser: ${{ github.repository_owner }}
       GithubRepo: geoasset
+      MaxProxiesPerCountry: ${{ github.event.inputs.max_proxies_per_country }}
       Timeout: 6000
       MaxThreadCount: 96
       SingboxPath: sing-box
