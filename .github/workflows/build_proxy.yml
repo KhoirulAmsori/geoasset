@@ -1,22 +1,15 @@
 name: Build Proxy List
+
 on:
   schedule:
     - cron: "*/30 * * * *"
   workflow_dispatch:
-  repository_dispatch:
     inputs:
       max_proxies_per_country:
         description: "Batas maksimal proxy per country"
         required: false
         default: "3"
-      release_branch:
-        description: "Select the release branch:"
-        required: true
-        default: "immortalwrt:24.10.2"
-        type: choice
-        options:
-          - openwrt:24.10.2
-          - immortalwrt:24.10.2
+  repository_dispatch:
 
 permissions:
   contents: write
