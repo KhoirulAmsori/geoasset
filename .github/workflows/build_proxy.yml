@@ -66,4 +66,7 @@ jobs:
           cd proxy-build
           dotnet restore
           dotnet run --configuration Release --project .
-          cat proxy_list.txt
+          pwd
+          ls
+          pwd
+          ls proxy-build
