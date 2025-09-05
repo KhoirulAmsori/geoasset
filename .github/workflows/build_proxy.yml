@@ -4,11 +4,6 @@ on:
   schedule:
     - cron: "0 * * * *"
   workflow_dispatch:
-    inputs:
-      max_proxies_per_country:
-        description: "Batas maksimal proxy per country"
-        required: false
-        default: "2"
   repository_dispatch:
 
 permissions:
@@ -18,7 +13,7 @@ jobs:
   Build:
     runs-on: ubuntu-latest
     env:
-      MaxProxiesPerCountry: ${{ github.event.inputs.max_proxies_per_country || 2 }}
+      MaxProxiesPerCountry: 2
       Timeout: 6000
       MaxThreadCount: 96
       SingboxPath: sing-box
