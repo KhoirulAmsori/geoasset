@@ -106,10 +106,10 @@ public class ProxyCollector
     {
         var tester = new ParallelUrlTester(
             new SingBoxWrapper(_config.SingboxPath),
-            30000,
+            20000,
             _config.MaxThreadCount,
             _config.Timeout,
-            4096,
+            1024,
             "https://www.gstatic.com/generate_204");
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
