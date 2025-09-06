@@ -14,7 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       MaxProxiesPerCountry: 2
-      ProxiesName: countryInfo.CountryName # countryInfo.CountryCode
       Timeout: 6000
       MaxThreadCount: 96
       SingboxPath: sing-box
