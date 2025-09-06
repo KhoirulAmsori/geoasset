@@ -78,13 +78,13 @@ public class ProxyCollector
             })
             .ToList();
 
-
         LogToConsole($"Writing results...");
         await CommitResults(finalResults);
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
     }
+
 
     private async Task CommitResults(List<ProfileItem> profiles)
     {
