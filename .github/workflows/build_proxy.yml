@@ -13,7 +13,7 @@ jobs:
   Build:
     runs-on: ubuntu-latest
     env:
-      MaxProxiesPerCountry: 2
+      MaxProxiesPerCountry: 3
       Timeout: 6000
       MaxThreadCount: 96
       SingboxPath: sing-box
