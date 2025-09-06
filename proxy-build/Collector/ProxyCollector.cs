@@ -37,10 +37,18 @@ public class ProxyCollector
         var startTime = DateTime.Now;
         LogToConsole("Collector started.");
 
-        var profiles = (await CollectProfilesFromConfigSources())
-            .DistinctBy(p => p.ToProfileUrl()) // buang duplikat sejak awal
+        var rawProfiles = await CollectProfilesFromConfigSources();
+        LogToConsole($"Collected {rawProfiles.Count} raw profiles.");
+
+        var profiles = rawProfiles
+            .DistinctBy(p => p.ToProfileUrl())
             .ToList();
-        LogToConsole($"Collected {profiles.Count} unique profiles.");
+
+        var removedCount = rawProfiles.Count - profiles.Count;
+        if (removedCount > 0)
+            LogToConsole($"Removed {removedCount} duplicate profiles (initial stage).");
+
+        LogToConsole($"Using {profiles.Count} unique profiles for testing.");
 
         LogToConsole($"Beginning UrlTest process.");
         var workingResults = (await TestProfiles(profiles));
@@ -57,18 +65,17 @@ public class ProxyCollector
             .Select
             (
                 g => g.OrderBy(x => x.TestResult.Delay)
-                      .WithIndex()
-                      .Take(_config.MaxProxiesPerCountry) // ambil maksimal proxy per country
-                      .Select(x =>
-                      {
-                          var profile = x.Item.TestResult.Profile;
-                          var countryInfo = x.Item.CountryInfo;
-                          profile.Name = $"{countryInfo.CountryCode}-{x.Index + 1}";
-                          return new { Profile = profile, CountryCode = countryInfo.CountryCode, Delay = x.Item.TestResult.Delay };
-                      })
+                    .WithIndex()
+                    .Take(_config.MaxProxiesPerCountry)
+                    .Select(x =>
+                    {
+                        var profile = x.Item.TestResult.Profile;
+                        var countryInfo = x.Item.CountryInfo;
+                        profile.Name = $"{countryInfo.CountryCode}-{x.Index + 1}";
+                        return new { Profile = profile, CountryCode = countryInfo.CountryCode, Delay = x.Item.TestResult.Delay };
+                    })
             )
             .SelectMany(x => x)
-            // urutkan hasil akhir: CountryCode lalu Delay
             .OrderBy(x => x.CountryCode)
             .ThenBy(x => x.Delay)
             .Select(x => x.Profile)
@@ -89,8 +96,7 @@ public class ProxyCollector
 
     private async Task CommitV2raySubscriptionResult(List<ProfileItem> profiles)
     {
-        // Hilangkan duplikat sekali lagi (berdasarkan URL)
-        var distinctProfiles = profiles
+        var encodedProfiles = profiles
             .Select(p =>
             {
                 var originalName = p.Name;
@@ -99,9 +105,16 @@ public class ProxyCollector
                 p.Name = originalName;
                 return new { Profile = p, Url = url };
             })
-            .DistinctBy(x => x.Url)
-            .OrderBy(x => x.Profile.Name) // urutkan juga berdasarkan nama
             .ToList();
+
+        var distinctProfiles = encodedProfiles
+            .DistinctBy(x => x.Url)
+            .OrderBy(x => x.Profile.Name)
+            .ToList();
+
+        var removedCount = encodedProfiles.Count - distinctProfiles.Count;
+        if (removedCount > 0)
+            LogToConsole($"Removed {removedCount} duplicate profiles before writing final file.");
 
         var finalResult = new StringBuilder();
         foreach (var item in distinctProfiles)
@@ -111,7 +124,6 @@ public class ProxyCollector
 
         var outputPath = _config.V2rayFormatResultPath;
 
-        // Pastikan folder tujuan ada
         var dir = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
