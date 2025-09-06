@@ -107,8 +107,9 @@ public class ProxyCollector
             })
             .ToList();
 
+        // Hapus fragment `#` saat deduplikasi
         var distinctProfiles = encodedProfiles
-            .DistinctBy(x => x.Url)
+            .DistinctBy(x => x.Url.Split('#')[0])
             .OrderBy(x => x.Profile.Name)
             .ToList();
 
@@ -131,6 +132,7 @@ public class ProxyCollector
         await File.WriteAllTextAsync(outputPath, finalResult.ToString());
         LogToConsole($"Subscription file written to {outputPath} (total {distinctProfiles.Count} unique entries)");
     }
+
 
     private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles)
     {
