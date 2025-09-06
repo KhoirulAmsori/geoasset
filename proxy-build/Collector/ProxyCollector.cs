@@ -37,10 +37,12 @@ public class ProxyCollector
         var startTime = DateTime.Now;
         LogToConsole("Collector started.");
 
-        var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
+        var profiles = (await CollectProfilesFromConfigSources())
+            .DistinctBy(p => p.ToProfileUrl()) // buang duplikat sejak awal
+            .ToList();
         LogToConsole($"Collected {profiles.Count} unique profiles.");
 
-        LogToConsole($"Beginning UrlTest proccess.");
+        LogToConsole($"Beginning UrlTest process.");
         var workingResults = (await TestProfiles(profiles));
         LogToConsole($"Testing has finished, found {workingResults.Count} working profiles.");
 
@@ -52,19 +54,19 @@ public class ProxyCollector
             (
                 x => x.OrderBy(x => x.TestResult.Delay)
                     .WithIndex()
-                    .Take(_config.MaxProxiesPerCountry) // <-- ambil maksimal proxy per country
+                    .Take(_config.MaxProxiesPerCountry) // ambil maksimal proxy per country
                     .Select(x =>
                     {
                         var profile = x.Item.TestResult.Profile;
                         var countryInfo = x.Item.CountryInfo;
                         profile.Name = $"{countryInfo.CountryCode}-{x.Index + 1}";
-                        return (profile);
+                        return profile;
                     })
             )
             .SelectMany(x => x)
             .ToList();
 
-        LogToConsole($"Uploading results...");
+        LogToConsole($"Writing results...");
         await CommitResults(finalResults.ToList());
 
         var timeSpent = DateTime.Now - startTime;
@@ -73,19 +75,29 @@ public class ProxyCollector
 
     private async Task CommitResults(List<ProfileItem> profiles)
     {
-        LogToConsole($"Uploading V2ray Subscription...");
+        LogToConsole($"Saving V2ray Subscription...");
         await CommitV2raySubscriptionResult(profiles);
     }
 
     private async Task CommitV2raySubscriptionResult(List<ProfileItem> profiles)
     {
+        // Hilangkan duplikat sekali lagi (berdasarkan URL)
+        var distinctProfiles = profiles
+            .Select(p =>
+            {
+                var originalName = p.Name;
+                p.Name = HttpUtility.UrlPathEncode(p.Name);
+                var url = p.ToProfileUrl();
+                p.Name = originalName;
+                return new { Profile = p, Url = url };
+            })
+            .DistinctBy(x => x.Url)
+            .ToList();
+
         var finalResult = new StringBuilder();
-        foreach (var profile in profiles)
+        foreach (var item in distinctProfiles)
         {
-            var profileName = profile.Name;
-            profile.Name = HttpUtility.UrlPathEncode(profile.Name);
-            finalResult.AppendLine(profile.ToProfileUrl());
-            profile.Name = profileName;
+            finalResult.AppendLine(item.Url);
         }
 
         var outputPath = _config.V2rayFormatResultPath;
@@ -96,7 +108,7 @@ public class ProxyCollector
             Directory.CreateDirectory(dir);
 
         await File.WriteAllTextAsync(outputPath, finalResult.ToString());
-        LogToConsole($"Subscription file written to {outputPath}");
+        LogToConsole($"Subscription file written to {outputPath} (total {distinctProfiles.Count} unique entries)");
     }
 
     private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles)
@@ -126,7 +138,7 @@ public class ProxyCollector
         };
 
         var profiles = new ConcurrentBag<ProfileItem>();
-        await Parallel.ForEachAsync(_config.Sources,new ParallelOptions {MaxDegreeOfParallelism = _config.MaxThreadCount }, async (source, ct) =>
+        await Parallel.ForEachAsync(_config.Sources, new ParallelOptions { MaxDegreeOfParallelism = _config.MaxThreadCount }, async (source, ct) =>
         {
             try
             {
@@ -139,7 +151,7 @@ public class ProxyCollector
                 }
                 LogToConsole($"Collected {count} proxies from {source}");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 LogToConsole($"Failed to fetch {source}. error: {ex.Message}");
             }
