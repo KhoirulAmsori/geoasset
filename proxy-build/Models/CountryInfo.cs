@@ -4,6 +4,7 @@ public class CountryInfo
 {
     public string? CountryCode { get; set; } = null!;
     public string? CountryName { get; set; } = null!;
+    public string? Isp { get; set; } = null!;
 
     private string? _countryFlag;
 
