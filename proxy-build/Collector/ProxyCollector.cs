@@ -48,26 +48,34 @@ public class ProxyCollector
 
         LogToConsole($"Compiling results...");
         var finalResults = workingResults
-            .Select(r => new { TestResult = r, CountryInfo = _ipToCountryResolver.GetCountry(r.Profile.Address!).Result })
+            .Select(r => new
+            {
+                TestResult = r,
+                CountryInfo = _ipToCountryResolver.GetCountry(r.Profile.Address!).Result
+            })
             .GroupBy(p => p.CountryInfo.CountryCode)
             .Select
             (
-                x => x.OrderBy(x => x.TestResult.Delay)
-                    .WithIndex()
-                    .Take(_config.MaxProxiesPerCountry) // ambil maksimal proxy per country
-                    .Select(x =>
-                    {
-                        var profile = x.Item.TestResult.Profile;
-                        var countryInfo = x.Item.CountryInfo;
-                        profile.Name = $"{countryInfo.CountryCode}-{x.Index + 1}";
-                        return profile;
-                    })
+                g => g.OrderBy(x => x.TestResult.Delay)
+                      .WithIndex()
+                      .Take(_config.MaxProxiesPerCountry) // ambil maksimal proxy per country
+                      .Select(x =>
+                      {
+                          var profile = x.Item.TestResult.Profile;
+                          var countryInfo = x.Item.CountryInfo;
+                          profile.Name = $"{countryInfo.CountryCode}-{x.Index + 1}";
+                          return new { Profile = profile, CountryCode = countryInfo.CountryCode, Delay = x.Item.TestResult.Delay };
+                      })
             )
             .SelectMany(x => x)
+            // urutkan hasil akhir: CountryCode lalu Delay
+            .OrderBy(x => x.CountryCode)
+            .ThenBy(x => x.Delay)
+            .Select(x => x.Profile)
             .ToList();
 
         LogToConsole($"Writing results...");
-        await CommitResults(finalResults.ToList());
+        await CommitResults(finalResults);
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
@@ -92,6 +100,7 @@ public class ProxyCollector
                 return new { Profile = p, Url = url };
             })
             .DistinctBy(x => x.Url)
+            .OrderBy(x => x.Profile.Name) // urutkan juga berdasarkan nama
             .ToList();
 
         var finalResult = new StringBuilder();
