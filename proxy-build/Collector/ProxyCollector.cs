@@ -37,36 +37,35 @@ public class ProxyCollector
         var startTime = DateTime.Now;
         LogToConsole("Collector started.");
 
-        var rawProfiles = await CollectProfilesFromConfigSources();
-        LogToConsole($"Collected {rawProfiles.Count} raw profiles.");
+        var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
+        LogToConsole($"Collected {profiles.Count} unique profiles.");
 
-        var profiles = rawProfiles
-            .DistinctBy(p => p.ToProfileUrl())
-            .ToList();
-
-        var removedCount = rawProfiles.Count - profiles.Count;
-        if (removedCount > 0)
-            LogToConsole($"Removed {removedCount} duplicate profiles (initial stage).");
-
-        LogToConsole($"Using {profiles.Count} unique profiles for testing.");
-
-        LogToConsole($"Beginning UrlTest process.");
+        LogToConsole($"Beginning UrlTest proccess.");
         var workingResults = (await TestProfiles(profiles));
         LogToConsole($"Testing has finished, found {workingResults.Count} working profiles.");
 
         LogToConsole($"Compiling results...");
         var finalResults = workingResults
-            .Select(r => new
-            {
-                TestResult = r,
-                CountryInfo = _ipToCountryResolver.GetCountry(r.Profile.Address!).Result
-            })
+            .Select(r => new { TestResult = r, CountryInfo = _ipToCountryResolver.GetCountry(r.Profile.Address!).Result })
             .GroupBy(p => p.CountryInfo.CountryCode)
-            .SelectMany(g => g.Take(_config.MaxProxiesPerCountry).Select(x => x.TestResult.Profile))
+            .Select
+            (
+                x => x.OrderBy(x => x.TestResult.Delay)
+                    .WithIndex()
+                    .Take(_config.MaxProxiesPerCountry) // <-- ambil maksimal proxy per country
+                    .Select(x =>
+                    {
+                        var profile = x.Item.TestResult.Profile;
+                        var countryInfo = x.Item.CountryInfo;
+                        profile.Name = $"{countryInfo.CountryCode}-{x.Index + 1}";
+                        return (profile);
+                    })
+            )
+            .SelectMany(x => x)
             .ToList();
 
-        LogToConsole($"Writing results...");
-        await CommitResults(finalResults);
+        LogToConsole($"Uploading results...");
+        await CommitResults(finalResults.ToList());
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
@@ -74,65 +73,30 @@ public class ProxyCollector
 
     private async Task CommitResults(List<ProfileItem> profiles)
     {
-        LogToConsole($"Saving V2ray Subscription...");
+        LogToConsole($"Uploading V2ray Subscription...");
         await CommitV2raySubscriptionResult(profiles);
     }
 
     private async Task CommitV2raySubscriptionResult(List<ProfileItem> profiles)
     {
-        var encodedProfiles = profiles
-            .Select(p =>
-            {
-                var originalName = p.Name;
-                p.Name = HttpUtility.UrlPathEncode(p.Name);
-                var url = p.ToProfileUrl();
-                p.Name = originalName;
-                return new { Profile = p, Url = url };
-            })
-            .ToList();
-
-        // Deduplikasi berdasarkan host:port (tanpa fragment #)
-        var distinctProfiles = encodedProfiles
-            .DistinctBy(x => x.Url.Split('#')[0])
-            .ToList();
-
-        var removedCount = encodedProfiles.Count - distinctProfiles.Count;
-        if (removedCount > 0)
-            LogToConsole($"Removed {removedCount} duplicate profiles before writing final file.");
-
-        // Penomoran ulang setelah deduplikasi
-        var renumbered = distinctProfiles
-            .GroupBy(x =>
-            {
-                var parts = x.Profile.Name.Split('-');
-                return parts.Length > 0 ? parts[0] : "XX"; // fallback country code
-            })
-            .SelectMany(g =>
-            {
-                var list = g.ToList();
-                for (int i = 0; i < list.Count; i++)
-                {
-                    list[i].Profile.Name = $"{g.Key}-{i + 1}";
-                }
-                return list;
-            })
-            .OrderBy(x => x.Profile.Name)
-            .ToList();
-
         var finalResult = new StringBuilder();
-        foreach (var item in renumbered)
+        foreach (var profile in profiles)
         {
-            finalResult.AppendLine(item.Url);
+            var profileName = profile.Name;
+            profile.Name = HttpUtility.UrlPathEncode(profile.Name);
+            finalResult.AppendLine(profile.ToProfileUrl());
+            profile.Name = profileName;
         }
 
         var outputPath = _config.V2rayFormatResultPath;
 
+        // Pastikan folder tujuan ada
         var dir = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
 
         await File.WriteAllTextAsync(outputPath, finalResult.ToString());
-        LogToConsole($"Subscription file written to {outputPath} (total {renumbered.Count} unique entries)");
+        LogToConsole($"Subscription file written to {outputPath}");
     }
 
     private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles)
@@ -162,7 +126,7 @@ public class ProxyCollector
         };
 
         var profiles = new ConcurrentBag<ProfileItem>();
-        await Parallel.ForEachAsync(_config.Sources, new ParallelOptions { MaxDegreeOfParallelism = _config.MaxThreadCount }, async (source, ct) =>
+        await Parallel.ForEachAsync(_config.Sources,new ParallelOptions {MaxDegreeOfParallelism = _config.MaxThreadCount }, async (source, ct) =>
         {
             try
             {
@@ -175,7 +139,7 @@ public class ProxyCollector
                 }
                 LogToConsole($"Collected {count} proxies from {source}");
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
                 LogToConsole($"Failed to fetch {source}. error: {ex.Message}");
             }
