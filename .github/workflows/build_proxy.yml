@@ -19,25 +19,14 @@ jobs:
       SingboxPath: sing-box
       V2rayFormatResultPath: list.txt
       Sources: |
-        https://bitbucket.org/huwo1/proxy_nodes/raw/f31ca9ec67b84071515729ff45b011b6b09c10f2/ss.md
-        https://raw.githubusercontent.com/Barabama/FreeNodes/master/nodes/yudou66.txt
-        https://raw.githubusercontent.com/caijh/FreeProxiesScraper/main/README.md
-        https://raw.githubusercontent.com/gtang8/SubCrawler/main/sub/share/all
-        https://raw.githubusercontent.com/hkaa0/permalink/main/proxy/V2ray.txt
-        https://raw.githubusercontent.com/kaoxindalao/v2raycheshi/main/v2raycheshi
+        https://raw.githubusercontent.com/Surfboardv2ray/TGParse/main/splitted/mixed
         https://raw.githubusercontent.com/LalatinaHub/Mineral/master/result/nodes
-        https://raw.githubusercontent.com/luxl-1379/merge/77247d23def72b25226dfa741614e9b07a569c72/sub/sub_merge_base64.txt
-        https://raw.githubusercontent.com/mahdibland/V2RayAggregator/master/sub/sub_merge.txt
-        https://raw.githubusercontent.com/mermeroo/Loon/main/node
-        https://raw.githubusercontent.com/mermeroo/Loon/main/node%202
-        https://raw.githubusercontent.com/mermeroo/Loon/refs/heads/main/all.nodes.txt
-        https://raw.githubusercontent.com/mermeroo/QuantumultX/refs/heads/main/Trojan.nodes
-        https://raw.githubusercontent.com/mermeroo/QX/refs/heads/main/Nodes
-        https://raw.githubusercontent.com/MhdiTaheri/V2rayCollector_Py/main/sub/Mix/mix.txt
         https://raw.githubusercontent.com/mheidari98/.proxy/main/all
         https://raw.githubusercontent.com/MrMohebi/xray-proxy-grabber-telegram/master/collected-proxies/row-url/actives.txt
-        https://raw.githubusercontent.com/Surfboardv2ray/TGParse/main/splitted/mixed
-        https://raw.githubusercontent.com/w1770946466/Auto_proxy/main/Long_term_subscription_num
+        https://raw.githubusercontent.com/hkaa0/permalink/main/proxy/V2ray.txt
+        https://raw.githubusercontent.com/Barabama/FreeNodes/master/nodes/yudou66.txt
+        https://raw.githubusercontent.com/kaoxindalao/v2raycheshi/main/v2raycheshi
+        https://raw.githubusercontent.com/MhdiTaheri/V2rayCollector_Py/main/sub/Mix/mix.txt
 
     steps:
       - name: Set variables
