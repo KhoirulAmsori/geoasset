@@ -109,7 +109,7 @@ public class ProxyCollector
             30000,
             _config.MaxThreadCount,
             _config.Timeout,
-            10,
+            4096,
             "https://www.gstatic.com/generate_204");
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
