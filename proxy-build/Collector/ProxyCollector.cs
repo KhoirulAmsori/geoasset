@@ -62,20 +62,22 @@ public class ProxyCollector
                 CountryInfo = _ipToCountryResolver.GetCountry(r.Profile.Address!).Result
             })
             .GroupBy(p => p.CountryInfo.CountryCode)
-            .Select
-            (
-                g => g
-                    .WithIndex()
-                    .Take(_config.MaxProxiesPerCountry)
-                    .Select(x =>
-                    {
-                        var profile = x.Item.TestResult.Profile;
-                        var countryInfo = x.Item.CountryInfo;
-                        profile.Name = $"{countryInfo.CountryCode}-{x.Index + 1}";
-                        return profile;
-                    })
-            )
+            .SelectMany(g =>
+            {
+                var profiles = g.Take(_config.MaxProxiesPerCountry)
+                            .Select(x => x.TestResult.Profile)
+                            .ToList();
+
+                // Penomoran ulang supaya tidak ada loncat angka
+                for (int i = 0; i < profiles.Count; i++)
+                {
+                    profiles[i].Name = $"{g.Key}-{i + 1}";
+                }
+
+                return profiles;
+            })
             .ToList();
+
 
         LogToConsole($"Writing results...");
         await CommitResults(finalResults);
