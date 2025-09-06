@@ -72,12 +72,9 @@ public class ProxyCollector
                         var profile = x.Item.TestResult.Profile;
                         var countryInfo = x.Item.CountryInfo;
                         profile.Name = $"{countryInfo.CountryCode}-{x.Index + 1}";
-                        return new { Profile = profile, CountryCode = countryInfo.CountryCode };
+                        return profile;
                     })
             )
-            .SelectMany(x => x)
-            .OrderBy(x => x.CountryCode)
-            .Select(x => x.Profile)
             .ToList();
 
         LogToConsole($"Writing results...");
