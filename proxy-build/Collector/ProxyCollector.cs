@@ -62,20 +62,7 @@ public class ProxyCollector
                 CountryInfo = _ipToCountryResolver.GetCountry(r.Profile.Address!).Result
             })
             .GroupBy(p => p.CountryInfo.CountryCode)
-            .SelectMany(g =>
-            {
-                var profiles = g.Take(_config.MaxProxiesPerCountry)
-                            .Select(x => x.TestResult.Profile)
-                            .ToList();
-
-                // Penomoran ulang supaya tidak ada loncat angka
-                for (int i = 0; i < profiles.Count; i++)
-                {
-                    profiles[i].Name = $"{g.Key}-{i + 1}";
-                }
-
-                return profiles;
-            })
+            .SelectMany(g => g.Take(_config.MaxProxiesPerCountry).Select(x => x.TestResult.Profile))
             .ToList();
 
         LogToConsole($"Writing results...");
@@ -84,7 +71,6 @@ public class ProxyCollector
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
     }
-
 
     private async Task CommitResults(List<ProfileItem> profiles)
     {
@@ -105,18 +91,36 @@ public class ProxyCollector
             })
             .ToList();
 
-        // Hapus fragment `#` saat deduplikasi
+        // Deduplikasi berdasarkan host:port (tanpa fragment #)
         var distinctProfiles = encodedProfiles
             .DistinctBy(x => x.Url.Split('#')[0])
-            .OrderBy(x => x.Profile.Name)
             .ToList();
 
         var removedCount = encodedProfiles.Count - distinctProfiles.Count;
         if (removedCount > 0)
             LogToConsole($"Removed {removedCount} duplicate profiles before writing final file.");
 
+        // Penomoran ulang setelah deduplikasi
+        var renumbered = distinctProfiles
+            .GroupBy(x =>
+            {
+                var parts = x.Profile.Name.Split('-');
+                return parts.Length > 0 ? parts[0] : "XX"; // fallback country code
+            })
+            .SelectMany(g =>
+            {
+                var list = g.ToList();
+                for (int i = 0; i < list.Count; i++)
+                {
+                    list[i].Profile.Name = $"{g.Key}-{i + 1}";
+                }
+                return list;
+            })
+            .OrderBy(x => x.Profile.Name)
+            .ToList();
+
         var finalResult = new StringBuilder();
-        foreach (var item in distinctProfiles)
+        foreach (var item in renumbered)
         {
             finalResult.AppendLine(item.Url);
         }
@@ -128,9 +132,8 @@ public class ProxyCollector
             Directory.CreateDirectory(dir);
 
         await File.WriteAllTextAsync(outputPath, finalResult.ToString());
-        LogToConsole($"Subscription file written to {outputPath} (total {distinctProfiles.Count} unique entries)");
+        LogToConsole($"Subscription file written to {outputPath} (total {renumbered.Count} unique entries)");
     }
-
 
     private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles)
     {
