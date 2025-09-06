@@ -64,20 +64,19 @@ public class ProxyCollector
             .GroupBy(p => p.CountryInfo.CountryCode)
             .Select
             (
-                g => g.OrderBy(x => x.TestResult.Delay)
+                g => g
                     .WithIndex()
                     .Take(_config.MaxProxiesPerCountry)
                     .Select(x =>
                     {
                         var profile = x.Item.TestResult.Profile;
                         var countryInfo = x.Item.CountryInfo;
-                        profile.Name = $"{countryInfo.CountryCode}-{x.Index + 1}";
-                        return new { Profile = profile, CountryCode = countryInfo.CountryCode, Delay = x.Item.TestResult.Delay };
+                        profile.Name = $"{countryInfo.CountryCode} {x.Index + 1}";
+                        return new { Profile = profile, CountryCode = countryInfo.CountryCode };
                     })
             )
             .SelectMany(x => x)
             .OrderBy(x => x.CountryCode)
-            .ThenBy(x => x.Delay)
             .Select(x => x.Profile)
             .ToList();
 
