@@ -20,7 +20,7 @@ jobs:
       MinActiveProxies: 150
       maxRetries: 15
       Timeout: 6000
-      MaxThreadCount: 128
+      MaxThreadCount: 256
       SingboxPath: sing-box
       V2rayFormatResultPath: Asset/list.txt
       SourcesFile: Asset/sources.txt
