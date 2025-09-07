@@ -52,7 +52,11 @@ public class ProxyCollector
 
             // pisahkan hasil sukses & gagal
             var successes = attemptResults.Where(r => r.Success).ToList();
-            var failures = attemptResults.Where(r => !r.Success).Select(r => r.Profile).ToList();
+            var failures = attemptResults
+                .Where(r => !r.Success)
+                .Select(r => r.Profile)
+                .DistinctBy(p => p.Address) // deduplicate proxy gagal
+                .ToList();
 
             // simpan hasil sukses, pastikan tidak duplikat
             foreach (var s in successes)
@@ -157,7 +161,7 @@ public class ProxyCollector
         };
 
         var profiles = new ConcurrentBag<ProfileItem>();
-        await Parallel.ForEachAsync(_config.Sources,new ParallelOptions {MaxDegreeOfParallelism = _config.MaxThreadCount }, async (source, ct) =>
+        await Parallel.ForEachAsync(_config.Sources, new ParallelOptions { MaxDegreeOfParallelism = _config.MaxThreadCount }, async (source, ct) =>
         {
             try
             {
@@ -170,7 +174,7 @@ public class ProxyCollector
                 }
                 LogToConsole($"Collected {count} proxies from {source}");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 LogToConsole($"Failed to fetch {source}. error: {ex.Message}");
             }
