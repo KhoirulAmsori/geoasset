@@ -68,6 +68,13 @@ public class ProxyCollector
             }
         }
 
+        if (workingResults.Count < _config.MinActiveProxies)
+        {
+            LogToConsole($"Active proxies ({workingResults.Count}) less than required ({_config.MinActiveProxies}). Skipping push.");
+            await File.WriteAllTextAsync("skip_push.flag", "not enough proxies");
+            return;
+        }
+
         LogToConsole("Compiling results...");
         var finalResults = workingResults
             .Select(r => new { TestResult = r, CountryInfo = _ipToCountryResolver.GetCountry(r.Profile.Address!).Result })
