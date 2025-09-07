@@ -9,6 +9,7 @@ public class CollectorConfig
     public required int MaxThreadCount { get; init; }
     public required int Timeout { get; init; }
     public required string[] Sources { get; init; }
+
     static CollectorConfig()
     {
         Instance = CreateInstance();
@@ -18,6 +19,18 @@ public class CollectorConfig
 
     private static CollectorConfig CreateInstance()
     {
+        // Lokasi file sources.txt
+        var sourcesFile = Environment.GetEnvironmentVariable("SourcesFile") ?? "sources.txt";
+
+        string[] sources = Array.Empty<string>();
+        if (File.Exists(sourcesFile))
+        {
+            sources = File.ReadAllLines(sourcesFile)
+                          .Select(line => line.Trim())
+                          .Where(line => !string.IsNullOrWhiteSpace(line))
+                          .ToArray();
+        }
+
         return new CollectorConfig
         {
             MaxProxiesPerCountry = int.Parse(Environment.GetEnvironmentVariable("MaxProxiesPerCountry")!),
@@ -25,7 +38,7 @@ public class CollectorConfig
             V2rayFormatResultPath = Environment.GetEnvironmentVariable("V2rayFormatResultPath")!,
             MaxThreadCount = int.Parse(Environment.GetEnvironmentVariable("MaxThreadCount")!),
             Timeout = int.Parse(Environment.GetEnvironmentVariable("Timeout")!),
-            Sources = Environment.GetEnvironmentVariable("Sources")!.Split("\n")
+            Sources = sources
         };
     }
 }
