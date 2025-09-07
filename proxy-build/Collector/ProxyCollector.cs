@@ -46,7 +46,7 @@ public class ProxyCollector
         LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies} with maximum {_config.maxRetriesCount} retries.");
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            LogToConsole($"Beginning UrlTest process (Attempt {attempt})...");
+            LogToConsole($"Beginning UrlTest process (Attempt {attempt} / {maxRetries})...");
             LogToConsole($"Attempt {attempt} testing {profiles.Count} profiles...");
 
             var attemptResults = await TestProfiles(profiles);
