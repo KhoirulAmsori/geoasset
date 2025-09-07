@@ -55,6 +55,9 @@ jobs:
           cd source/proxy-build
           dotnet restore
           dotnet run --configuration Release --project .
+          pwd
+          ls
+          readlink -f skip_push.flag
           cd ../..
 
       - name: Prepare local repo for 'asset' branch (create if missing)
