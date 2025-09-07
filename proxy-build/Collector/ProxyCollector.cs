@@ -40,23 +40,34 @@ public class ProxyCollector
         var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
         LogToConsole($"Collected {profiles.Count} unique profiles.");
 
-        IReadOnlyCollection<UrlTestResult> workingResults = Array.Empty<UrlTestResult>();
+        var workingResults = new List<UrlTestResult>();
 
-        // coba maksimal 5 kali
         const int maxRetries = 5;
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
             LogToConsole($"Beginning UrlTest process (Attempt {attempt})...");
-            workingResults = await TestProfiles(profiles);
-            LogToConsole($"Testing finished, found {workingResults.Count} working profiles.");
+            LogToConsole($"Attempt {attempt} testing {profiles.Count} profiles...");
+
+            var attemptResults = await TestProfiles(profiles);
+
+            var newSuccesses = attemptResults
+                .Where(r => r.Success && !workingResults.Any(x => x.Profile.Address == r.Profile.Address))
+                .ToList();
+
+            foreach (var s in newSuccesses)
+                workingResults.Add(s);
+
+            LogToConsole($"Attempt {attempt} finished, found {workingResults.Count} total working profiles so far.");
+            LogToConsole($"Attempt {attempt} had {newSuccesses.Count} new working profiles.");
 
             if (workingResults.Count >= _config.MinActiveProxies)
-                break; // cukup, tidak perlu ulang
-            else if (attempt < maxRetries)
-                LogToConsole($"Working proxies < {_config.MinActiveProxies}, retrying test...");
+            {
+                LogToConsole($"Reached minimum required {_config.MinActiveProxies} active proxies, stopping retries.");
+                break;
+            }
         }
 
-        LogToConsole($"Compiling results...");
+        LogToConsole("Compiling results...");
         var finalResults = workingResults
             .Select(r => new { TestResult = r, CountryInfo = _ipToCountryResolver.GetCountry(r.Profile.Address!).Result })
             .GroupBy(p => p.CountryInfo.CountryCode)
@@ -64,7 +75,7 @@ public class ProxyCollector
             (
                 x => x.OrderBy(x => x.TestResult.Delay)
                     .WithIndex()
-                    .Take(_config.MaxProxiesPerCountry) 
+                    .Take(_config.MaxProxiesPerCountry)
                     .Select(x =>
                     {
                         var profile = x.Item.TestResult.Profile;
@@ -78,13 +89,12 @@ public class ProxyCollector
             .Select(x => x.Profile)
             .ToList();
 
-        LogToConsole($"Uploading results...");
+        LogToConsole("Uploading results...");
         await CommitResults(finalResults.ToList());
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
     }
-
 
     private async Task CommitResults(List<ProfileItem> profiles)
     {
