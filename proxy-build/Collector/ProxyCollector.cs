@@ -90,15 +90,8 @@ public class ProxyCollector
             .Select(x => x.Profile)
             .ToList();
 
-        if (workingResults.Count >= _config.MinActiveProxies)
-        {
-            LogToConsole("Uploading results...");
-            await CommitResults(finalResults.ToList());
-        }
-        else
-        {
-            LogToConsole($"Didn't reach the minimum target ({_config.MinActiveProxies}). Upload canceled.");
-        }
+        LogToConsole("Uploading results...");
+        await CommitResults(finalResults.ToList());
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
