@@ -42,7 +42,7 @@ public class ProxyCollector
 
         var workingResults = new List<UrlTestResult>();
 
-        const int maxRetries = _config.maxRetriesCount;
+        var maxRetries = _config.maxRetriesCount;
         LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies} with maximum {_config.maxRetriesCount} retries.");
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
