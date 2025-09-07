@@ -40,48 +40,20 @@ public class ProxyCollector
         var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
         LogToConsole($"Collected {profiles.Count} unique profiles.");
 
-        var workingResults = new List<UrlTestResult>();
-        var failedProfiles = profiles;
+        IReadOnlyCollection<UrlTestResult> workingResults = Array.Empty<UrlTestResult>();
 
-        const int maxRetries = 5; // maksimal lima kali pengulangan
+        // coba maksimal 5 kali
+        const int maxRetries = 5;
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
             LogToConsole($"Beginning UrlTest process (Attempt {attempt})...");
-            LogToConsole($"Attempt {attempt} testing {failedProfiles.Count} profiles...");
-
-            var attemptResults = await TestProfiles(failedProfiles);
-
-            // pisahkan hasil sukses & gagal
-            var successes = attemptResults.Where(r => r.Success).ToList();
-            var failures = attemptResults
-                .Where(r => !r.Success)
-                .Select(r => r.Profile)
-                .DistinctBy(p => p.Address) // deduplicate proxy gagal
-                .ToList();
-
-            // simpan hasil sukses, pastikan tidak duplikat
-            foreach (var s in successes)
-            {
-                if (!workingResults.Any(x => x.Profile.Address == s.Profile.Address))
-                    workingResults.Add(s);
-            }
-
-            LogToConsole($"Attempt {attempt} finished, found {workingResults.Count} total working profiles so far.");
-            LogToConsole($"Attempt {attempt} had {failures.Count} unique failed profiles.");
+            workingResults = await TestProfiles(profiles);
+            LogToConsole($"Testing finished, found {workingResults.Count} working profiles.");
 
             if (workingResults.Count >= _config.MinActiveProxies)
-                break; // sudah cukup
-
-            // simpan proxy gagal ke file supaya attempt berikutnya fresh
-            var failedPath = Path.Combine(Path.GetTempPath(), $"failed_attempt_{attempt}.txt");
-            await File.WriteAllLinesAsync(failedPath, failures.Select(f => f.ToProfileUrl()));
-            LogToConsole($"Saved {failures.Count} failed proxies to {failedPath}");
-
-            // retry hanya untuk yang gagal
-            failedProfiles = failures;
-
-            if (attempt < maxRetries && failedProfiles.Count > 0)
-                LogToConsole($"Working proxies < {_config.MinActiveProxies}, retrying {failedProfiles.Count} failed proxies...");
+                break; // cukup, tidak perlu ulang
+            else if (attempt < maxRetries)
+                LogToConsole($"Working proxies < {_config.MinActiveProxies}, retrying test...");
         }
 
         LogToConsole($"Compiling results...");
@@ -92,7 +64,7 @@ public class ProxyCollector
             (
                 x => x.OrderBy(x => x.TestResult.Delay)
                     .WithIndex()
-                    .Take(_config.MaxProxiesPerCountry)
+                    .Take(_config.MaxProxiesPerCountry) 
                     .Select(x =>
                     {
                         var profile = x.Item.TestResult.Profile;
@@ -112,6 +84,7 @@ public class ProxyCollector
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
     }
+
 
     private async Task CommitResults(List<ProfileItem> profiles)
     {
@@ -151,16 +124,13 @@ public class ProxyCollector
             1024,
             "https://www.gstatic.com/generate_204");
 
-        var results = new ConcurrentBag<UrlTestResult>();
-
-        using var cts = new CancellationTokenSource();
-        await tester.ParallelTestAsync(
-            profiles,
-            new Progress<UrlTestResult>(result => results.Add(result)),
-            cts.Token
-        );
-
-        return results;
+        var workingResults = new ConcurrentBag<UrlTestResult>();
+        await tester.ParallelTestAsync(profiles, new Progress<UrlTestResult>((result =>
+        {
+            if (result.Success)
+                workingResults.Add(result);
+        })), default);
+        return workingResults;
     }
 
     private async Task<IReadOnlyCollection<ProfileItem>> CollectProfilesFromConfigSources()
@@ -171,7 +141,7 @@ public class ProxyCollector
         };
 
         var profiles = new ConcurrentBag<ProfileItem>();
-        await Parallel.ForEachAsync(_config.Sources, new ParallelOptions { MaxDegreeOfParallelism = _config.MaxThreadCount }, async (source, ct) =>
+        await Parallel.ForEachAsync(_config.Sources,new ParallelOptions {MaxDegreeOfParallelism = _config.MaxThreadCount }, async (source, ct) =>
         {
             try
             {
@@ -184,7 +154,7 @@ public class ProxyCollector
                 }
                 LogToConsole($"Collected {count} proxies from {source}");
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
                 LogToConsole($"Failed to fetch {source}. error: {ex.Message}");
             }
