@@ -55,8 +55,7 @@ public class ProxyCollector
             foreach (var s in newSuccesses)
                 workingResults.Add(s);
 
-            LogToConsole($"Attempt {attempt} / {maxRetries}: {newSuccesses.Count} new active node.");
-            LogToConsole($"Attempt {attempt} / {maxRetries}: Total {workingResults.Count} active node.");
+            LogToConsole($"Attempt {attempt} / {maxRetries}: {newSuccesses.Count} new and {workingResults.Count} total active node.");
 
             if (workingResults.Count >= _config.MinActiveProxies)
             {
