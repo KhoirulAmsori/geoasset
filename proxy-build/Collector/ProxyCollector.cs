@@ -40,26 +40,15 @@ public class ProxyCollector
         var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
         LogToConsole($"Collected {profiles.Count} unique profiles.");
 
-        var workingResults = new List<UrlTestResult>();
+        IReadOnlyCollection<UrlTestResult> workingResults = Array.Empty<UrlTestResult>();
 
         var maxRetries = _config.maxRetriesCount;
         LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies} with maximum {_config.maxRetriesCount} retries.");
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
             LogToConsole($"Beginning UrlTest process (Attempt {attempt} / {maxRetries})...");
-            LogToConsole($"Attempt {attempt} testing {profiles.Count} profiles...");
-
-            var attemptResults = await TestProfiles(profiles);
-
-            var newSuccesses = attemptResults
-                .Where(r => r.Success && !workingResults.Any(x => x.Profile.Address == r.Profile.Address))
-                .ToList();
-
-            foreach (var s in newSuccesses)
-                workingResults.Add(s);
-
-            LogToConsole($"Attempt {attempt} finished, found {workingResults.Count} total working profiles so far.");
-            LogToConsole($"Attempt {attempt} had {newSuccesses.Count} new working profiles.");
+            workingResults = await TestProfiles(profiles);
+            LogToConsole($"Testing finished, found {workingResults.Count} working profiles.");
 
             if (workingResults.Count >= _config.MinActiveProxies)
             {
@@ -75,7 +64,7 @@ public class ProxyCollector
             return;
         }
 
-        LogToConsole("Compiling results...");
+        LogToConsole($"Compiling results...");
         var finalResults = workingResults
             .Select(r => new { TestResult = r, CountryInfo = _ipToCountryResolver.GetCountry(r.Profile.Address!).Result })
             .GroupBy(p => p.CountryInfo.CountryCode)
@@ -83,7 +72,7 @@ public class ProxyCollector
             (
                 x => x.OrderBy(x => x.TestResult.Delay)
                     .WithIndex()
-                    .Take(_config.MaxProxiesPerCountry)
+                    .Take(_config.MaxProxiesPerCountry) 
                     .Select(x =>
                     {
                         var profile = x.Item.TestResult.Profile;
@@ -97,12 +86,13 @@ public class ProxyCollector
             .Select(x => x.Profile)
             .ToList();
 
-        LogToConsole("Uploading results...");
+        LogToConsole($"Uploading results...");
         await CommitResults(finalResults.ToList());
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
     }
+
 
     private async Task CommitResults(List<ProfileItem> profiles)
     {
@@ -140,7 +130,7 @@ public class ProxyCollector
             _config.MaxThreadCount,
             _config.Timeout,
             1024,
-            "http://edge-http.microsoft.com/captiveportal/generate_204");
+            "https://www.gstatic.com/generate_204");
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
         await tester.ParallelTestAsync(profiles, new Progress<UrlTestResult>((result =>
