@@ -34,17 +34,17 @@ jobs:
           git clone --depth 1 -b asset https://github.com/${{ github.repository }} geoip-build/asset
 
       - name: Prepare Go cache folder
-        run: |
-          mkdir -p /tmp/go-geoip-build/pkg/mod
-          mkdir -p /tmp/go-geosite-build/pkg/mod
+        run: mkdir -p /tmp/go-build/pkg/mod
 
-      - name: Setup Go for GEOIP
+      - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: ./geoip-build/go.mod
-          cache-dependency-path: ./geoip-build/go.sum
+          go-version: "1.24"   # versi Go seragam
+          cache-dependency-path: |
+            ./geoip-build/go.sum
+            ./geosite-build/go.sum
         env:
-          GOPATH: /tmp/go-geoip-build
+          GOPATH: /tmp/go-build
 
       - name: Build GEOIP
         run: |
@@ -66,21 +66,13 @@ jobs:
           cp asset/GEO/GeoLite2-Country-CSV_*/*.csv geolite2/
           cp asset/GEO/GeoLite2-Country-CSV_*/{GeoLite2-Country-Blocks-IPv4*,GeoLite2-Country-Locations-en}.csv geolite2/
           
-          # Salin aset untuk diterbitkann
+          # Salin aset untuk diterbitkan
           cp geolite2/GeoLite2-ASN.mmdb ../Publish/GeoLite2-ASN.mmdb
           
           # Jalankan pembangunan
           go mod tidy
           go build ./
           ./geoip convert -c ./config.json
-
-      - name: Setup Go for GEOSITE
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: ./geosite-build/go.mod
-          cache-dependency-path: ./geosite-build/go.sum
-        env:
-          GOPATH: /tmp/go-geosite-build
 
       - name: Build GEOSITE
         run: |
