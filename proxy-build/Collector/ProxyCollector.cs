@@ -136,7 +136,7 @@ public class ProxyCollector
     {
         var tester = new ParallelUrlTester(
             new SingBoxWrapper(_config.SingboxPath),
-            60000,
+            20000,
             _config.MaxThreadCount,
             _config.Timeout,
             1024,
