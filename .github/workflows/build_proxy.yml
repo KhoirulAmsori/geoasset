@@ -18,6 +18,7 @@ jobs:
     env:
       MaxProxiesPerCountry: 3
       MinActiveProxies: 100
+      maxRetries: 10
       Timeout: 6000
       MaxThreadCount: 128
       SingboxPath: sing-box

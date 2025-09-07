@@ -5,6 +5,7 @@ public class CollectorConfig
     public static CollectorConfig Instance { get; private set; }
     public required int MaxProxiesPerCountry { get; init; }
     public required int MinActiveProxies { get; init; }
+    public required int maxRetriesCount { get; init; }
     public required string SingboxPath { get; init; }
     public required string V2rayFormatResultPath { get; init; }
     public required int MaxThreadCount { get; init; }
@@ -36,6 +37,7 @@ public class CollectorConfig
         {
             MaxProxiesPerCountry = int.Parse(Environment.GetEnvironmentVariable("MaxProxiesPerCountry")!),
             MinActiveProxies = int.Parse(Environment.GetEnvironmentVariable("MinActiveProxies")!),
+            maxRetriesCount = int.Parse(Environment.GetEnvironmentVariable("maxRetries")!),
             SingboxPath = Environment.GetEnvironmentVariable("SingboxPath")!,
             V2rayFormatResultPath = Environment.GetEnvironmentVariable("V2rayFormatResultPath")!,
             MaxThreadCount = int.Parse(Environment.GetEnvironmentVariable("MaxThreadCount")!),

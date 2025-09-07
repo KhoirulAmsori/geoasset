@@ -39,11 +39,11 @@ public class ProxyCollector
 
         var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
         LogToConsole($"Collected {profiles.Count} unique profiles.");
-        LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies}");
 
         var workingResults = new List<UrlTestResult>();
 
-        const int maxRetries = 10;
+        const int maxRetries = _config.maxRetriesCount;
+        LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies} with maximum {_config.maxRetriesCount} retries.");
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
             LogToConsole($"Beginning UrlTest process (Attempt {attempt})...");
@@ -90,8 +90,15 @@ public class ProxyCollector
             .Select(x => x.Profile)
             .ToList();
 
-        LogToConsole("Uploading results...");
-        await CommitResults(finalResults.ToList());
+        if (workingResults.Count >= _config.MinActiveProxies)
+        {
+            LogToConsole("Uploading results...");
+            await CommitResults(finalResults.ToList());
+        }
+        else
+        {
+            LogToConsole($"Didn't reach the minimum target ({_config.MinActiveProxies}). Upload canceled.");
+        }
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
