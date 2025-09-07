@@ -3,6 +3,9 @@ name: Build Proxy List
 on:
   schedule:
     - cron: "0 * * * *"
+  push:
+    paths:
+      - "proxy-build/Asset/sources.txt"
   workflow_dispatch:
   repository_dispatch:
 
