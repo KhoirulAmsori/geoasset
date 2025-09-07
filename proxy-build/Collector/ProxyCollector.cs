@@ -140,13 +140,13 @@ public class ProxyCollector
             1024,
             "https://www.gstatic.com/generate_204");
 
-        var workingResults = new ConcurrentBag<UrlTestResult>();
+        var results = new ConcurrentBag<UrlTestResult>();
         await tester.ParallelTestAsync(profiles, new Progress<UrlTestResult>((result =>
         {
-            if (result.Success)
-                workingResults.Add(result);
+            results.Add(result); // simpan semua, baik sukses maupun gagal
         })), default);
-        return workingResults;
+
+        return results;
     }
 
     private async Task<IReadOnlyCollection<ProfileItem>> CollectProfilesFromConfigSources()
