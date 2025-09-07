@@ -40,9 +40,21 @@ public class ProxyCollector
         var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
         LogToConsole($"Collected {profiles.Count} unique profiles.");
 
-        LogToConsole($"Beginning UrlTest proccess.");
-        var workingResults = (await TestProfiles(profiles));
-        LogToConsole($"Testing has finished, found {workingResults.Count} working profiles.");
+        IReadOnlyCollection<UrlTestResult> workingResults = Array.Empty<UrlTestResult>();
+
+        // coba maksimal 3 kali
+        const int maxRetries = 3;
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            LogToConsole($"Beginning UrlTest process (Attempt {attempt})...");
+            workingResults = await TestProfiles(profiles);
+            LogToConsole($"Testing finished, found {workingResults.Count} working profiles.");
+
+            if (workingResults.Count >= 50)
+                break; // cukup, tidak perlu ulang
+            else if (attempt < maxRetries)
+                LogToConsole($"Working proxies < 50, retrying test...");
+        }
 
         LogToConsole($"Compiling results...");
         var finalResults = workingResults
@@ -52,7 +64,7 @@ public class ProxyCollector
             (
                 x => x.OrderBy(x => x.TestResult.Delay)
                     .WithIndex()
-                    .Take(_config.MaxProxiesPerCountry) // <-- ambil maksimal proxy per country
+                    .Take(_config.MaxProxiesPerCountry) 
                     .Select(x =>
                     {
                         var profile = x.Item.TestResult.Profile;
@@ -62,7 +74,6 @@ public class ProxyCollector
                     })
             )
             .SelectMany(x => x)
-            // urutkan berdasarkan CountryCode
             .OrderBy(x => x.CountryCode)
             .Select(x => x.Profile)
             .ToList();
@@ -73,6 +84,7 @@ public class ProxyCollector
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
     }
+
 
     private async Task CommitResults(List<ProfileItem> profiles)
     {
