@@ -39,6 +39,7 @@ public class ProxyCollector
 
         var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
         LogToConsole($"Collected {profiles.Count} unique profiles.");
+        LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies}");
 
         var workingResults = new List<UrlTestResult>();
 
