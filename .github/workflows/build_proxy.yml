@@ -55,13 +55,10 @@ jobs:
           cd source/proxy-build
           dotnet restore
           dotnet run --configuration Release --project .
-          pwd
-          ls
-          readlink -f skip_push.flag
           cd ../..
 
       - name: Prepare local repo for 'asset' branch (create if missing)
-        if: ${{ !hashFiles('skip_push.flag') }}
+        if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -81,13 +78,13 @@ jobs:
           cd ..
 
       - name: Copy build results to asset/Proxy
-        if: ${{ !hashFiles('skip_push.flag') }}
+        if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
         run: |
           mkdir -p asset/Proxy
           cp source/proxy-build/Asset/list.txt asset/Proxy/
 
       - name: Commit & push Proxy
-        if: ${{ !hashFiles('skip_push.flag') }}
+        if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
         run: |
           cd asset
           git add Proxy
