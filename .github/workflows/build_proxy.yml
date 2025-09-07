@@ -33,6 +33,7 @@ jobs:
           echo "BUILDTIME=$(LC_TIME=id_ID.UTF-8 date '+%A, %d %B %Y - %H:%M:%S')" >> $GITHUB_ENV
 
       - uses: actions/checkout@v5
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -54,10 +55,27 @@ jobs:
         run: |
           cd source/proxy-build
           dotnet restore
-          dotnet run --configuration Release --project .
+          # jalankan dan cek hasil
+          if ! dotnet run --configuration Release --project .; then
+            echo "Proxy build failed, exiting..."
+            exit 1
+          fi
+
+          # cek apakah hasil ada dan memenuhi syarat
+          if [ ! -s Asset/list.txt ]; then
+            echo "Proxy list file not found or empty"
+            exit 1
+          fi
+          PROXY_COUNT=$(wc -l < Asset/list.txt)
+          echo "Proxy count: $PROXY_COUNT"
+          if [ "$PROXY_COUNT" -lt "$MinActiveProxies" ]; then
+            echo "Active proxies ($PROXY_COUNT) less than required ($MinActiveProxies)."
+            exit 1
+          fi
           cd ../..
 
       - name: Prepare local repo for 'asset' branch (create if missing)
+        if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -77,11 +95,13 @@ jobs:
           cd ..
 
       - name: Copy build results to asset/Proxy
+        if: success()
         run: |
           mkdir -p asset/Proxy
           cp source/proxy-build/Asset/list.txt asset/Proxy/
 
       - name: Commit & push Proxy
+        if: success()
         run: |
           cd asset
           git add Proxy
