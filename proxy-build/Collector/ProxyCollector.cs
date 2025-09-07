@@ -47,7 +47,6 @@ public class ProxyCollector
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
             LogToConsole($"Beginning UrlTest process (Attempt {attempt} / {maxRetries})...");
-            LogToConsole($"Attempt {attempt} testing {profiles.Count} profiles...");
 
             var attemptResults = await TestProfiles(profiles);
 
@@ -58,8 +57,8 @@ public class ProxyCollector
             foreach (var s in newSuccesses)
                 workingResults.Add(s);
 
-            LogToConsole($"Attempt {attempt} finished, found {workingResults.Count} total working profiles so far.");
             LogToConsole($"Attempt {attempt} had {newSuccesses.Count} new working profiles.");
+            LogToConsole($"Attempt {attempt} finished, found {workingResults.Count} total working profiles so far.");
 
             if (workingResults.Count >= _config.MinActiveProxies)
             {
