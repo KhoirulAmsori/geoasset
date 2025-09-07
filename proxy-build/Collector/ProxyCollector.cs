@@ -66,6 +66,7 @@ public class ProxyCollector
             }
 
             LogToConsole($"Attempt {attempt} finished, found {workingResults.Count} total working profiles so far.");
+            LogToConsole($"Attempt {attempt} had {failures.Count} unique failed profiles.");
 
             if (workingResults.Count >= _config.MinActiveProxies)
                 break; // sudah cukup
