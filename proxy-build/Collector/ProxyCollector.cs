@@ -47,6 +47,7 @@ public class ProxyCollector
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
             LogToConsole($"Beginning UrlTest process (Attempt {attempt})...");
+            LogToConsole($"Attempt {attempt} testing {failedProfiles.Count} profiles...");
 
             var attemptResults = await TestProfiles(failedProfiles);
 
@@ -70,6 +71,11 @@ public class ProxyCollector
 
             if (workingResults.Count >= _config.MinActiveProxies)
                 break; // sudah cukup
+
+            // simpan proxy gagal ke file supaya attempt berikutnya fresh
+            var failedPath = Path.Combine(Path.GetTempPath(), $"failed_attempt_{attempt}.txt");
+            await File.WriteAllLinesAsync(failedPath, failures.Select(f => f.ToProfileUrl()));
+            LogToConsole($"Saved {failures.Count} failed proxies to {failedPath}");
 
             // retry hanya untuk yang gagal
             failedProfiles = failures;
@@ -146,10 +152,13 @@ public class ProxyCollector
             "https://www.gstatic.com/generate_204");
 
         var results = new ConcurrentBag<UrlTestResult>();
-        await tester.ParallelTestAsync(profiles, new Progress<UrlTestResult>((result =>
-        {
-            results.Add(result); // simpan semua, baik sukses maupun gagal
-        })), default);
+
+        using var cts = new CancellationTokenSource();
+        await tester.ParallelTestAsync(
+            profiles,
+            new Progress<UrlTestResult>(result => results.Add(result)),
+            cts.Token
+        );
 
         return results;
     }
