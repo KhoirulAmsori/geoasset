@@ -50,7 +50,7 @@ public class ProxyCollector
             workingResults = await TestProfiles(profiles);
             LogToConsole($"Testing finished, found {workingResults.Count} working profiles.");
 
-            if (workingResults.Count >= 50)
+            if (workingResults.Count >= 100)
                 break; // cukup, tidak perlu ulang
             else if (attempt < maxRetries)
                 LogToConsole($"Working proxies < 50, retrying test...");
