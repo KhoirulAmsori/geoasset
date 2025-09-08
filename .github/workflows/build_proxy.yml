@@ -16,8 +16,8 @@ jobs:
   Build:
     runs-on: ubuntu-latest
     env:
-      MaxProxiesPerCountry: 5
-      MinActiveProxies: 150
+      MaxProxiesPerCountry: 3
+      MinActiveProxies: 120
       maxRetries: 15
       Timeout: 6000
       MaxThreadCount: 256
