@@ -38,10 +38,11 @@ public class ProxyCollector
         LogToConsole("Collector started.");
 
         var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
-        var skipped = _config.SkipProtocols.Length > 0
-            ? string.Join(", ", _config.SkipProtocols.Select(p => p.Replace("://", "").ToUpperInvariant()))
-            : "none";
-        LogToConsole($"Collected {profiles.Count} unique profiles with {skipped} skipped.");
+        var included = _config.IncludedProtocols.Length > 0
+            ? string.Join(", ", _config.IncludedProtocols.Select(p => p.Replace("://", "").ToUpperInvariant()))
+            : "all";
+
+        LogToConsole($"Collected {profiles.Count} unique profiles with protocols: {included}.");
 
         var workingResults = new List<UrlTestResult>();
 
@@ -225,12 +226,12 @@ public class ProxyCollector
             string? line = null;
             while ((line = reader.ReadLine()?.Trim()) is not null)
             {
-                // Skip protokol
-                if (_config.SkipProtocols.Any(proto => line.StartsWith(proto, StringComparison.OrdinalIgnoreCase)))
+                // Skip jika protokol tidak ada di IncludedProtocols
+                if (_config.IncludedProtocols.Length > 0 &&
+                    !_config.IncludedProtocols.Any(proto => line.StartsWith(proto, StringComparison.OrdinalIgnoreCase)))
                 {
                     continue;
                 }
-
                 
                 ProfileItem? profile = null;
                 try

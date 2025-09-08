@@ -11,7 +11,7 @@ public class CollectorConfig
     public required int MaxThreadCount { get; init; }
     public required int Timeout { get; init; }
     public required string[] Sources { get; init; }
-    public required string[] SkipProtocols { get; init; }
+    public required string[] IncludedProtocols { get; init; }
     public required string[] TestUrls { get; init; }
 
     static CollectorConfig()
@@ -34,8 +34,7 @@ public class CollectorConfig
                           .ToArray();
         }
 
-        // Ambil skip protocols dari ENV, default kosong
-        var skipProtocols = (Environment.GetEnvironmentVariable("SkipProtocols") ?? "")
+        var includedProtocols = (Environment.GetEnvironmentVariable("IncludedProtocols") ?? "")
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(p => p.EndsWith("://") ? p : $"{p}://")
             .ToArray();
@@ -55,7 +54,7 @@ public class CollectorConfig
             MaxThreadCount = int.Parse(Environment.GetEnvironmentVariable("MaxThreadCount")!),
             Timeout = int.Parse(Environment.GetEnvironmentVariable("Timeout")!),
             Sources = sources,
-            SkipProtocols = skipProtocols,
+            IncludedProtocols = includedProtocols,
             TestUrls = testUrls.Length > 0 
                         ? testUrls 
                         : new[] { "https://www.gstatic.com/generate_204", "http://cp.cloudflare.com" }
