@@ -47,9 +47,19 @@ public class ProxyCollector
 
         var maxRetries = _config.maxRetriesCount;
         LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies} with maximum {_config.maxRetriesCount} retries.");
+
+        // Profil yang belum terbukti aktif → mulai dari semua profil
+        var remainingProfiles = profiles;
+
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            var attemptResults = await TestProfiles(profiles);
+            if (!remainingProfiles.Any())
+                {
+                    LogToConsole("No remaining profiles left to test.");
+                    break;
+                }
+
+            var attemptResults = await TestProfiles(remainingProfiles);
 
             var newSuccesses = attemptResults
                 .Where(r => r.Success && !workingResults.Any(x => x.Profile.Address == r.Profile.Address))
@@ -65,6 +75,10 @@ public class ProxyCollector
                 LogToConsole($"Reached minimum required {_config.MinActiveProxies} active proxies, stopping retries.");
                 break;
             }
+
+            // Update daftar yang tersisa → hanya yang gagal di attempt ini
+            var successAddresses = new HashSet<string>(attemptResults.Where(r => r.Success).Select(r => r.Profile.Address!));
+            remainingProfiles = remainingProfiles.Where(p => !successAddresses.Contains(p.Address!)).ToList();
         }
 
         if (workingResults.Count < _config.MinActiveProxies)
@@ -87,10 +101,10 @@ public class ProxyCollector
                     {
                         var profile = x.Item.TestResult.Profile;
                         var countryInfo = x.Item.CountryInfo;
-                        var ispRaw = (countryInfo.Isp ?? string.Empty).Replace(".", ""); // kalau null → string kosong, hapus titik
+                        var ispRaw = (countryInfo.Isp ?? string.Empty).Replace(".", "");
                         var ispParts = ispRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                         var ispName = ispParts.Length >= 2
-                            ? $"{ispParts[0]} {ispParts[1]}" 
+                            ? $"{ispParts[0]} {ispParts[1]}"
                             : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
                         profile.Name = $"{countryInfo.CountryCode} {x.Index + 1} - {ispName}";
                         return new { Profile = profile, CountryCode = countryInfo.CountryCode };
@@ -107,6 +121,7 @@ public class ProxyCollector
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
     }
+
 
     private async Task CommitResults(List<ProfileItem> profiles)
     {
@@ -144,7 +159,7 @@ public class ProxyCollector
             _config.MaxThreadCount,
             _config.Timeout,
             1024,
-            "http://cp.cloudflare.com");
+            "https://www.gstatic.com/generate_204");
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
         await tester.ParallelTestAsync(profiles, new Progress<UrlTestResult>((result =>
