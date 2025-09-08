@@ -2,7 +2,7 @@ name: Build Proxy List
 
 on:
   schedule:
-    - cron: "0 */12 * * *"
+    - cron: "0 18 * * *"
   push:
     paths:
       - "proxy-build/Asset/sources.txt"
