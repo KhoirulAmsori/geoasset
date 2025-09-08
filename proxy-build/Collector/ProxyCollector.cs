@@ -84,7 +84,9 @@ public class ProxyCollector
                     {
                         var profile = x.Item.TestResult.Profile;
                         var countryInfo = x.Item.CountryInfo;
-                        profile.Name = $"[{countryInfo.CountryCode}] {countryInfo.Isp}-{x.Index + 1}";
+                        string[] IspNameSplit = (countryInfo.Isp).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        string IspName = IspNameSplit.Length >= 2 ? $"{IspNameSplit[0]} {IspNameSplit[1]}" : IspNameSplit[0]; // fallback kalau hanya ada satu kata
+                        profile.Name = $"[{countryInfo.CountryCode}] {IspName}-{x.Index + 1}";
                         return new { Profile = profile, CountryCode = countryInfo.CountryCode };
                     })
             )
