@@ -49,15 +49,15 @@ public class ProxyCollector
         LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies} with maximum {_config.maxRetriesCount} retries.");
 
         // Profil yang belum terbukti aktif → mulai dari semua profil
-        var remainingProfiles = profiles;
+        var remainingProfiles = profiles.ToList();
 
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
             if (!remainingProfiles.Any())
-                {
-                    LogToConsole("No remaining profiles left to test.");
-                    break;
-                }
+            {
+                LogToConsole("No remaining profiles left to test.");
+                break;
+            }
 
             var attemptResults = await TestProfiles(remainingProfiles);
 
@@ -68,7 +68,10 @@ public class ProxyCollector
             foreach (var s in newSuccesses)
                 workingResults.Add(s);
 
-            LogToConsole($"Attempt {attempt} / {maxRetries}: {newSuccesses.Count} new and {workingResults.Count} total active node.");
+            // Log ringkas attempt
+            LogToConsole(
+                $"Attempt {attempt} / {maxRetries}: testing {remainingProfiles.Count} nodes → {newSuccesses.Count} new, {workingResults.Count} total active."
+            );
 
             if (workingResults.Count >= _config.MinActiveProxies)
             {
@@ -76,9 +79,13 @@ public class ProxyCollector
                 break;
             }
 
-            // Update daftar yang tersisa → hanya yang gagal di attempt ini
-            var successAddresses = new HashSet<string>(attemptResults.Where(r => r.Success).Select(r => r.Profile.Address!));
-            remainingProfiles = remainingProfiles.Where(p => !successAddresses.Contains(p.Address!)).ToList();
+            // Update daftar tersisa: hanya yang gagal di attempt ini
+            var successAddresses = new HashSet<string>(
+                attemptResults.Where(r => r.Success).Select(r => r.Profile.Address!)
+            );
+            remainingProfiles = remainingProfiles
+                .Where(p => !successAddresses.Contains(p.Address!))
+                .ToList();
         }
 
         if (workingResults.Count < _config.MinActiveProxies)
