@@ -196,7 +196,7 @@ public class ProxyCollector
             {
                 // Skip protokol
                 if (line.StartsWith("vmess://", StringComparison.OrdinalIgnoreCase) ||
-                    line.StartsWith("hysteria://", StringComparison.OrdinalIgnoreCase)) ||
+                    line.StartsWith("hysteria://", StringComparison.OrdinalIgnoreCase) ||
                     line.StartsWith("hysteria2://", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
