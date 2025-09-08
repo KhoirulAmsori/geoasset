@@ -141,7 +141,7 @@ public class ProxyCollector
             _config.MaxThreadCount,
             _config.Timeout,
             1024,
-            "http://edge.microsoft.com/captiveportal/generate_204");
+            "http://cp.cloudflare.com");
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
         await tester.ParallelTestAsync(profiles, new Progress<UrlTestResult>((result =>
