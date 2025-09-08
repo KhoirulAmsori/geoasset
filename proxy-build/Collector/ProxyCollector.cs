@@ -53,10 +53,8 @@ public class ProxyCollector
 
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            // Pilih URL dari config. Kalau index lebih besar dari jumlah TestUrls, pakai URL terakhir
-            var testUrl = attempt <= _config.TestUrls.Length 
-                ? _config.TestUrls[attempt - 1]
-                : _config.TestUrls.Last();
+            // Round-robin: kalau habis, balik lagi ke awal
+            var testUrl = _config.TestUrls[(attempt - 1) % _config.TestUrls.Length];
             
             LogToConsole($"Attempt {attempt} testing with URL: {testUrl}");
 
