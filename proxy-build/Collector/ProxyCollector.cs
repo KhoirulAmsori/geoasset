@@ -91,7 +91,7 @@ public class ProxyCollector
                             : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
                         // decode nama agar tidak ada %20
                         var ispNameDecoded = HttpUtility.UrlDecode(ispName);
-                        profile.Name = $"{countryInfo.CountryCode} - {ispNameDecoded} {x.Index + 1}";
+                        profile.Name = $"{countryInfo.CountryCode} {x.Index + 1} - {ispNameDecoded}";
                         return new { Profile = profile, CountryCode = countryInfo.CountryCode };
                     })
             )
