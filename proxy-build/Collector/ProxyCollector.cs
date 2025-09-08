@@ -38,7 +38,7 @@ public class ProxyCollector
         LogToConsole("Collector started.");
 
         var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
-        LogToConsole($"Collected {profiles.Count} unique profiles.");
+        LogToConsole($"Collected {profiles.Count} unique profiles with {(_config.SkipProtocols).Replace(",", ", ")} skipped.");
 
         var workingResults = new List<UrlTestResult>();
 
@@ -195,12 +195,11 @@ public class ProxyCollector
             while ((line = reader.ReadLine()?.Trim()) is not null)
             {
                 // Skip protokol
-                if (line.StartsWith("vmess://", StringComparison.OrdinalIgnoreCase) ||
-                    line.StartsWith("hysteria://", StringComparison.OrdinalIgnoreCase) ||
-                    line.StartsWith("hysteria2://", StringComparison.OrdinalIgnoreCase))
+                if (_config.SkipProtocols.Any(proto => line.StartsWith(proto, StringComparison.OrdinalIgnoreCase)))
                 {
                     continue;
                 }
+
                 
                 ProfileItem? profile = null;
                 try

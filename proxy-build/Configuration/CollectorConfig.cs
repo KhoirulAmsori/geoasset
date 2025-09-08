@@ -11,6 +11,8 @@ public class CollectorConfig
     public required int MaxThreadCount { get; init; }
     public required int Timeout { get; init; }
     public required string[] Sources { get; init; }
+    // Tambahkan property SkipProtocols
+    public required string[] SkipProtocols { get; init; }
 
     static CollectorConfig()
     {
@@ -21,7 +23,6 @@ public class CollectorConfig
 
     private static CollectorConfig CreateInstance()
     {
-        // Lokasi file sources.txt
         var sourcesFile = Environment.GetEnvironmentVariable("SourcesFile") ?? "sources.txt";
 
         string[] sources = Array.Empty<string>();
@@ -33,6 +34,12 @@ public class CollectorConfig
                           .ToArray();
         }
 
+        // Ambil skip protocols dari ENV, default kosong
+        var skipProtocols = (Environment.GetEnvironmentVariable("SkipProtocols") ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(p => p.EndsWith("://") ? p : $"{p}://")
+            .ToArray();
+
         return new CollectorConfig
         {
             MaxProxiesPerCountry = int.Parse(Environment.GetEnvironmentVariable("MaxProxiesPerCountry")!),
@@ -42,7 +49,8 @@ public class CollectorConfig
             V2rayFormatResultPath = Environment.GetEnvironmentVariable("V2rayFormatResultPath")!,
             MaxThreadCount = int.Parse(Environment.GetEnvironmentVariable("MaxThreadCount")!),
             Timeout = int.Parse(Environment.GetEnvironmentVariable("Timeout")!),
-            Sources = sources
+            Sources = sources,
+            SkipProtocols = skipProtocols
         };
     }
 }
