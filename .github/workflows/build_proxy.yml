@@ -23,7 +23,7 @@ jobs:
       MaxThreadCount: 64
       SingboxPath: sing-box
       SkipProtocols: "trojan,vmess,hysteria,hysteria2"
-      TestUrls="http://www.gstatic.com/generate_204,http://cp.cloudflare.com,http://edge.microsoft.com/captiveportal/generate_204,http://connectivitycheck.android.com/generate_204"
+      TestUrls: "http://www.gstatic.com/generate_204,http://cp.cloudflare.com,http://edge.microsoft.com/captiveportal/generate_204,http://connectivitycheck.android.com/generate_204"
       V2rayFormatResultPath: Asset/list.txt
       SourcesFile: Asset/sources.txt
 
