@@ -89,7 +89,7 @@ public class ProxyCollector
                         var ispName = ispParts.Length >= 2
                             ? $"{ispParts[0]} {ispParts[1]}" 
                             : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
-                        profile.Name = $"[{countryInfo.CountryCode}] {ispName}-{x.Index + 1}";
+                        profile.Name = $"[{countryInfo.CountryCode}] {ispName} {x.Index + 1}";
                         return new { Profile = profile, CountryCode = countryInfo.CountryCode };
                     })
             )
