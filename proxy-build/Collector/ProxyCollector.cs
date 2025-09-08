@@ -168,10 +168,15 @@ public class ProxyCollector
     {
         var tester = new ParallelUrlTester(
             new SingBoxWrapper(_config.SingboxPath),
+            // A list of open local ports, must be equal or bigger than total test thread count
+            // make sure they are not occupied by other applications running on your system
             20000,
+            // max number of concurrent testing
             _config.MaxThreadCount,
+            // timeout in miliseconds
             _config.Timeout,
-            10,
+            // retry count (will still do the retries even if proxy works, returns fastest result)
+            5,
             testUrl);
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
