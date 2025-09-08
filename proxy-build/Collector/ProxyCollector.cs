@@ -171,7 +171,7 @@ public class ProxyCollector
             20000,
             _config.MaxThreadCount,
             _config.Timeout,
-            1024,
+            10,
             testUrl);
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
