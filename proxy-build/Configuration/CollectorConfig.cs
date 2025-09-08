@@ -55,7 +55,7 @@ public class CollectorConfig
             MaxThreadCount = int.Parse(Environment.GetEnvironmentVariable("MaxThreadCount")!),
             Timeout = int.Parse(Environment.GetEnvironmentVariable("Timeout")!),
             Sources = sources,
-            SkipProtocols = skipProtocols
+            SkipProtocols = skipProtocols,
             TestUrls = testUrls.Length > 0 
                         ? testUrls 
                         : new[] { "https://www.gstatic.com/generate_204", "http://cp.cloudflare.com" }
