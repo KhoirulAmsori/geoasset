@@ -50,7 +50,8 @@ public sealed class IPToCountryResolver
         return new CountryInfo
         {
             CountryName = ipInfo.CountryName,
-            CountryCode = ipInfo.CountryCode
+            CountryCode = ipInfo.CountryCode,
+            Isp = ipInfo.Isp
         };
     }
 }
