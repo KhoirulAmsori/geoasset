@@ -38,7 +38,10 @@ public class ProxyCollector
         LogToConsole("Collector started.");
 
         var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
-        LogToConsole($"Collected {profiles.Count} unique profiles with {_config.SkipProtocols} skipped.");
+        var skipped = _config.SkipProtocols.Length > 0
+            ? string.Join(", ", _config.SkipProtocols)
+            : "none";
+        LogToConsole($"Collected {profiles.Count} unique profiles with {skipped} skipped.");
 
         var workingResults = new List<UrlTestResult>();
 
