@@ -194,6 +194,14 @@ public class ProxyCollector
             string? line = null;
             while ((line = reader.ReadLine()?.Trim()) is not null)
             {
+                // Skip protokol
+                if (line.StartsWith("vmess://", StringComparison.OrdinalIgnoreCase) ||
+                    line.StartsWith("hysteria://", StringComparison.OrdinalIgnoreCase)) ||
+                    line.StartsWith("hysteria2://", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                
                 ProfileItem? profile = null;
                 try
                 {
