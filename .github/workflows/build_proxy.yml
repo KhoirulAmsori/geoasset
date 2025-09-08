@@ -22,7 +22,7 @@ jobs:
       Timeout: 6000
       MaxThreadCount: 256
       SingboxPath: sing-box
-      SkipProtocols: "trojan,vmess,hysteria,hysteria2"
+      SkipProtocols: "vmess,hysteria,hysteria2"
       V2rayFormatResultPath: Asset/list.txt
       SourcesFile: Asset/sources.txt
 
