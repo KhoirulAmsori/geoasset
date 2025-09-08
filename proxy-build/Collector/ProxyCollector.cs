@@ -39,7 +39,7 @@ public class ProxyCollector
 
         var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
         var skipped = _config.SkipProtocols.Length > 0
-            ? string.Join(", ", _config.SkipProtocols)
+            ? string.Join(", ", _config.SkipProtocols.Select(p => p.Replace("://", "").ToUpperInvariant()))
             : "none";
         LogToConsole($"Collected {profiles.Count} unique profiles with {skipped} skipped.");
 
