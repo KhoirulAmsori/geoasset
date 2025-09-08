@@ -84,7 +84,7 @@ public class ProxyCollector
                     {
                         var profile = x.Item.TestResult.Profile;
                         var countryInfo = x.Item.CountryInfo;
-                        var ispRaw = countryInfo.Isp ?? string.Empty; // kalau null, pakai string kosong
+                        var ispRaw = (countryInfo.Isp ?? string.Empty).Replace(".", ""); // kalau null → string kosong, hapus titik
                         var ispParts = ispRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                         var ispName = ispParts.Length >= 2
                             ? $"{ispParts[0]} {ispParts[1]}" 
