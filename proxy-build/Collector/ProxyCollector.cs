@@ -84,11 +84,7 @@ public class ProxyCollector
                     {
                         var profile = x.Item.TestResult.Profile;
                         var countryInfo = x.Item.CountryInfo;
-                        var ispRaw = (countryInfo.Isp ?? string.Empty).Replace(".", ""); // kalau null → string kosong, hapus titik
-                        var ispParts = ispRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                        var ispName = ispParts.Length >= 2
-                            ? $"{ispParts[0]} {ispParts[1]}" 
-                            : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
+                        var ispName = (countryInfo.Isp ?? string.Empty).Replace(".", ""); // kalau null → string kosong, hapus titik
                         profile.Name = $"[{countryInfo.CountryCode}] {ispName} {x.Index + 1}";
                         return new { Profile = profile, CountryCode = countryInfo.CountryCode };
                     })
