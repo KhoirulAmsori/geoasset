@@ -53,13 +53,20 @@ public class ProxyCollector
 
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
+            // Pilih URL dari config. Kalau index lebih besar dari jumlah TestUrls, pakai URL terakhir
+            var testUrl = attempt <= _config.TestUrls.Length 
+                ? _config.TestUrls[attempt - 1] 
+                : _config.TestUrls.Last();
+            
+            LogToConsole($"Attempt {attempt} testing with URL: {testUrl}");
+
             if (!remainingProfiles.Any())
             {
                 LogToConsole("No remaining profiles left to test.");
                 break;
             }
 
-            var attemptResults = await TestProfiles(remainingProfiles);
+            var attemptResults = await TestProfiles(remainingProfiles, testUrl);
 
             var newSuccesses = attemptResults
                 .Where(r => r.Success && !workingResults.Any(x => x.Profile.Address == r.Profile.Address))
@@ -158,7 +165,7 @@ public class ProxyCollector
         LogToConsole($"Subscription file written to {outputPath}");
     }
 
-    private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles)
+    private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles, string testUrl)
     {
         var tester = new ParallelUrlTester(
             new SingBoxWrapper(_config.SingboxPath),
@@ -166,7 +173,7 @@ public class ProxyCollector
             _config.MaxThreadCount,
             _config.Timeout,
             1024,
-            "https://www.gstatic.com/generate_204");
+            testUrl);
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
         await tester.ParallelTestAsync(profiles, new Progress<UrlTestResult>((result =>
@@ -176,6 +183,7 @@ public class ProxyCollector
         })), default);
         return workingResults;
     }
+
 
     private async Task<IReadOnlyCollection<ProfileItem>> CollectProfilesFromConfigSources()
     {

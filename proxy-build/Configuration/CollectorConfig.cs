@@ -11,8 +11,8 @@ public class CollectorConfig
     public required int MaxThreadCount { get; init; }
     public required int Timeout { get; init; }
     public required string[] Sources { get; init; }
-    // Tambahkan property SkipProtocols
     public required string[] SkipProtocols { get; init; }
+    public required string[] TestUrls { get; init; }
 
     static CollectorConfig()
     {
@@ -40,6 +40,11 @@ public class CollectorConfig
             .Select(p => p.EndsWith("://") ? p : $"{p}://")
             .ToArray();
 
+        // Ambil TestUrls dari env
+        var testUrlsEnv = Environment.GetEnvironmentVariable("TestUrls") ?? "";
+        var testUrls = testUrlsEnv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+
         return new CollectorConfig
         {
             MaxProxiesPerCountry = int.Parse(Environment.GetEnvironmentVariable("MaxProxiesPerCountry")!),
@@ -51,6 +56,9 @@ public class CollectorConfig
             Timeout = int.Parse(Environment.GetEnvironmentVariable("Timeout")!),
             Sources = sources,
             SkipProtocols = skipProtocols
+            TestUrls = testUrls.Length > 0 
+                        ? testUrls 
+                        : new[] { "https://www.gstatic.com/generate_204", "http://cp.cloudflare.com" }
         };
     }
 }
