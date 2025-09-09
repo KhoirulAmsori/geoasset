@@ -47,7 +47,6 @@ public class ProxyCollector
         LogToConsole($"Compiling results...");
         var finalResults = workingResults
             .Select(r => new { TestResult = r })
-            .GroupBy(p => p.CountryInfo.CountryCode)
             .Select
             (
                 x => x.OrderBy(x => x.TestResult.Delay)
@@ -56,13 +55,11 @@ public class ProxyCollector
                     .Select(x =>
                     {
                         var profile = x.Item.TestResult.Profile;
-                        profile.Name = $"{countryInfo.CountryCode}-{x.Index + 1}";
+                        profile.Name = $"{x.Index + 1}";
                         return profile;
                     })
             )
             .SelectMany(x => x)
-            // urutkan berdasarkan CountryCode
-            .OrderBy(x => x.CountryCode)
             .Select(x => x.Profile)
             .ToList();
 
