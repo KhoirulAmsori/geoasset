@@ -38,103 +38,40 @@ public class ProxyCollector
         LogToConsole("Collector started.");
 
         var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
-        var included = _config.IncludedProtocols.Length > 0
-            ? string.Join(", ", _config.IncludedProtocols.Select(p => p.Replace("://", "").ToUpperInvariant()))
-            : "all";
+        LogToConsole($"Collected {profiles.Count} unique profiles.");
 
-        LogToConsole($"Collected {profiles.Count} unique profiles with protocols: {included}.");
+        LogToConsole($"Beginning UrlTest proccess.");
+        var workingResults = (await TestProfiles(profiles));
+        LogToConsole($"Testing has finished, found {workingResults.Count} working profiles.");
 
-        var workingResults = new List<UrlTestResult>();
-
-        var maxRetries = _config.maxRetriesCount;
-        LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies} with maximum {_config.maxRetriesCount} retries.");
-
-        // Profil yang belum terbukti aktif → mulai dari semua profil
-        var remainingProfiles = profiles.ToList();
-
-        for (int attempt = 1; attempt <= maxRetries; attempt++)
-        {
-            // Round-robin: kalau habis, balik lagi ke awal
-            var testUrl = _config.TestUrls[(attempt - 1) % _config.TestUrls.Length];
-            
-            LogToConsole($"Attempt {attempt} testing with URL: {testUrl}");
-
-            if (!remainingProfiles.Any())
-            {
-                LogToConsole("No remaining profiles left to test.");
-                break;
-            }
-
-            var attemptResults = await TestProfiles(remainingProfiles, testUrl);
-
-            var newSuccesses = attemptResults
-                .Where(r => r.Success && !workingResults.Any(x => x.Profile.Address == r.Profile.Address))
-                .ToList();
-
-            foreach (var s in newSuccesses)
-                workingResults.Add(s);
-
-            // Log ringkas attempt
-            LogToConsole(
-                $"Attempt {attempt} / {maxRetries}: testing {remainingProfiles.Count} nodes → {newSuccesses.Count} new, {workingResults.Count} total active."
-            );
-
-            if (workingResults.Count >= _config.MinActiveProxies)
-            {
-                LogToConsole($"Reached minimum required {_config.MinActiveProxies} active proxies, stopping retries.");
-                break;
-            }
-
-            // Update daftar tersisa: hanya yang gagal di attempt ini
-            var successAddresses = new HashSet<string>(
-                attemptResults.Where(r => r.Success).Select(r => r.Profile.Address!)
-            );
-            remainingProfiles = remainingProfiles
-                .Where(p => !successAddresses.Contains(p.Address!))
-                .ToList();
-        }
-
-        if (workingResults.Count < _config.MinActiveProxies)
-        {
-            LogToConsole($"Active proxies ({workingResults.Count}) less than required ({_config.MinActiveProxies}). Skipping push.");
-            await File.WriteAllTextAsync("skip_push.flag", "not enough proxies");
-            return;
-        }
-
-        LogToConsole("Compiling results...");
+        LogToConsole($"Compiling results...");
         var finalResults = workingResults
-            .Select(r => new { TestResult = r, CountryInfo = _ipToCountryResolver.GetCountry(r.Profile.Address!).Result })
+            .Select(r => new { TestResult = r })
             .GroupBy(p => p.CountryInfo.CountryCode)
             .Select
             (
                 x => x.OrderBy(x => x.TestResult.Delay)
                     .WithIndex()
-                    .Take(_config.MaxProxiesPerCountry)
+                    .Take(_config.MaxProxiesPerCountry) // <-- ambil maksimal proxy per country
                     .Select(x =>
                     {
                         var profile = x.Item.TestResult.Profile;
-                        var countryInfo = x.Item.CountryInfo;
-                        var ispRaw = (countryInfo.Isp ?? string.Empty).Replace(".", "");
-                        var ispParts = ispRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                        var ispName = ispParts.Length >= 2
-                            ? $"{ispParts[0]} {ispParts[1]}"
-                            : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
-                        profile.Name = $"{countryInfo.CountryCode} {x.Index + 1} - {ispName}";
-                        return new { Profile = profile, CountryCode = countryInfo.CountryCode };
+                        profile.Name = $"{countryInfo.CountryCode}-{x.Index + 1}";
+                        return profile;
                     })
             )
             .SelectMany(x => x)
+            // urutkan berdasarkan CountryCode
             .OrderBy(x => x.CountryCode)
             .Select(x => x.Profile)
             .ToList();
 
-        LogToConsole("Uploading results...");
+        LogToConsole($"Uploading results...");
         await CommitResults(finalResults.ToList());
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
     }
-
 
     private async Task CommitResults(List<ProfileItem> profiles)
     {
@@ -164,20 +101,15 @@ public class ProxyCollector
         LogToConsole($"Subscription file written to {outputPath}");
     }
 
-    private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles, string testUrl)
+    private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles)
     {
         var tester = new ParallelUrlTester(
             new SingBoxWrapper(_config.SingboxPath),
-            // A list of open local ports, must be equal or bigger than total test thread count
-            // make sure they are not occupied by other applications running on your system
             20000,
-            // max number of concurrent testing
             _config.MaxThreadCount,
-            // timeout in miliseconds
             _config.Timeout,
-            // retry count (will still do the retries even if proxy works, returns fastest result)
             1024,
-            testUrl);
+            "https://www.gstatic.com/generate_204");
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
         await tester.ParallelTestAsync(profiles, new Progress<UrlTestResult>((result =>
@@ -187,7 +119,6 @@ public class ProxyCollector
         })), default);
         return workingResults;
     }
-
 
     private async Task<IReadOnlyCollection<ProfileItem>> CollectProfilesFromConfigSources()
     {
@@ -231,13 +162,6 @@ public class ProxyCollector
             string? line = null;
             while ((line = reader.ReadLine()?.Trim()) is not null)
             {
-                // Skip jika protokol tidak ada di IncludedProtocols
-                if (_config.IncludedProtocols.Length > 0 &&
-                    !_config.IncludedProtocols.Any(proto => line.StartsWith(proto, StringComparison.OrdinalIgnoreCase)))
-                {
-                    continue;
-                }
-                
                 ProfileItem? profile = null;
                 try
                 {
