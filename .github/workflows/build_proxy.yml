@@ -18,10 +18,12 @@ jobs:
     env:
       MaxProxiesPerCountry: 3
       MinActiveProxies: 100
+      maxRetries: 5
       Timeout: 15000
       MaxThreadCount: 64
       SingboxPath: sing-box
       IncludedProtocols: "ss"
+      TestUrls: "http://www.gstatic.com/generate_204,http://cp.cloudflare.com,http://edge.microsoft.com/captiveportal/generate_204,http://wifi.vivo.com.cn/generate_204,http://quasar.yandex.net/generate_204"
       V2rayFormatResultPath: Asset/list.txt
       SourcesFile: Asset/sources.txt
 

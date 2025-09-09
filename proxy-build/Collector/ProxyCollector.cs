@@ -10,7 +10,6 @@ using SingBoxLib.Runtime;
 using SingBoxLib.Runtime.Testing;
 using System.Collections.Concurrent;
 using System.Text;
-using System.Web;
 
 namespace ProxyCollector.Collector;
 
@@ -41,11 +40,55 @@ public class ProxyCollector
             : "all";
 
         LogToConsole($"Collected {profiles.Count} unique profiles with protocols: {included}.");
-        LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies}.");
-        
-        var workingResults = (await TestProfiles(profiles));
 
-        LogToConsole($"Tested {workingResults.Count} active node. Reached minimum Target.");
+        var workingResults = new List<UrlTestResult>();
+
+        var maxRetries = _config.maxRetriesCount;
+        LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies} with maximum {_config.maxRetriesCount} retries.");
+
+        // Profil yang belum terbukti aktif → mulai dari semua profil
+        var remainingProfiles = profiles.ToList();
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            // Round-robin: kalau habis, balik lagi ke awal
+            var testUrl = _config.TestUrls[(attempt - 1) % _config.TestUrls.Length];
+            
+            LogToConsole($"Attempt {attempt} / {maxRetries} testing with URL: {testUrl}");
+
+            if (!remainingProfiles.Any())
+            {
+                LogToConsole("No remaining profiles left to test.");
+                break;
+            }
+
+            var attemptResults = await TestProfiles(remainingProfiles, testUrl);
+
+            var newSuccesses = attemptResults
+                .Where(r => r.Success && !workingResults.Any(x => x.Profile.Address == r.Profile.Address))
+                .ToList();
+
+            foreach (var s in newSuccesses)
+                workingResults.Add(s);
+
+            LogToConsole(
+                $"Attempt {attempt} / {maxRetries}: testing {remainingProfiles.Count} nodes → {newSuccesses.Count} new, {workingResults.Count} total active."
+            );
+
+            if (workingResults.Count >= _config.MinActiveProxies)
+            {
+                LogToConsole($"Reached minimum required {_config.MinActiveProxies} active proxies, stopping retries.");
+                break;
+            }
+
+            // Update daftar tersisa: hanya yang gagal di attempt ini
+            var successAddresses = new HashSet<string>(
+                attemptResults.Where(r => r.Success).Select(r => r.Profile.Address!)
+            );
+            remainingProfiles = remainingProfiles
+                .Where(p => !successAddresses.Contains(p.Address!))
+                .ToList();
+        }
 
         if (workingResults.Count < _config.MinActiveProxies)
         {
@@ -117,7 +160,7 @@ public class ProxyCollector
         LogToConsole($"Subscription file written to {outputPath}");
     }
 
-    private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles)
+    private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles, string testUrl)
     {
         var tester = new ParallelUrlTester(
             new SingBoxWrapper(_config.SingboxPath),
@@ -130,7 +173,7 @@ public class ProxyCollector
             _config.Timeout,
             // retry count (will still do the retries even if proxy works, returns fastest result)
             1024,
-            "http://www.gstatic.com/generate_204");
+            testUrl);
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
         await tester.ParallelTestAsync(profiles, new Progress<UrlTestResult>((result =>
