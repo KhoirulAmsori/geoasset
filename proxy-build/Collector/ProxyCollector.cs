@@ -53,19 +53,8 @@ public class ProxyCollector
 
         // Setelah semua profile di-resolve dan diberi nama baru
         var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
-
-        var plain = string.Join("\n", finalResults.Select(p =>
-        {
-            var fullUrl = p.ToProfileUrl();
-            var hashIndex = fullUrl.IndexOf('#');
-            var baseUrl = hashIndex >= 0 ? fullUrl.Substring(0, hashIndex) : fullUrl;
-
-            // pastikan Name kita yang dipakai tanpa escape
-            return $"{baseUrl}#{p.Name}";
-        }));
-
+        var plain = string.Join("\n", finalResults.Select(p => p.ToProfileUrl()));
         await File.WriteAllTextAsync(listPath, plain);
-
         LogToConsole($"Final list written to {listPath} ({profiles.Count} entries)");
 
         // jalankan lite test
@@ -111,7 +100,7 @@ public class ProxyCollector
                 var idx = parsedProfiles.Count(p => countryMap.ContainsKey(p) &&
                                                     countryMap[p].CountryCode == country.CountryCode);
 
-                profile.Name = Uri.UnescapeDataString($"{country.CountryCode} {idx + 1} - {ispTwoWords}");
+                profile.Name = ($"{country.CountryCode} {idx + 1} - {ispTwoWords}");
                 parsedProfiles.Add(profile);
             }
             catch (Exception ex)
