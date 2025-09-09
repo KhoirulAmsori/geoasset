@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using ProxyCollector.Configuration;
+using ProxyCollector.Services;
 using SingBoxLib.Configuration;
 using SingBoxLib.Parsing;
 
@@ -48,10 +49,9 @@ public class ProxyCollector
         }
 
         LogToConsole("Compiling results...");
-        var finalResults = profiles
-            .ToList();
+        var finalResults = profiles.ToList();
 
-        // tulis list.txt => namun lite mengharapkan base64 subscription, jadi encode dulu
+        // tulis list.txt (base64) untuk lite
         var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
         var plain = string.Join("\n", finalResults.Select(p => p.ToProfileUrl()));
         var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(plain));
@@ -60,15 +60,57 @@ public class ProxyCollector
 
         // jalankan lite test
         var liteOk = await RunLiteTest(listPath);
-
-        if (!liteOk)
+        var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
+        if (!liteOk || !File.Exists(outputPath))
         {
             LogToConsole("Lite test failed — skipping upload.");
             await File.WriteAllTextAsync("skip_push.flag", "lite test failed");
             return;
         }
 
-        // jika sukses, RunLiteTest sudah mengganti output.txt -> list.txt (overwrite)
+        // --- Proses IPToCountryResolver ---
+        LogToConsole("Resolving countries for active proxies...");
+        var resolver = new IPToCountryResolver();
+        var lines = await File.ReadAllLinesAsync(outputPath);
+        var parsedProfiles = new List<ProfileItem>();
+
+        foreach (var line in lines)
+        {
+            ProfileItem? profile = null;
+            try { profile = ProfileParser.ParseProfileUrl(line); } catch { }
+            if (profile == null) continue;
+
+            try
+            {
+                var host = profile.Address ?? profile.Server;
+                var country = await resolver.GetCountry(host);
+                profile.Country = country;
+
+                var isp = string.IsNullOrEmpty(country.Isp) ? "UnknownISP" : country.Isp;
+                var idx = parsedProfiles.Count(p => p.Country?.CountryCode == country.CountryCode);
+                profile.Name = $"{country.CountryCode} {idx + 1} - {isp}";
+                parsedProfiles.Add(profile);
+            }
+            catch (Exception ex)
+            {
+                LogToConsole($"[WARN] Failed resolve {profile.Server}: {ex.Message}");
+            }
+        }
+
+        // batasi jumlah per country
+        var grouped = parsedProfiles
+            .GroupBy(p => p.Country?.CountryCode ?? "ZZ")
+            .SelectMany(g => g.Take(_config.MaxProxiesPerCountry))
+            .ToList();
+
+        LogToConsole($"Final proxy count after country limit: {grouped.Count}");
+
+        // tulis hasil final ke list.txt
+        try { File.Delete(listPath); } catch { }
+        await File.WriteAllLinesAsync(listPath, grouped.Select(p => p.ToProfileUrl()));
+        try { File.Delete(outputPath); } catch { }
+
+        // upload hasil
         LogToConsole("Uploading results...");
         await CommitResultsFromFile(listPath);
 
@@ -76,11 +118,6 @@ public class ProxyCollector
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
     }
 
-    /// <summary>
-    /// Jalankan lite --config config.json -test list.txt
-    /// Jika sukses (exit code 0) dan output.txt ada, rename output.txt -> list.txt (overwrite).
-    /// Kembalikan true jika rename berhasil.
-    /// </summary>
     private async Task<bool> RunLiteTest(string listPath)
     {
         try
@@ -103,15 +140,6 @@ public class ProxyCollector
             var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
             if (proc.ExitCode == 0 && File.Exists(outputPath))
             {
-                // replace original list.txt with output.txt
-                try
-                {
-                    File.Delete(listPath); // hapus base64 input
-                }
-                catch { /* ignore */ }
-
-                File.Move(outputPath, listPath); // rename output.txt -> list.txt
-                LogToConsole($"Renamed {outputPath} -> {listPath}");
                 return true;
             }
             else
@@ -129,9 +157,6 @@ public class ProxyCollector
         }
     }
 
-    /// <summary>
-    /// Commit / upload berdasarkan file list.txt yang dihasilkan lite (sudah berisi daftar final).
-    /// </summary>
     private async Task CommitResultsFromFile(string listPath)
     {
         LogToConsole("Uploading V2ray Subscription...");
