@@ -45,10 +45,7 @@ public class ProxyCollector
         
         var workingResults = (await TestProfiles(profiles));
 
-        if (workingResults.Count >= _config.MinActiveProxies)
-        {
-            LogToConsole($"Reached minimum required {_config.MinActiveProxies} active proxies.");
-        }
+        LogToConsole($"Tested {workingResults.Count} active node.");
 
         if (workingResults.Count < _config.MinActiveProxies)
         {
