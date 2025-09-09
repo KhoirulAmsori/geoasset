@@ -10,6 +10,7 @@ using SingBoxLib.Configuration.Shared;
 using SingBoxLib.Parsing;
 using SingBoxLib.Runtime;
 using SingBoxLib.Runtime.Testing;
+using SingBoxLib.ClashApi; // tambahan untuk ClashApiClient
 using System.Collections.Concurrent;
 using System.Text;
 using System.Web;
@@ -166,16 +167,17 @@ public class ProxyCollector
 
     private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles, string testUrl)
     {
+        int clashApiPort = 9090; // hardcoded port untuk ClashApi
+        var singbox = new SingBoxWrapper(_config.SingboxPath, clashApiPort);
+
+        // Mulai logging dari ClashApi
+        await StartClashApiLogging(clashApiPort);
+
         var tester = new ParallelUrlTester(
-            new SingBoxWrapper(_config.SingboxPath),
-            // A list of open local ports, must be equal or bigger than total test thread count
-            // make sure they are not occupied by other applications running on your system
+            singbox,
             20000,
-            // max number of concurrent testing
             _config.MaxThreadCount,
-            // timeout in miliseconds
             _config.Timeout,
-            // retry count (will still do the retries even if proxy works, returns fastest result)
             5,
             testUrl);
 
@@ -188,6 +190,15 @@ public class ProxyCollector
         return workingResults;
     }
 
+    private async Task StartClashApiLogging(int clashApiPort)
+    {
+        var clashApi = new ClashApiClient(clashApiPort);
+        clashApi.LogReceived += (sender, log) =>
+        {
+            LogToConsole($"[ClashApi:{log.Type}] {log.Payload}");
+        };
+        await clashApi.StartAsync();
+    }
 
     private async Task<IReadOnlyCollection<ProfileItem>> CollectProfilesFromConfigSources()
     {
@@ -231,7 +242,6 @@ public class ProxyCollector
             string? line = null;
             while ((line = reader.ReadLine()?.Trim()) is not null)
             {
-                // Skip jika protokol tidak ada di IncludedProtocols
                 if (_config.IncludedProtocols.Length > 0 &&
                     !_config.IncludedProtocols.Any(proto => line.StartsWith(proto, StringComparison.OrdinalIgnoreCase)))
                 {
