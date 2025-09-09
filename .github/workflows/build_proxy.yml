@@ -18,10 +18,12 @@ jobs:
     env:
       MaxProxiesPerCountry: 3
       MinActiveProxies: 100
+      maxRetries: 15
+      Timeout: 6000
       MaxThreadCount: 96
-      LitePath: Asset/lite
-      LiteConfigPath: Asset/config.json
-      IncludedProtocols: "ss"
+      SingboxPath: sing-box
+      IncludedProtocols: "ss,trojan,vless"
+      TestUrls: "http://www.gstatic.com/generate_204,http://cp.cloudflare.com,http://edge.microsoft.com/captiveportal/generate_204,http://connectivitycheck.android.com/generate_204,http://wifi.vivo.com.cn/generate_204,http://detectportal.firefox.com/canonical.html,http://quasar.yandex.net/generate_204"
       V2rayFormatResultPath: Asset/list.txt
       SourcesFile: Asset/sources.txt
 
@@ -36,7 +38,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 9.0.x
 
       - name: Checkout main branch
         uses: actions/checkout@v5
@@ -44,6 +46,11 @@ jobs:
           fetch-depth: 1
           ref: main
           path: source
+
+      - name: Install sing-box
+        run: |
+          sudo dpkg -i source/proxy-build/Asset/*.deb
+          sudo apt-get install -f
 
       - name: Build proxy list
         run: |
