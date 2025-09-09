@@ -37,48 +37,19 @@ public class ProxyCollector
         LogToConsole($"Collected {profiles.Count} unique profiles with protocols: {included}.");
 
         var workingResults = new List<UrlTestResult>();
-        var maxRetries = _config.maxRetriesCount;
-        LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies} with maximum {maxRetries} retries.");
 
-        var remainingProfiles = profiles.ToList();
+        var attemptResults = await TestProfiles(profiles, _config.LitePath, _config.LiteConfigPath);
 
-        for (int attempt = 1; attempt <= maxRetries; attempt++)
-        {
-            var testUrl = _config.TestUrls[(attempt - 1) % _config.TestUrls.Length];
-            LogToConsole($"Attempt {attempt} / {maxRetries} testing with URL: {testUrl}");
+        var newSuccesses = attemptResults
+            .Where(r => r.Success && !workingResults.Any(x => x.Profile.Address == r.Profile.Address))
+            .ToList();
 
-            if (!remainingProfiles.Any())
-            {
-                LogToConsole("No remaining profiles left to test.");
-                break;
-            }
+        foreach (var s in newSuccesses)
+            workingResults.Add(s);
 
-            var attemptResults = await TestProfiles(remainingProfiles, _config.LitePath, _config.LiteConfigPath);
-
-            var newSuccesses = attemptResults
-                .Where(r => r.Success && !workingResults.Any(x => x.Profile.Address == r.Profile.Address))
-                .ToList();
-
-            foreach (var s in newSuccesses)
-                workingResults.Add(s);
-
-            LogToConsole(
-                $"Attempt {attempt} / {maxRetries}: testing {remainingProfiles.Count} nodes → {newSuccesses.Count} new, {workingResults.Count} total active."
-            );
-
-            if (workingResults.Count >= _config.MinActiveProxies)
-            {
-                LogToConsole($"Reached minimum required {_config.MinActiveProxies} active proxies, stopping retries.");
-                break;
-            }
-
-            var successAddresses = new HashSet<string>(
-                attemptResults.Where(r => r.Success).Select(r => r.Profile.Address!)
-            );
-            remainingProfiles = remainingProfiles
-                .Where(p => !successAddresses.Contains(p.Address!))
-                .ToList();
-        }
+        LogToConsole(
+            $"Testing {profiles.Count} proxies → {newSuccesses.Count} active proxies detected."
+        );
 
         if (workingResults.Count < _config.MinActiveProxies)
         {
