@@ -74,6 +74,9 @@ public class ProxyCollector
         var lines = await File.ReadAllLinesAsync(outputPath);
         var parsedProfiles = new List<ProfileItem>();
 
+        // dictionary untuk simpan hasil country per profile
+        var countryMap = new Dictionary<ProfileItem, CountryInfo>();
+
         foreach (var line in lines)
         {
             ProfileItem? profile = null;
@@ -82,28 +85,34 @@ public class ProxyCollector
 
             try
             {
-                var host = profile.Address ?? profile.Server;
+                var host = profile.Address;
+                if (string.IsNullOrEmpty(host))
+                    continue;
+
                 var country = await resolver.GetCountry(host);
-                profile.Country = country;
+                countryMap[profile] = country;
 
                 var isp = string.IsNullOrEmpty(country.Isp) ? "UnknownISP" : country.Isp;
-                var idx = parsedProfiles.Count(p => p.Country?.CountryCode == country.CountryCode);
+                var idx = parsedProfiles.Count(p => countryMap.ContainsKey(p) &&
+                                                    countryMap[p].CountryCode == country.CountryCode);
+
                 profile.Name = $"{country.CountryCode} {idx + 1} - {isp}";
                 parsedProfiles.Add(profile);
             }
             catch (Exception ex)
             {
-                LogToConsole($"[WARN] Failed resolve {profile.Server}: {ex.Message}");
+                LogToConsole($"[WARN] Failed resolve {profile.Address}: {ex.Message}");
             }
         }
 
         // batasi jumlah per country
         var grouped = parsedProfiles
-            .GroupBy(p => p.Country?.CountryCode ?? "ZZ")
+            .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
             .SelectMany(g => g.Take(_config.MaxProxiesPerCountry))
             .ToList();
 
         LogToConsole($"Final proxy count after country limit: {grouped.Count}");
+
 
         // tulis hasil final ke list.txt
         try { File.Delete(listPath); } catch { }
