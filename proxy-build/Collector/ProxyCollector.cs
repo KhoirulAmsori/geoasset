@@ -89,31 +89,8 @@ public class ProxyCollector
 
         LogToConsole("Compiling results...");
         var finalResults = workingResults
-            .Select(r => new {
-                TestResult = r,
-                CountryInfo = _ipToCountryResolver.GetCountry(ExtractHost(r.Profile.Address!)).Result
-            })
-            .GroupBy(p => p.CountryInfo.CountryCode)
-            .Select(
-                x => x.OrderBy(x => x.TestResult.Delay)
-                      .WithIndex()
-                      .Take(_config.MaxProxiesPerCountry)
-                      .Select(x =>
-                      {
-                          var profile = x.Item.TestResult.Profile;
-                          var countryInfo = x.Item.CountryInfo;
-                          var ispRaw = (countryInfo.Isp ?? string.Empty).Replace(".", "");
-                          var ispParts = ispRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                          var ispName = ispParts.Length >= 2
-                              ? $"{ispParts[0]} {ispParts[1]}"
-                              : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
-                          profile.Name = $"{countryInfo.CountryCode} {x.Index + 1} - {ispName}";
-                          return new { Profile = profile, CountryCode = countryInfo.CountryCode };
-                      })
-            )
-            .SelectMany(x => x)
-            .OrderBy(x => x.CountryCode)
-            .Select(x => x.Profile)
+            .OrderBy(r => r.Delay)
+            .Select(r => r.Profile)
             .ToList();
 
         LogToConsole("Uploading results...");
