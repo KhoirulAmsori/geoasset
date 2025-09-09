@@ -100,7 +100,7 @@ public class ProxyCollector
 
         LogToConsole("Compiling results...");
         var finalResults = workingResults
-            .Select(r => new { TestResult = r, CountryInfo = _ipToCountryResolver.GetCountry(r.Profile.Address!).Result })
+            .Select(r => new { TestResult = r, CountryInfo = _ipToCountryResolver.GetCountry(r.Profile.Address!) })
             .GroupBy(p => p.CountryInfo.CountryCode)
             .Select
             (
