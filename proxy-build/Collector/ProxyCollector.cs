@@ -6,9 +6,9 @@ using System.Diagnostics;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using ProxyCollector.Models;
-using ProxyCollector.Services;
+
 using ProxyCollector.Configuration;
+using ProxyCollector.Services; // untuk IPToCountryResolver + CountryInfo
 using SingBoxLib.Configuration;
 using SingBoxLib.Parsing;
 
@@ -17,10 +17,12 @@ namespace ProxyCollector.Collector;
 public class ProxyCollector
 {
     private readonly CollectorConfig _config;
+    private readonly IPToCountryResolver _resolver;
 
     public ProxyCollector()
     {
         _config = CollectorConfig.Instance;
+        _resolver = new IPToCountryResolver();
     }
 
     private void LogToConsole(string log)
@@ -51,7 +53,7 @@ public class ProxyCollector
         LogToConsole("Compiling results...");
         var finalResults = profiles.ToList();
 
-        // tulis list.txt (base64) untuk lite
+        // tulis list.txt base64 untuk lite
         var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
         var plain = string.Join("\n", finalResults.Select(p => p.ToProfileUrl()));
         var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(plain));
@@ -60,66 +62,77 @@ public class ProxyCollector
 
         // jalankan lite test
         var liteOk = await RunLiteTest(listPath);
-        var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
-        if (!liteOk || !File.Exists(outputPath))
+
+        if (!liteOk)
         {
             LogToConsole("Lite test failed — skipping upload.");
             await File.WriteAllTextAsync("skip_push.flag", "lite test failed");
             return;
         }
 
-        // --- Proses IPToCountryResolver ---
-        LogToConsole("Resolving countries for active proxies...");
-        var resolver = new IPToCountryResolver();
-        var lines = await File.ReadAllLinesAsync(outputPath);
-        var parsedProfiles = new List<ProfileItem>();
-
-        // dictionary untuk simpan hasil country per profile
-        var countryMap = new Dictionary<ProfileItem, CountryInfo>();
-
-        foreach (var line in lines)
+        // Setelah lite sukses, proses hasil output.txt dengan IPToCountryResolver
+        var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
+        if (File.Exists(outputPath))
         {
-            ProfileItem? profile = null;
-            try { profile = ProfileParser.ParseProfileUrl(line); } catch { }
-            if (profile == null) continue;
+            LogToConsole("Resolving countries & renaming profiles...");
 
-            try
-            {
-                var host = profile.Address;
-                if (string.IsNullOrEmpty(host))
-                    continue;
+            var content = await File.ReadAllTextAsync(outputPath);
+            var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(content));
 
-                var country = await resolver.GetCountry(host);
-                countryMap[profile] = country;
-                
-                var isp = string.IsNullOrEmpty(country.Isp) ? "UnknownISP" : country.Isp;
-                var idx = parsedProfiles.Count(p => countryMap.ContainsKey(p) &&
-                                                    countryMap[p].CountryCode == country.CountryCode);
-                                                    
-                profile.Name = Uri.UnescapeDataString($"{country.CountryCode} {idx + 1} - {isp}");
-                parsedProfiles.Add(profile);
-            }
-            catch (Exception ex)
+            var parsedProfiles = new List<ProfileItem>();
+            using (var reader = new StringReader(decoded))
             {
-                LogToConsole($"[WARN] Failed resolve {profile.Address}: {ex.Message}");
+                string? line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    try
+                    {
+                        var p = ProfileParser.ParseProfileUrl(line.Trim());
+                        if (p != null) parsedProfiles.Add(p);
+                    }
+                    catch { }
+                }
             }
+
+            var countryMap = new Dictionary<ProfileItem, CountryInfo>();
+
+            foreach (var profile in parsedProfiles)
+            {
+                try
+                {
+                    var server = profile.ServerAddress; // gunakan ServerAddress
+                    var country = await _resolver.GetCountry(server);
+                    countryMap[profile] = country;
+
+                    // Ambil hanya 2 kata pertama ISP
+                    var isp = string.IsNullOrEmpty(country.Isp) ? "UnknownISP" : country.Isp;
+                    var ispParts = isp.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    var ispTwoWords = ispParts.Length > 1
+                        ? string.Join(" ", ispParts.Take(2))
+                        : ispParts.FirstOrDefault() ?? "UnknownISP";
+
+                    // Hitung index per country
+                    var idx = parsedProfiles.Count(p => countryMap.ContainsKey(p) &&
+                                                        countryMap[p].CountryCode == country.CountryCode);
+
+                    profile.Name = Uri.UnescapeDataString($"{country.CountryCode} {idx} - {ispTwoWords}");
+                }
+                catch (Exception ex)
+                {
+                    LogToConsole($"Failed to resolve country for {profile.ServerAddress}: {ex.Message}");
+                }
+            }
+
+            // Tulis ulang list.txt hasil rename → base64 encode
+            var newPlain = string.Join("\n", parsedProfiles.Select(p => p.ToProfileUrl()));
+            var newBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(newPlain));
+
+            File.Delete(listPath);
+            await File.WriteAllTextAsync(listPath, newBase64);
+            LogToConsole("Profiles renamed & written back to list.txt");
         }
 
-        // batasi jumlah per country
-        var grouped = parsedProfiles
-            .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
-            .SelectMany(g => g.Take(_config.MaxProxiesPerCountry))
-            .ToList();
-
-        LogToConsole($"Final proxy count after country limit: {grouped.Count}");
-
-
-        // tulis hasil final ke list.txt
-        try { File.Delete(listPath); } catch { }
-        await File.WriteAllLinesAsync(listPath, grouped.Select(p => p.ToProfileUrl()));
-        try { File.Delete(outputPath); } catch { }
-
-        // upload hasil
+        // Upload
         LogToConsole("Uploading results...");
         await CommitResultsFromFile(listPath);
 
@@ -149,13 +162,12 @@ public class ProxyCollector
             var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
             if (proc.ExitCode == 0 && File.Exists(outputPath))
             {
+                LogToConsole("Lite test succeeded, output.txt ready");
                 return true;
             }
             else
             {
                 LogToConsole("Warning: lite did not produce a valid output.txt or exited with error.");
-                if (File.Exists(outputPath))
-                    LogToConsole($"Note: output.txt exists but lite exit code = {proc.ExitCode}.");
                 return false;
             }
         }
