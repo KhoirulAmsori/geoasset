@@ -44,7 +44,7 @@ public class ProxyCollector
 
         // var attemptResults = await TestProfiles(remainingProfiles, _config.LitePath, _config.LiteConfigPath);
         var workingResults = (await TestProfiles(profiles));
-        LogToConsole($"Total working results: {workingResults");
+
         if (workingResults.Count < _config.MinActiveProxies)
         {
             LogToConsole($"Active proxies ({workingResults.Count}) less than required ({_config.MinActiveProxies}). Skipping push.");
