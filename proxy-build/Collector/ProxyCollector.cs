@@ -1,6 +1,7 @@
 using ProxyCollector.Configuration;
 using SingBoxLib.Parsing;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text;
 
 namespace ProxyCollector.Collector;
@@ -41,13 +42,66 @@ public class ProxyCollector
 
         LogToConsole("Compiling results...");
         var finalResults = profiles
+            .Take(_config.MaxProxiesPerCountry) // ambil sesuai batas
             .ToList();
+
+        // === tulis list.txt untuk dites dengan Lite ===
+        var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
+        await File.WriteAllLinesAsync(listPath, finalResults.Select(p => p.ToProfileUrl()));
+        LogToConsole($"Temporary list written to {listPath}");
+
+        // === jalankan perintah lite test ===
+        await RunLiteTest(listPath);
 
         LogToConsole("Uploading results...");
         await CommitResults(finalResults);
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
+    }
+
+    private async Task RunLiteTest(string listPath)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = _config.LitePath,
+                Arguments = $"--config {_config.LiteConfigPath} -test \"{listPath}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var proc = new Process { StartInfo = psi };
+            proc.OutputDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) LogToConsole(e.Data); };
+            proc.ErrorDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) LogToConsole("[ERR] " + e.Data); };
+
+            proc.Start();
+            proc.BeginOutputReadLine();
+            proc.BeginErrorReadLine();
+            await proc.WaitForExitAsync();
+
+            LogToConsole($"Lite test finished with exit code {proc.ExitCode}");
+
+            // === rename output.txt -> list.txt ===
+            var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
+            if (File.Exists(outputPath))
+            {
+                File.Delete(listPath); // hapus list.txt lama
+                File.Move(outputPath, listPath);
+                LogToConsole($"Renamed {outputPath} -> {listPath}");
+            }
+            else
+            {
+                LogToConsole("Warning: output.txt not found after lite test!");
+            }
+        }
+        catch (Exception ex)
+        {
+            LogToConsole($"Failed to run lite test: {ex.Message}");
+        }
     }
 
     private async Task CommitResults(List<ProfileItem> profiles)
@@ -66,7 +120,6 @@ public class ProxyCollector
 
         var outputPath = _config.V2rayFormatResultPath;
 
-        // Pastikan folder tujuan ada
         var dir = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
@@ -135,18 +188,6 @@ public class ProxyCollector
                     yield return profile;
                 }
             }
-        }
-    }
-}
-
-public static class HelperExtentions
-{
-    public static IEnumerable<(int Index, T Item)> WithIndex<T>(this IEnumerable<T> items)
-    {
-        int index = 0;
-        foreach (var item in items)
-        {
-            yield return (index++, item);
         }
     }
 }
