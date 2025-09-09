@@ -10,6 +10,7 @@ using SingBoxLib.Runtime;
 using SingBoxLib.Runtime.Testing;
 using System.Collections.Concurrent;
 using System.Text;
+using System.Web;
 
 namespace ProxyCollector.Collector;
 
