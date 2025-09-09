@@ -34,7 +34,7 @@ public sealed class IPToCountryResolver
         return new CountryInfo
         {
             CountryName = response?.Country?.Name ?? "Unknown",
-            CountryCode = response?.Country?.IsoCode ?? "XX"
+            CountryCode = response?.Country?.IsoCode ?? "Unknown"
         };
     }
 }
