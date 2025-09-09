@@ -22,7 +22,7 @@ jobs:
       Timeout: 15000
       MaxThreadCount: 64
       SingboxPath: sing-box
-      IncludedProtocols: "ss"
+      IncludedProtocols: "ss,trojan,vless"
       TestUrls: "http://www.gstatic.com/generate_204,http://cp.cloudflare.com,http://edge.microsoft.com/captiveportal/generate_204,http://connectivitycheck.android.com/generate_204,http://wifi.vivo.com.cn/generate_204,http://detectportal.firefox.com/canonical.html,http://quasar.yandex.net/generate_204"
       V2rayFormatResultPath: Asset/list.txt
       SourcesFile: Asset/sources.txt
