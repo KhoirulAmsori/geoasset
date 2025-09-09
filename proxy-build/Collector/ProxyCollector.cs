@@ -100,26 +100,25 @@ public class ProxyCollector
             {
                 try
                 {
-                    var server = profile.ServerAddress; // gunakan ServerAddress
+                    var server = profile.Address;
                     var country = await _resolver.GetCountry(server);
                     countryMap[profile] = country;
 
-                    // Ambil hanya 2 kata pertama ISP
                     var isp = string.IsNullOrEmpty(country.Isp) ? "UnknownISP" : country.Isp;
                     var ispParts = isp.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
                     var ispTwoWords = ispParts.Length > 1
                         ? string.Join(" ", ispParts.Take(2))
-                        : ispParts.FirstOrDefault() ?? "UnknownISP";
+                        : (ispParts.Length == 1 ? ispParts[0] : "UnknownISP");
 
-                    // Hitung index per country
                     var idx = parsedProfiles.Count(p => countryMap.ContainsKey(p) &&
                                                         countryMap[p].CountryCode == country.CountryCode);
 
-                    profile.Name = Uri.UnescapeDataString($"{country.CountryCode} {idx} - {ispTwoWords}");
+                    profile.Name = Uri.UnescapeDataString($"{country.CountryCode} {idx + 1} - {ispTwoWords}");
                 }
                 catch (Exception ex)
                 {
-                    LogToConsole($"Failed to resolve country for {profile.ServerAddress}: {ex.Message}");
+                    LogToConsole($"Failed to resolve country for {profile.Address}: {ex.Message}");
                 }
             }
 
