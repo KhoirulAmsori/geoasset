@@ -253,13 +253,15 @@ public class ProxyCollector
                     !_config.IncludedProtocols.Any(proto => line.StartsWith(proto, StringComparison.OrdinalIgnoreCase)))
                     continue;
 
-                ProfileItem? profile = null;
-                try { profile = ProfileParser.ParseProfileUrl(line); } catch { }
-
-                if (profile != null)
-                    yield return profile;
+                // Minimal parsing: simpan URL sebagai Address, Name kosong
+                yield return new ProfileItem
+                {
+                    Address = line,
+                    Name = string.Empty
+                };
             }
         }
+
     }
 }
 
