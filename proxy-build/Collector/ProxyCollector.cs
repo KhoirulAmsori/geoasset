@@ -51,11 +51,14 @@ public class ProxyCollector
         LogToConsole("Compiling results...");
         var finalResults = profiles.ToList();
 
-        // tulis list.txt (base64) untuk lite
+        // Setelah semua profile di-resolve dan diberi nama baru
         var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
-        var plain = string.Join("\n", finalResults.Select(p =>
+
+        var plain = string.Join("\n", profiles.Select(p =>
         {
             var url = p.ToProfileUrl();
+
+            // pastikan fragment # sudah unescaped
             if (url.Contains("#"))
             {
                 var parts = url.Split('#', 2);
@@ -64,9 +67,9 @@ public class ProxyCollector
             return url;
         }));
 
-        // var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(plain));
         await File.WriteAllTextAsync(listPath, plain);
-        LogToConsole($"Temporary list written to {listPath} (base64-encoded, {finalResults.Count} entries)");
+
+        LogToConsole($"Final list written to {listPath} ({profiles.Count} entries)");
 
         // jalankan lite test
         var liteOk = await RunLiteTest(listPath);
