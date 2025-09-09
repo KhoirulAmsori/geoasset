@@ -117,11 +117,13 @@ public class ProxyCollector
                         var countryInfo = x.Item.CountryInfo;
                         var ispRaw = countryInfo.Isp ?? string.Empty;
 
-                        // Bersihkan titik dan suffix formal
-                        ispRaw = ispRaw.Replace(".", "").Trim();
+                        // Bersihkan karakter dan suffix formal
+                        ispRaw = ispRaw.Replace(".", "")
+                                        .Replace(",", "")
+                                        .Trim();
 
                         // Daftar suffix formal yang ingin dihapus
-                        var formalSuffixes = new[] { "SAS", "INC", "LTD", "LLC", "CORP", "CO", "GMBH", "SA", "SRO" };
+                        var formalSuffixes = new[] { "SAS", "INC", "LTD", "LLC", "CORP", "CO", "SA", "SRO", "ASN" };
 
                         // Pisahkan kata
                         var ispParts = ispRaw.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries)
