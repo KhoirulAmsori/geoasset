@@ -11,6 +11,8 @@ public class CollectorConfig
     public required string V2rayFormatResultPath { get; init; }
     public required string[] Sources { get; init; }
     public required string[] IncludedProtocols { get; init; }
+    public required string GeoLiteCountryDbPath { get; init; }
+    public required string GeoLiteAsnDbPath { get; init; }
 
     static CollectorConfig()
     {
@@ -46,7 +48,9 @@ public class CollectorConfig
             LiteConfigPath = Environment.GetEnvironmentVariable("LiteConfigPath")!,
             V2rayFormatResultPath = Environment.GetEnvironmentVariable("V2rayFormatResultPath")!,
             Sources = sources,
-            IncludedProtocols = includedProtocols
+            IncludedProtocols = includedProtocols,
+            GeoLiteCountryDbPath = Environment.GetEnvironmentVariable("GeoLiteCountryDbPath")!,
+            GeoLiteAsnDbPath = Environment.GetEnvironmentVariable("GeoLiteAsnDbPath")!
         };
     }
 }

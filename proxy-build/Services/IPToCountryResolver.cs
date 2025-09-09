@@ -1,19 +1,24 @@
-﻿using Newtonsoft.Json;
+﻿using MaxMind.GeoIP2;
+using MaxMind.GeoIP2.Responses;
 using ProxyCollector.Models;
 using System.Net;
 
 namespace ProxyCollector.Services;
 
-public sealed class IPToCountryResolver
+public sealed class IPToCountryResolver : IDisposable
 {
-    private readonly HttpClient _httpClient;
+    private readonly DatabaseReader _countryReader;
+    private readonly DatabaseReader _asnReader;
+    private bool _disposed = false;
 
-    public IPToCountryResolver()
+    public IPToCountryResolver(string geoLiteCountryDbPath, string geoLiteAsnDbPath)
     {
-        _httpClient = new HttpClient();
+        // Buka reader sekali untuk batch lookup
+        _countryReader = new DatabaseReader(geoLiteCountryDbPath);
+        _asnReader = new DatabaseReader(geoLiteAsnDbPath);
     }
 
-    public async Task<CountryInfo> GetCountry(string address, CancellationToken cancellationToken = default)
+    public CountryInfo GetCountry(string address)
     {
         IPAddress? ip = null;
         if (!IPAddress.TryParse(address, out ip))
@@ -22,36 +27,38 @@ public sealed class IPToCountryResolver
             ip = ips[0];
         }
 
-        return await GetCountry(ip, cancellationToken);
+        return GetCountry(ip!);
     }
 
-    public async Task<CountryInfo> GetCountry(IPAddress ip, CancellationToken cancellationToken = default)
+    public CountryInfo GetCountry(IPAddress ip)
     {
-        string? response = null;
-        for (int i = 1; i <= 5; i++)
-        {
-            try
-            {
-                response = await _httpClient.GetStringAsync($"https://api.iplocation.net/?ip={ip}");
-                break;
-            }
-            catch (HttpRequestException)
-            {
-                if(i == 5)
-                {
-                    throw;
-                }
-                await Task.Delay(TimeSpan.FromSeconds(20));
-            }
-        }
+        string countryName = "Unknown";
+        string countryCode = "Unknown";
+        string isp = "Unknown";
 
-        var ipInfo = JsonConvert.DeserializeObject<IpLocationResponse>(response!)!;
+        // Lookup Country
+        var countryResponse = _countryReader.Country(ip);
+        countryName = countryResponse?.Country?.Name ?? "Unknown";
+        countryCode = countryResponse?.Country?.IsoCode ?? "Unknown";
+
+        // Lookup ASN / ISP
+        var asnResponse = _asnReader.Asn(ip);
+        isp = asnResponse?.AutonomousSystemOrganization ?? "Unknown";
 
         return new CountryInfo
         {
-            CountryName = ipInfo.CountryName,
-            CountryCode = ipInfo.CountryCode,
-            Isp = ipInfo.Isp
+            CountryName = countryName,
+            CountryCode = countryCode,
+            Isp = isp
         };
+    }
+
+    // IDisposable pattern untuk menutup reader saat selesai
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _countryReader.Dispose();
+        _asnReader.Dispose();
+        _disposed = true;
     }
 }

@@ -85,7 +85,10 @@ public class ProxyCollector
 
         // --- Proses IPToCountryResolver ---
         LogToConsole("Resolving countries for active proxies...");
-        var resolver = new IPToCountryResolver();
+        var resolver = new IPToCountryResolver(
+            _config.GeoLiteCountryDbPath,    // GeoLite2-Country.mmdb
+            _config.GeoLiteAsnDbPath         // GeoLite2-ASN.mmdb
+        );
         var lines = await File.ReadAllLinesAsync(outputPath);
         var parsedProfiles = new List<ProfileItem>();
         var countryMap = new Dictionary<ProfileItem, CountryInfo>();

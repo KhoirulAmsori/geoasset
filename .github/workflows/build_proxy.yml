@@ -17,13 +17,15 @@ jobs:
     runs-on: ubuntu-latest
     env:
       MaxProxiesPerCountry: 3
-      MinActiveProxies: 100
+      MinActiveProxies: 20
       MaxThreadCount: 96
       LitePath: Asset/lite
       LiteConfigPath: Asset/config.json
       IncludedProtocols: "ss"
       V2rayFormatResultPath: Asset/list.txt
       SourcesFile: Asset/sources.txt
+      GeoLiteCountryDbPath: Asset/GeoLite2-Country.mmdb
+      GeoLiteAsnDbPath: Asset/GeoLite2-ASN.mmdb
 
     steps:
       - name: Set variables
