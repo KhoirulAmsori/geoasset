@@ -1,13 +1,5 @@
-using Octokit;
 using ProxyCollector.Configuration;
-using ProxyCollector.Services;
-using SingBoxLib.Configuration;
-using SingBoxLib.Configuration.Inbound;
-using SingBoxLib.Configuration.Outbound;
-using SingBoxLib.Configuration.Outbound.Abstract;
 using SingBoxLib.Parsing;
-using SingBoxLib.Runtime;
-using SingBoxLib.Runtime.Testing;
 using System.Collections.Concurrent;
 using System.Text;
 
@@ -16,12 +8,10 @@ namespace ProxyCollector.Collector;
 public class ProxyCollector
 {
     private readonly CollectorConfig _config;
-    private readonly IPToCountryResolver _ipToCountryResolver;
 
     public ProxyCollector()
     {
         _config = CollectorConfig.Instance;
-        _ipToCountryResolver = new IPToCountryResolver();
     }
 
     private void LogToConsole(string log)
@@ -42,54 +32,27 @@ public class ProxyCollector
         LogToConsole($"Collected {profiles.Count} unique profiles with protocols: {included}.");
         LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies}.");
 
-        // var attemptResults = await TestProfiles(remainingProfiles, _config.LitePath, _config.LiteConfigPath);
-        var workingResults = (await TestProfiles(profiles));
-
-        if (workingResults.Count < _config.MinActiveProxies)
+        if (profiles.Count < _config.MinActiveProxies)
         {
-            LogToConsole($"Active proxies ({workingResults.Count}) less than required ({_config.MinActiveProxies}). Skipping push.");
+            LogToConsole($"Active proxies ({profiles.Count}) less than required ({_config.MinActiveProxies}). Skipping push.");
             await File.WriteAllTextAsync("skip_push.flag", "not enough proxies");
             return;
         }
 
         LogToConsole("Compiling results...");
-        var finalResults = workingResults
-            .Select(r => new { TestResult = r, CountryInfo = _ipToCountryResolver.GetCountry(r.Profile.Address!).Result })
-            .GroupBy(p => p.CountryInfo.CountryCode)
-            .Select
-            (
-                x => x.OrderBy(x => x.TestResult.Delay)
-                    .WithIndex()
-                    .Take(_config.MaxProxiesPerCountry)
-                    .Select(x =>
-                    {
-                        var profile = x.Item.TestResult.Profile;
-                        var countryInfo = x.Item.CountryInfo;
-                        var ispRaw = (countryInfo.Isp ?? string.Empty).Replace(".", "");
-                        var ispParts = ispRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                        var ispName = ispParts.Length >= 2
-                            ? $"{ispParts[0]} {ispParts[1]}"
-                            : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
-                        profile.Name = $"{countryInfo.CountryCode} {x.Index + 1} - {ispName}";
-                        return new { Profile = profile, CountryCode = countryInfo.CountryCode };
-                    })
-            )
-            .SelectMany(x => x)
-            .OrderBy(x => x.CountryCode)
-            .Select(x => x.Profile)
+        var finalResults = profiles
             .ToList();
 
         LogToConsole("Uploading results...");
-        await CommitResults(finalResults.ToList());
+        await CommitResults(finalResults);
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
     }
 
-
     private async Task CommitResults(List<ProfileItem> profiles)
     {
-        LogToConsole($"Uploading V2ray Subscription...");
+        LogToConsole("Uploading V2ray Subscription...");
         await CommitV2raySubscriptionResult(profiles);
     }
 
@@ -110,25 +73,6 @@ public class ProxyCollector
 
         await File.WriteAllTextAsync(outputPath, finalResult.ToString());
         LogToConsole($"Subscription file written to {outputPath}");
-    }
-
-    private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles)
-    {
-        var tester = new ParallelUrlTester(
-            new SingBoxWrapper(_config.SingboxPath),
-            20000,
-            _config.MaxThreadCount,
-            _config.Timeout,
-            1024,
-            "https://www.youtube.com/generate_204");
-
-        var workingResults = new ConcurrentBag<UrlTestResult>();
-        await tester.ParallelTestAsync(profiles, new Progress<UrlTestResult>((result =>
-        {
-            if (result.Success)
-                workingResults.Add(result);
-        })), default);
-        return workingResults;
     }
 
     private async Task<IReadOnlyCollection<ProfileItem>> CollectProfilesFromConfigSources()
@@ -152,7 +96,7 @@ public class ProxyCollector
                 }
                 LogToConsole($"Collected {count} proxies from {source}");
             }
-            catch ( Exception ex )
+            catch (Exception ex)
             {
                 LogToConsole($"Failed to fetch {source}. error: {ex.Message}");
             }
@@ -173,13 +117,12 @@ public class ProxyCollector
             string? line = null;
             while ((line = reader.ReadLine()?.Trim()) is not null)
             {
-                // Skip jika protokol tidak ada di IncludedProtocols
                 if (_config.IncludedProtocols.Length > 0 &&
                     !_config.IncludedProtocols.Any(proto => line.StartsWith(proto, StringComparison.OrdinalIgnoreCase)))
                 {
                     continue;
                 }
-                
+
                 ProfileItem? profile = null;
                 try
                 {
