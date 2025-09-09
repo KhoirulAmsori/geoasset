@@ -182,7 +182,8 @@ public class ProxyCollector
         var workingResults = new ConcurrentBag<UrlTestResult>();
         await tester.ParallelTestAsync(profiles, new Progress<UrlTestResult>((result =>
         {
-            workingResults.Add(result);
+            if (result.Success)
+                workingResults.Add(result);
         })), default);
         return workingResults;
     }
