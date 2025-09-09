@@ -123,7 +123,7 @@ public class ProxyCollector
                                         .Trim();
 
                         // Daftar suffix formal yang ingin dihapus
-                        var formalSuffixes = new[] { "SAS", "INC", "LTD", "LLC", "CORP", "CO", "SA", "SRO", "ASN", "LIMITED", "COMPANY" };
+                        var formalSuffixes = new[] { "SAS", "INC", "LTD", "LLC", "CORP", "CO", "SA", "SRO", "ASN", "LIMITED", "COMPANY", "ASIA", "CLOUD" };
 
                         // Pisahkan kata
                         var ispParts = ispRaw.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries)
