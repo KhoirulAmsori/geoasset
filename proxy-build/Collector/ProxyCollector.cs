@@ -55,7 +55,7 @@ public class ProxyCollector
         var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
         var plain = string.Join("\n", finalResults.Select(p => p.ToProfileUrl()));
         var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(plain));
-        await File.WriteAllTextAsync(listPath, base64);
+        await File.WriteAllTextAsync(listPath, plain);
         LogToConsole($"Temporary list written to {listPath} (base64-encoded, {finalResults.Count} entries)");
 
         // jalankan lite test
