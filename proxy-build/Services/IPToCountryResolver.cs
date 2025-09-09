@@ -5,13 +5,17 @@ using System.Net;
 
 namespace ProxyCollector.Services;
 
-public sealed class IPToCountryResolver
+public sealed class IPToCountryResolver : IDisposable
 {
-    private readonly string _geoLiteDbPath;
+    private readonly DatabaseReader _countryReader;
+    private readonly DatabaseReader _asnReader;
+    private bool _disposed = false;
 
-    public IPToCountryResolver(string geoLiteDbPath)
+    public IPToCountryResolver(string geoLiteCountryDbPath, string geoLiteAsnDbPath)
     {
-        _geoLiteDbPath = geoLiteDbPath;
+        // Buka reader sekali untuk batch lookup
+        _countryReader = new DatabaseReader(geoLiteCountryDbPath);
+        _asnReader = new DatabaseReader(geoLiteAsnDbPath);
     }
 
     public CountryInfo GetCountry(string address)
@@ -28,13 +32,33 @@ public sealed class IPToCountryResolver
 
     public CountryInfo GetCountry(IPAddress ip)
     {
-        using var reader = new DatabaseReader(_geoLiteDbPath);
-        var response = reader.Country(ip);
+        string countryName = "Unknown";
+        string countryCode = "Unknown";
+        string isp = "Unknown";
+
+        // Lookup Country
+        var countryResponse = _countryReader.Country(ip);
+        countryName = countryResponse?.Country?.Name ?? "Unknown";
+        countryCode = countryResponse?.Country?.IsoCode ?? "Unknown";
+
+        // Lookup ASN / ISP
+        var asnResponse = _asnReader.Asn(ip);
+        isp = asnResponse?.AutonomousSystemOrganization ?? "Unknown";
 
         return new CountryInfo
         {
-            CountryName = response?.Country?.Name ?? "Unknown",
-            CountryCode = response?.Country?.IsoCode ?? "Unknown"
+            CountryName = countryName,
+            CountryCode = countryCode,
+            Isp = isp
         };
+    }
+
+    // IDisposable pattern untuk menutup reader saat selesai
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _countryReader.Dispose();
+        _asnReader.Dispose();
+        _disposed = true;
     }
 }

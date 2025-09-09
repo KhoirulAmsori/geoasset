@@ -22,7 +22,11 @@ public class ProxyCollector
     public ProxyCollector()
     {
         _config = CollectorConfig.Instance;
-        _ipToCountryResolver = new IPToCountryResolver(_config.GeoLite2DbPath);
+        _ipToCountryResolver = new IPToCountryResolver(
+            _config.GeoLiteCountryDbPath,    // GeoLite2-Country.mmdb
+            _config.GeoLiteAsnDbPath         // GeoLite2-ASN.mmdb
+        );
+
     }
 
     private void LogToConsole(string log)
@@ -111,7 +115,12 @@ public class ProxyCollector
                     {
                         var profile = x.Item.TestResult.Profile;
                         var countryInfo = x.Item.CountryInfo;
-                        profile.Name = $"{countryInfo.CountryCode}-{x.Index + 1}";
+                        var ispRaw = (countryInfo.Isp ?? string.Empty).Replace(".", "");
+                        var ispParts = ispRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        var ispName = ispParts.Length >= 2
+                            ? $"{ispParts[0]} {ispParts[1]}"
+                            : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
+                        profile.Name = $"{countryInfo.CountryCode} {x.Index + 1} - {ispName}";
                         return new { Profile = profile, CountryCode = countryInfo.CountryCode };
                     })
             )

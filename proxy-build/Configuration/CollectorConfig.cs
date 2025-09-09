@@ -13,7 +13,8 @@ public class CollectorConfig
     public required string[] Sources { get; init; }
     public required string[] IncludedProtocols { get; init; }
     public required string[] TestUrls { get; init; }
-    public required string GeoLite2DbPath { get; init; }
+    public required string GeoLiteCountryDbPath { get; init; }
+    public required string GeoLiteAsnDbPath { get; init; }
 
     static CollectorConfig()
     {
@@ -58,7 +59,8 @@ public class CollectorConfig
             TestUrls = testUrls.Length > 0 
                         ? testUrls 
                         : new[] { "https://www.gstatic.com/generate_204", "http://cp.cloudflare.com" },
-            GeoLite2DbPath = Environment.GetEnvironmentVariable("GeoLite2DbPath")!
+            GeoLiteCountryDbPath = Environment.GetEnvironmentVariable("GeoLiteCountryDbPath")!,
+            GeoLiteAsnDbPath = Environment.GetEnvironmentVariable("GeoLiteAsnDbPath")!
         };
     }
 }
