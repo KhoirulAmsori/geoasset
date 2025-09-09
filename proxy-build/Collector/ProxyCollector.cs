@@ -123,7 +123,7 @@ public class ProxyCollector
                 if (string.IsNullOrEmpty(host))
                     continue;
 
-                var country = await resolver.GetCountry(host);
+                var country = resolver.GetCountry(host);
                 countryMap[profile] = country;
 
                 var isp = string.IsNullOrEmpty(country.Isp) ? "UnknownISP" : country.Isp;
