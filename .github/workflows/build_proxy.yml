@@ -2,7 +2,7 @@ name: Build Proxy List
 
 on:
   schedule:
-    - cron: "0 18 * * *"
+    - cron: "0 */12 * * *"
   push:
     paths:
       - "proxy-build/Asset/sources.txt"
@@ -20,7 +20,7 @@ jobs:
       MinActiveProxies: 50
       maxRetries: 5
       Timeout: 15000
-      MaxThreadCount: 64
+      MaxThreadCount: 128
       SingboxPath: sing-box
       IncludedProtocols: "ss"
       TestUrls: "http://www.gstatic.com/generate_204,http://cp.cloudflare.com,http://edge.microsoft.com/captiveportal/generate_204,http://wifi.vivo.com.cn/generate_204,http://quasar.yandex.net/generate_204"
