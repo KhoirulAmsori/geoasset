@@ -1,15 +1,5 @@
-using Octokit;
 using ProxyCollector.Configuration;
 using ProxyCollector.Services;
-using SingBoxLib.Configuration;
-using SingBoxLib.Configuration.Inbound;
-using SingBoxLib.Configuration.Outbound;
-using SingBoxLib.Configuration.Outbound.Abstract;
-using SingBoxLib.Configuration.Route;
-using SingBoxLib.Configuration.Shared;
-using SingBoxLib.Parsing;
-using SingBoxLib.Runtime;
-using SingBoxLib.Runtime.Testing;
 using System.Collections.Concurrent;
 using System.Text;
 using System.Web;
@@ -37,6 +27,7 @@ public class ProxyCollector
         var startTime = DateTime.Now;
         LogToConsole("Collector started.");
 
+        // Ambil semua profile
         var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
         var included = _config.IncludedProtocols.Length > 0
             ? string.Join(", ", _config.IncludedProtocols.Select(p => p.Replace("://", "").ToUpperInvariant()))
@@ -44,43 +35,30 @@ public class ProxyCollector
 
         LogToConsole($"Collected {profiles.Count} unique profiles with protocols: {included}.");
 
-        // Anggap semua proxy langsung berhasil
-        var workingResults = profiles
-            .Select(p => new UrlTestResult { Profile = p, Success = true, Delay = 0 })
-            .ToList();
-
-        if (workingResults.Count < _config.MinActiveProxies)
+        if (profiles.Count < _config.MinActiveProxies)
         {
-            LogToConsole($"Active proxies ({workingResults.Count}) less than required ({_config.MinActiveProxies}). Skipping push.");
+            LogToConsole($"Active proxies ({profiles.Count}) less than required ({_config.MinActiveProxies}). Skipping push.");
             await File.WriteAllTextAsync("skip_push.flag", "not enough proxies");
             return;
         }
 
         LogToConsole("Compiling results...");
-        var finalResults = workingResults
-            .Select(r => new { TestResult = r, CountryInfo = _ipToCountryResolver.GetCountry(r.Profile.Address!).Result })
-            .GroupBy(p => p.CountryInfo.CountryCode)
-            .Select
-            (
-                x => x.OrderBy(x => x.TestResult.Delay)
-                    .WithIndex()
-                    .Take(_config.MaxProxiesPerCountry)
-                    .Select(x =>
-                    {
-                        var profile = x.Item.TestResult.Profile;
-                        var countryInfo = x.Item.CountryInfo;
-                        var ispRaw = (countryInfo.Isp ?? string.Empty).Replace(".", "");
-                        var ispParts = ispRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                        var ispName = ispParts.Length >= 2
-                            ? $"{ispParts[0]} {ispParts[1]}"
-                            : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
-                        profile.Name = $"{countryInfo.CountryCode} {x.Index + 1} - {ispName}";
-                        return profile;
-                    })
-            )
-            .SelectMany(x => x)
-            .OrderBy(x => x.Name)
-            .ToList();
+
+        // Dapatkan info negara secara paralel
+        var countryTasks = profiles.Select(async p =>
+        {
+            var countryInfo = await _ipToCountryResolver.GetCountry(p.Address!);
+            var ispRaw = (countryInfo.Isp ?? string.Empty).Replace(".", "");
+            var ispParts = ispRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var ispName = ispParts.Length >= 2
+                ? $"{ispParts[0]} {ispParts[1]}"
+                : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
+
+            p.Name = $"{countryInfo.CountryCode} - {ispName}";
+            return p;
+        });
+
+        var finalResults = (await Task.WhenAll(countryTasks)).ToList();
 
         LogToConsole("Uploading results...");
         await CommitResults(finalResults);

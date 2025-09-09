@@ -5,7 +5,7 @@ on:
     - cron: "0 18 * * *"
   push:
     paths:
-      - "proxy-build/**"
+      - "proxy-build/Asset/sources.txt"
   workflow_dispatch:
   repository_dispatch:
 
