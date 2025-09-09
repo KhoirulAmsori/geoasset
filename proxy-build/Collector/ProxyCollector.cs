@@ -44,6 +44,9 @@ public class ProxyCollector
 
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
+            var testUrl = _config.TestUrls[(attempt - 1) % _config.TestUrls.Length];
+            LogToConsole($"Attempt {attempt} / {maxRetries} testing with URL: {testUrl}");
+
             if (!remainingProfiles.Any())
             {
                 LogToConsole("No remaining profiles left to test.");
@@ -86,7 +89,10 @@ public class ProxyCollector
 
         LogToConsole("Compiling results...");
         var finalResults = workingResults
-            .Select(r => new { TestResult = r, CountryInfo = _ipToCountryResolver.GetCountry(r.Profile.Address!).Result })
+            .Select(r => new {
+                TestResult = r,
+                CountryInfo = _ipToCountryResolver.GetCountry(ExtractHost(r.Profile.Address!)).Result
+            })
             .GroupBy(p => p.CountryInfo.CountryCode)
             .Select(
                 x => x.OrderBy(x => x.TestResult.Delay)
@@ -111,7 +117,7 @@ public class ProxyCollector
             .ToList();
 
         LogToConsole("Uploading results...");
-        await CommitResults(finalResults.ToList());
+        await CommitResults(finalResults);
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
@@ -166,8 +172,8 @@ public class ProxyCollector
         using var process = new Process { StartInfo = psi };
         var output = new StringBuilder();
 
-        process.OutputDataReceived += (s, e) => { if (e.Data != null) output.AppendLine(e.Data); };
-        process.ErrorDataReceived += (s, e) => { if (e.Data != null) output.AppendLine(e.Data); };
+        process.OutputDataReceived += (s, e) => { if (e.Data != null) { output.AppendLine(e.Data); LogToConsole(e.Data); } };
+        process.ErrorDataReceived += (s, e) => { if (e.Data != null) { output.AppendLine(e.Data); LogToConsole(e.Data); } };
 
         process.Start();
         process.BeginOutputReadLine();
@@ -250,7 +256,6 @@ public class ProxyCollector
                     !_config.IncludedProtocols.Any(proto => line.StartsWith(proto, StringComparison.OrdinalIgnoreCase)))
                     continue;
 
-                // Minimal parsing: simpan URL sebagai Address, Name kosong
                 yield return new ProfileItem
                 {
                     Address = line,
@@ -258,11 +263,32 @@ public class ProxyCollector
                 };
             }
         }
+    }
 
+    private string ExtractHost(string proxyUrl)
+    {
+        try
+        {
+            var atIndex = proxyUrl.IndexOf('@');
+            if (atIndex >= 0)
+            {
+                var rest = proxyUrl.Substring(atIndex + 1);
+                var colonIndex = rest.IndexOf(':');
+                if (colonIndex > 0)
+                    return rest.Substring(0, colonIndex);
+                else
+                    return rest;
+            }
+            return proxyUrl;
+        }
+        catch
+        {
+            return proxyUrl;
+        }
     }
 }
 
-// ===== Minimal type definitions agar bisa compile =====
+// ===== Minimal type definitions =====
 public class ProfileItem
 {
     public string? Address { get; set; }
