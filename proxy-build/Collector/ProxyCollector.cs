@@ -45,7 +45,7 @@ public class ProxyCollector
         LogToConsole($"Collected {profiles.Count} unique profiles with protocols: {included}.");
         LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies}.");
 
-        var workingResults = (await TestProfiles(profiles));
+        var workingResults = new List<UrlTestResult>();
 
         if (workingResults.Count < _config.MinActiveProxies)
         {
