@@ -263,6 +263,22 @@ public class ProxyCollector
     }
 }
 
+// ===== Minimal type definitions agar bisa compile =====
+public class ProfileItem
+{
+    public string? Address { get; set; }
+    public string? Name { get; set; }
+    public string ToProfileUrl() => Address ?? string.Empty;
+}
+
+public class UrlTestResult
+{
+    public ProfileItem Profile { get; set; } = null!;
+    public bool Success { get; set; }
+    public int Delay { get; set; } // ms
+}
+
+// ===== Extension helper =====
 public static class HelperExtentions
 {
     public static IEnumerable<(int Index, T Item)> WithIndex<T>(this IEnumerable<T> items)
