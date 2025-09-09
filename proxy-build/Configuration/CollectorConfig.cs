@@ -58,7 +58,7 @@ public class CollectorConfig
             TestUrls = testUrls.Length > 0 
                         ? testUrls 
                         : new[] { "https://www.gstatic.com/generate_204", "http://cp.cloudflare.com" },
-            GeoLite2DbPath = Environment.GetEnvironmentVariable("GeoLite2DbPath")
+            GeoLite2DbPath = Environment.GetEnvironmentVariable("GeoLite2DbPath")!
         };
     }
 }
