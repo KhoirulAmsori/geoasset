@@ -115,12 +115,27 @@ public class ProxyCollector
                     {
                         var profile = x.Item.TestResult.Profile;
                         var countryInfo = x.Item.CountryInfo;
-                        var ispRaw = (countryInfo.Isp ?? string.Empty).Replace(".", "");
-                        var ispParts = ispRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        var ispRaw = countryInfo.Isp ?? string.Empty;
+
+                        // Bersihkan titik dan suffix formal
+                        ispRaw = ispRaw.Replace(".", "").Trim();
+
+                        // Daftar suffix formal yang ingin dihapus
+                        var formalSuffixes = new[] { "SAS", "INC", "LTD", "LLC", "CORP", "CO", "GMBH", "SA", "SRO" };
+
+                        // Pisahkan kata
+                        var ispParts = ispRaw.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries)
+                            .Where(w => !formalSuffixes.Contains(w.ToUpperInvariant()))
+                            .ToArray();
+
+                        // Ambil kata pertama dan kedua jika ada
                         var ispName = ispParts.Length >= 2
                             ? $"{ispParts[0]} {ispParts[1]}"
                             : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
+
+                        // Gunakan untuk profile name
                         profile.Name = $"{countryInfo.CountryCode} {x.Index + 1} - {ispName}";
+
                         return new { Profile = profile, CountryCode = countryInfo.CountryCode };
                     })
             )
