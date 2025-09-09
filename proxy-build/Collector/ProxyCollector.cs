@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using ProxyCollector.Models;
 using ProxyCollector.Services;
 using ProxyCollector.Configuration;
+using SingBoxLib.Configuration;
+using SingBoxLib.Parsing;
 
 namespace ProxyCollector.Collector;
 
@@ -89,17 +91,13 @@ public class ProxyCollector
 
                 var country = await resolver.GetCountry(host);
                 countryMap[profile] = country;
-                
-                var isp = string.IsNullOrEmpty(country.Isp) ? "UnknownISP" : country.Isp;
-                var ispParts = isp.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-                var ispTwoWords = ispParts.Length > 1
-                    ? string.Join(" ", ispParts.Take(2))
-                    : (ispParts.Length == 1 ? ispParts[0] : "UnknownISP");
+                var isp = string.IsNullOrEmpty(country.Isp) ? "UnknownISP" : country.Isp;
                 var idx = parsedProfiles.Count(p => countryMap.ContainsKey(p) &&
                                                     countryMap[p].CountryCode == country.CountryCode);
 
-                profile.Name = Uri.UnescapeDataString($"{country.CountryCode} {idx + 1} - {ispTwoWords}");
+                profile.Name = $"{country.CountryCode} {idx + 1} - {isp}";
+                parsedProfiles.Add(profile);
             }
             catch (Exception ex)
             {
