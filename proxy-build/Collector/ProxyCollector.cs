@@ -11,6 +11,7 @@ using ProxyCollector.Services;
 using ProxyCollector.Configuration;
 using SingBoxLib.Configuration;
 using SingBoxLib.Parsing;
+using System.Text.Json;
 
 namespace ProxyCollector.Collector;
 
@@ -26,6 +27,23 @@ public class ProxyCollector
     private void LogToConsole(string log)
     {
         Console.WriteLine($"{DateTime.Now:HH:mm:ss} - {log}");
+    }
+
+    private static string TryBase64Decode(string input)
+    {
+        try
+        {
+            int mod4 = input.Length % 4;
+            if (mod4 > 0)
+                input = input.PadRight(input.Length + (4 - mod4), '=');
+
+            var data = Convert.FromBase64String(input);
+            return Encoding.UTF8.GetString(data);
+        }
+        catch
+        {
+            return input;
+        }
     }
 
     public async Task StartAsync()
@@ -51,13 +69,11 @@ public class ProxyCollector
         LogToConsole("Compiling results...");
         var finalResults = profiles.ToList();
 
-        // Setelah semua profile di-resolve dan diberi nama baru
         var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
         var plain = string.Join("\n", finalResults.Select(p => p.ToProfileUrl()));
         await File.WriteAllTextAsync(listPath, plain);
         LogToConsole($"Final list written to {listPath} ({profiles.Count} entries)");
 
-        // jalankan lite test
         var liteOk = await RunLiteTest(listPath);
         var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
         if (!liteOk || !File.Exists(outputPath))
@@ -72,8 +88,6 @@ public class ProxyCollector
         var resolver = new IPToCountryResolver();
         var lines = await File.ReadAllLinesAsync(outputPath);
         var parsedProfiles = new List<ProfileItem>();
-
-        // dictionary untuk simpan hasil country per profile
         var countryMap = new Dictionary<ProfileItem, CountryInfo>();
 
         foreach (var line in lines)
@@ -84,7 +98,25 @@ public class ProxyCollector
 
             try
             {
-                var host = profile.Address;
+                string? host = profile.Address;
+
+                // Jika kosong, coba decode base64
+                if (string.IsNullOrEmpty(host))
+                {
+                    var decoded = TryBase64Decode(line);
+
+                    if (decoded.StartsWith("{"))
+                    {
+                        try
+                        {
+                            using var doc = JsonDocument.Parse(decoded);
+                            if (doc.RootElement.TryGetProperty("add", out var addProp))
+                                host = addProp.GetString();
+                        }
+                        catch { }
+                    }
+                }
+
                 if (string.IsNullOrEmpty(host))
                     continue;
 
@@ -100,7 +132,7 @@ public class ProxyCollector
                 var idx = parsedProfiles.Count(p => countryMap.ContainsKey(p) &&
                                                     countryMap[p].CountryCode == country.CountryCode);
 
-                profile.Name = ($"{country.CountryCode} {idx + 1} - {ispTwoWords}");
+                profile.Name = $"{country.CountryCode} {idx + 1} - {ispTwoWords}";
                 parsedProfiles.Add(profile);
             }
             catch (Exception ex)
@@ -109,7 +141,6 @@ public class ProxyCollector
             }
         }
 
-        // batasi jumlah per country
         var grouped = parsedProfiles
             .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
             .SelectMany(g => g.Take(_config.MaxProxiesPerCountry))
@@ -117,13 +148,10 @@ public class ProxyCollector
 
         LogToConsole($"Final proxy count after country limit: {grouped.Count}");
 
-
-        // tulis hasil final ke list.txt
         try { File.Delete(listPath); } catch { }
         await File.WriteAllLinesAsync(listPath, grouped.Select(p => p.ToProfileUrl()));
         try { File.Delete(outputPath); } catch { }
 
-        // upload hasil
         LogToConsole("Uploading results...");
         await CommitResultsFromFile(listPath);
 
@@ -144,7 +172,6 @@ public class ProxyCollector
             };
 
             using var proc = new Process { StartInfo = psi };
-
             proc.Start();
             await proc.WaitForExitAsync();
 
@@ -152,16 +179,12 @@ public class ProxyCollector
 
             var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
             if (proc.ExitCode == 0 && File.Exists(outputPath))
-            {
                 return true;
-            }
-            else
-            {
-                LogToConsole("Warning: lite did not produce a valid output.txt or exited with error.");
-                if (File.Exists(outputPath))
-                    LogToConsole($"Note: output.txt exists but lite exit code = {proc.ExitCode}.");
-                return false;
-            }
+
+            LogToConsole("Warning: lite did not produce a valid output.txt or exited with error.");
+            if (File.Exists(outputPath))
+                LogToConsole($"Note: output.txt exists but lite exit code = {proc.ExitCode}.");
+            return false;
         }
         catch (Exception ex)
         {
@@ -247,9 +270,7 @@ public class ProxyCollector
                 catch { }
 
                 if (profile is not null)
-                {
                     yield return profile;
-                }
             }
         }
     }
