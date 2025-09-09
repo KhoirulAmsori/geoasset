@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json;
+﻿using MaxMind.GeoIP2;
+using MaxMind.GeoIP2.Responses;
+using Newtonsoft.Json;
 using ProxyCollector.Models;
 using System.Net;
 
@@ -7,10 +9,12 @@ namespace ProxyCollector.Services;
 public sealed class IPToCountryResolver
 {
     private readonly HttpClient _httpClient;
+    private readonly string _geoLiteDbPath;
 
-    public IPToCountryResolver()
+    public IPToCountryResolver(string geoLiteDbPath)
     {
         _httpClient = new HttpClient();
+        _geoLiteDbPath = geoLiteDbPath;
     }
 
     public async Task<CountryInfo> GetCountry(string address, CancellationToken cancellationToken = default)
@@ -27,21 +31,27 @@ public sealed class IPToCountryResolver
 
     public async Task<CountryInfo> GetCountry(IPAddress ip, CancellationToken cancellationToken = default)
     {
+        // 1. Coba lookup offline dulu
+        var offlineResult = GetCountryOffline(ip);
+        if (offlineResult != null)
+        {
+            return offlineResult;
+        }
+
+        // 2. Fallback online
         string? response = null;
         for (int i = 1; i <= 5; i++)
         {
             try
             {
-                response = await _httpClient.GetStringAsync($"https://api.iplocation.net/?ip={ip}");
+                response = await _httpClient.GetStringAsync($"https://api.iplocation.net/?ip={ip}", cancellationToken);
                 break;
             }
             catch (HttpRequestException)
             {
-                if(i == 5)
-                {
+                if (i == 5)
                     throw;
-                }
-                await Task.Delay(TimeSpan.FromSeconds(20));
+                await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken);
             }
         }
 
@@ -53,5 +63,29 @@ public sealed class IPToCountryResolver
             CountryCode = ipInfo.CountryCode,
             Isp = ipInfo.Isp
         };
+    }
+
+    private CountryInfo? GetCountryOffline(IPAddress ip)
+    {
+        try
+        {
+            using var reader = new DatabaseReader(_geoLiteDbPath);
+            CountryResponse response = reader.Country(ip);
+
+            if (response?.Country?.Name != null && response?.Country?.IsoCode != null)
+            {
+                return new CountryInfo
+                {
+                    CountryName = response.Country.Name,
+                    CountryCode = response.Country.IsoCode,
+                    Isp = null // GeoLite2 gratis tidak menyediakan ISP
+                };
+            }
+        }
+        catch
+        {
+            // Ignore errors, fallback ke online
+        }
+        return null;
     }
 }
