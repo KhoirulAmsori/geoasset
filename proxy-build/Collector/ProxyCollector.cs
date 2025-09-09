@@ -45,7 +45,7 @@ public class ProxyCollector
         LogToConsole($"Collected {profiles.Count} unique profiles with protocols: {included}.");
         LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies}.");
 
-        var workingResults = new List<UrlTestResult>();
+        var workingResults = (await TestProfiles(profiles));
 
         if (workingResults.Count < _config.MinActiveProxies)
         {
@@ -117,7 +117,7 @@ public class ProxyCollector
         LogToConsole($"Subscription file written to {outputPath}");
     }
 
-    private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles, string testUrl)
+    private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles)
     {
         var tester = new ParallelUrlTester(
             new SingBoxWrapper(_config.SingboxPath),
@@ -130,7 +130,7 @@ public class ProxyCollector
             _config.Timeout,
             // retry count (will still do the retries even if proxy works, returns fastest result)
             1024,
-            testUrl);
+            "http://www.gstatic.com/generate_204");
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
         await tester.ParallelTestAsync(profiles, new Progress<UrlTestResult>((result =>
