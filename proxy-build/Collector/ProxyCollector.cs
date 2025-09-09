@@ -54,17 +54,14 @@ public class ProxyCollector
         // Setelah semua profile di-resolve dan diberi nama baru
         var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
 
-        var plain = string.Join("\n", profiles.Select(p =>
+        var plain = string.Join("\n", finalResults.Select(p =>
         {
-            var url = p.ToProfileUrl();
+            var fullUrl = p.ToProfileUrl();
+            var hashIndex = fullUrl.IndexOf('#');
+            var baseUrl = hashIndex >= 0 ? fullUrl.Substring(0, hashIndex) : fullUrl;
 
-            // pisahkan base dan fragment
-            var basePart = url.Contains('#')
-                ? url.Substring(0, url.IndexOf('#'))
-                : url;
-
-            // tempelkan nama tanpa di-escape
-            return $"{basePart}#{p.Name}";
+            // pastikan Name kita yang dipakai tanpa escape
+            return $"{baseUrl}#{p.Name}";
         }));
 
         await File.WriteAllTextAsync(listPath, plain);
