@@ -132,7 +132,7 @@ public class ProxyCollector
             // timeout in miliseconds
             _config.Timeout,
             // retry count (will still do the retries even if proxy works, returns fastest result)
-            3,
+            1024,
             "http://www.gstatic.com/generate_204");
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
