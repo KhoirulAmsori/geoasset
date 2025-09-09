@@ -38,7 +38,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 9.0.x
 
       - name: Checkout main branch
         uses: actions/checkout@v5
@@ -49,7 +49,7 @@ jobs:
 
       - name: Install sing-box
         run: |
-          sudo dpkg -i source/proxy-build/Asset/sing-box.deb
+          sudo dpkg -i source/proxy-build/Asset/*.deb
           sudo apt-get install -f
 
       - name: Build proxy list
