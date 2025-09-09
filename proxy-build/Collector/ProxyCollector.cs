@@ -11,6 +11,7 @@ using SingBoxLib.Runtime.Testing;
 using System.Collections.Concurrent;
 using System.Text;
 using System.Web;
+using SingBoxLib.Runtime.Api.Clash;
 
 namespace ProxyCollector.Collector;
 
@@ -34,6 +35,8 @@ public class ProxyCollector
     {
         var startTime = DateTime.Now;
         LogToConsole("Collector started.");
+
+        var clashApi = new ClashApiWrapper("http://127.0.0.1:9090");
 
         var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
         var included = _config.IncludedProtocols.Length > 0
@@ -90,6 +93,11 @@ public class ProxyCollector
             remainingProfiles = remainingProfiles
                 .Where(p => !successAddresses.Contains(p.Address!))
                 .ToList();
+        }
+
+        await foreach(var logInfo in clashApi.GetLogs(cts.Token))
+        {
+            LogToConsole($"{logInfo.Level}>> {logInfo.Payload}");
         }
 
         if (workingResults.Count < _config.MinActiveProxies)
@@ -164,6 +172,17 @@ public class ProxyCollector
 
     private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles, string testUrl)
     {
+        var config = new SingBoxConfig
+        {
+            Experimental = new()
+            {
+                ClashApi = new()
+                {
+                    ExternalController = "127.0.0.1:9090", 
+                }
+            }
+        };
+
         var tester = new ParallelUrlTester(
             new SingBoxWrapper(_config.SingboxPath),
             // A list of open local ports, must be equal or bigger than total test thread count
