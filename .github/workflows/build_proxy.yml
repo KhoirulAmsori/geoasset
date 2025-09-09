@@ -17,11 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       MaxProxiesPerCountry: 3
-      MinActiveProxies: 50
+      MinActiveProxies: 100
       Timeout: 15000
       MaxThreadCount: 64
       SingboxPath: sing-box
-      IncludedProtocols: "ss,trojan,vless"
+      IncludedProtocols: "ss"
       V2rayFormatResultPath: Asset/list.txt
       SourcesFile: Asset/sources.txt
 
