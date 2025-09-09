@@ -96,11 +96,11 @@ public class ProxyCollector
             };
 
             using var proc = new Process { StartInfo = psi };
-            proc.OutputDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) LogToConsole(e.Data); };
+            // proc.OutputDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) LogToConsole(e.Data); };
             proc.ErrorDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) LogToConsole("[ERR] " + e.Data); };
 
             proc.Start();
-            proc.BeginOutputReadLine();
+            // proc.BeginOutputReadLine();
             proc.BeginErrorReadLine();
             await proc.WaitForExitAsync();
 
