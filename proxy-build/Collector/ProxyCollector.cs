@@ -22,7 +22,7 @@ public class ProxyCollector
     public ProxyCollector()
     {
         _config = CollectorConfig.Instance;
-        _ipToCountryResolver = new IPToCountryResolver();
+        _ipToCountryResolver = new IPToCountryResolver(_config.GeoLite2DbPath);
     }
 
     private void LogToConsole(string log)
