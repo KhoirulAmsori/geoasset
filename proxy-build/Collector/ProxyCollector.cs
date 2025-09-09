@@ -57,9 +57,13 @@ public class ProxyCollector
         var plain = string.Join("\n", profiles.Select(p =>
         {
             var url = p.ToProfileUrl();
-            var basePart = url.Split('#')[0]; // ambil sampai sebelum '#'
 
-            // pakai Name yang sudah kita set, tidak di-escape
+            // pisahkan base dan fragment
+            var basePart = url.Contains('#')
+                ? url.Substring(0, url.IndexOf('#'))
+                : url;
+
+            // tempelkan nama tanpa di-escape
             return $"{basePart}#{p.Name}";
         }));
 
