@@ -91,12 +91,12 @@ public class ProxyCollector
 
                 var country = await resolver.GetCountry(host);
                 countryMap[profile] = country;
-
+                
                 var isp = string.IsNullOrEmpty(country.Isp) ? "UnknownISP" : country.Isp;
                 var idx = parsedProfiles.Count(p => countryMap.ContainsKey(p) &&
                                                     countryMap[p].CountryCode == country.CountryCode);
-
-                profile.Name = $"{country.CountryCode} {idx + 1} - {isp}";
+                                                    
+                profile.Name = Uri.UnescapeDataString($"{country.CountryCode} {idx + 1} - {isp}");
                 parsedProfiles.Add(profile);
             }
             catch (Exception ex)
