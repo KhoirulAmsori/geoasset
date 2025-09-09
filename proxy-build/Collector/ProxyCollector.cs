@@ -1,8 +1,15 @@
-using ProxyCollector.Configuration;
-using SingBoxLib.Parsing;
-using System.Collections.Concurrent;
-using System.Diagnostics;
+using System;
+using System.IO;
+using System.Linq;
 using System.Text;
+using System.Diagnostics;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+using ProxyCollector.Configuration;
+using SingBoxLib.Configuration;
+using SingBoxLib.Parsing;
 
 namespace ProxyCollector.Collector;
 
@@ -42,25 +49,39 @@ public class ProxyCollector
 
         LogToConsole("Compiling results...");
         var finalResults = profiles
-            .Take(_config.MaxProxiesPerCountry) // ambil sesuai batas
             .ToList();
 
-        // === tulis list.txt untuk dites dengan Lite ===
+        // tulis list.txt => namun lite mengharapkan base64 subscription, jadi encode dulu
         var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
-        await File.WriteAllLinesAsync(listPath, finalResults.Select(p => p.ToProfileUrl()));
-        LogToConsole($"Temporary list written to {listPath}");
+        var plain = string.Join("\n", finalResults.Select(p => p.ToProfileUrl()));
+        var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(plain));
+        await File.WriteAllTextAsync(listPath, base64);
+        LogToConsole($"Temporary list written to {listPath} (base64-encoded, {finalResults.Count} entries)");
 
-        // === jalankan perintah lite test ===
-        await RunLiteTest(listPath);
+        // jalankan lite test
+        var liteOk = await RunLiteTest(listPath);
 
+        if (!liteOk)
+        {
+            LogToConsole("Lite test failed — skipping upload.");
+            await File.WriteAllTextAsync("skip_push.flag", "lite test failed");
+            return;
+        }
+
+        // jika sukses, RunLiteTest sudah mengganti output.txt -> list.txt (overwrite)
         LogToConsole("Uploading results...");
-        await CommitResults(finalResults);
+        await CommitResultsFromFile(listPath);
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
     }
 
-    private async Task RunLiteTest(string listPath)
+    /// <summary>
+    /// Jalankan lite --config config.json -test list.txt
+    /// Jika sukses (exit code 0) dan output.txt ada, rename output.txt -> list.txt (overwrite).
+    /// Kembalikan true jika rename berhasil.
+    /// </summary>
+    private async Task<bool> RunLiteTest(string listPath)
     {
         try
         {
@@ -85,47 +106,57 @@ public class ProxyCollector
 
             LogToConsole($"Lite test finished with exit code {proc.ExitCode}");
 
-            // === rename output.txt -> list.txt ===
             var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
-            if (File.Exists(outputPath))
+            if (proc.ExitCode == 0 && File.Exists(outputPath))
             {
-                File.Delete(listPath); // hapus list.txt lama
-                File.Move(outputPath, listPath);
+                // replace original list.txt with output.txt
+                try
+                {
+                    File.Delete(listPath); // hapus base64 input
+                }
+                catch { /* ignore */ }
+
+                File.Move(outputPath, listPath); // rename output.txt -> list.txt
                 LogToConsole($"Renamed {outputPath} -> {listPath}");
+                return true;
             }
             else
             {
-                LogToConsole("Warning: output.txt not found after lite test!");
+                LogToConsole("Warning: lite did not produce a valid output.txt or exited with error.");
+                if (File.Exists(outputPath))
+                    LogToConsole($"Note: output.txt exists but lite exit code = {proc.ExitCode}.");
+                return false;
             }
         }
         catch (Exception ex)
         {
             LogToConsole($"Failed to run lite test: {ex.Message}");
+            return false;
         }
     }
 
-    private async Task CommitResults(List<ProfileItem> profiles)
+    /// <summary>
+    /// Commit / upload berdasarkan file list.txt yang dihasilkan lite (sudah berisi daftar final).
+    /// </summary>
+    private async Task CommitResultsFromFile(string listPath)
     {
         LogToConsole("Uploading V2ray Subscription...");
-        await CommitV2raySubscriptionResult(profiles);
-    }
 
-    private async Task CommitV2raySubscriptionResult(List<ProfileItem> profiles)
-    {
-        var finalResult = new StringBuilder();
-        foreach (var profile in profiles)
+        if (!File.Exists(listPath))
         {
-            finalResult.AppendLine(profile.ToProfileUrl());
+            LogToConsole("list.txt not found, skipping upload.");
+            return;
         }
 
         var outputPath = _config.V2rayFormatResultPath;
-
         var dir = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
 
-        await File.WriteAllTextAsync(outputPath, finalResult.ToString());
+        File.Copy(listPath, outputPath, true);
         LogToConsole($"Subscription file written to {outputPath}");
+
+        await Task.CompletedTask;
     }
 
     private async Task<IReadOnlyCollection<ProfileItem>> CollectProfilesFromConfigSources()
