@@ -7,8 +7,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using ProxyCollector.Models;
-using ProxyCollector.Configuration;
 using ProxyCollector.Services;
+using ProxyCollector.Configuration;
 using SingBoxLib.Configuration;
 using SingBoxLib.Parsing;
 
@@ -91,7 +91,7 @@ public class ProxyCollector
 
                 var country = await resolver.GetCountry(host);
                 countryMap[profile] = country;
-                
+
                 var isp = string.IsNullOrEmpty(country.Isp) ? "UnknownISP" : country.Isp;
                 var idx = parsedProfiles.Count(p => countryMap.ContainsKey(p) &&
                                                     countryMap[p].CountryCode == country.CountryCode);
