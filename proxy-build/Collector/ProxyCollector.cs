@@ -36,12 +36,19 @@ public class ProxyCollector
         Console.WriteLine($"{DateTime.Now:HH:mm:ss} - {log}");
     }
 
+    private async Task<T?> WithTimeout<T>(Task<T> task, int timeoutMs)
+    {
+        var timeout = Task.Delay(timeoutMs);
+        var finished = await Task.WhenAny(task, timeout);
+        if (finished == timeout) return default;
+        return await task;
+    }
+
     public async Task StartAsync()
     {
         var startTime = DateTime.Now;
         LogToConsole("Collector started.");
 
-        // Ambil semua profile
         var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
         var included = _config.IncludedProtocols.Length > 0
             ? string.Join(", ", _config.IncludedProtocols.Select(p => p.Replace("://", "").ToUpperInvariant()))
@@ -58,17 +65,25 @@ public class ProxyCollector
 
         LogToConsole("Compiling results...");
 
-        // Resolve country info secara paralel
         var countryTasks = profiles.Select(async p =>
         {
-            var countryInfo = await _ipToCountryResolver.GetCountry(p.Address!);
-            var ispRaw = (countryInfo.Isp ?? string.Empty).Replace(".", "");
-            var ispParts = ispRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var ispName = ispParts.Length >= 2
-                ? $"{ispParts[0]} {ispParts[1]}"
-                : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
+            try
+            {
+                var countryInfo = await WithTimeout(_ipToCountryResolver.GetCountry(p.Address!), 3000)
+                                  ?? new CountryInfo { CountryCode = "XX", Isp = "Unknown" };
 
-            p.Name = $"{countryInfo.CountryCode} - {ispName}";
+                var ispRaw = (countryInfo.Isp ?? string.Empty).Replace(".", "");
+                var ispParts = ispRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var ispName = ispParts.Length >= 2
+                    ? $"{ispParts[0]} {ispParts[1]}"
+                    : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
+
+                p.Name = $"{countryInfo.CountryCode} - {ispName}";
+            }
+            catch
+            {
+                p.Name = "XX - Unknown";
+            }
             return p;
         });
 
