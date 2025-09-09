@@ -44,55 +44,10 @@ public class ProxyCollector
 
         LogToConsole($"Collected {profiles.Count} unique profiles with protocols: {included}.");
 
-        var workingResults = new List<UrlTestResult>();
-
-        var maxRetries = _config.maxRetriesCount;
-        LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies} with maximum {_config.maxRetriesCount} retries.");
-
-        // Profil yang belum terbukti aktif → mulai dari semua profil
-        var remainingProfiles = profiles.ToList();
-
-        for (int attempt = 1; attempt <= maxRetries; attempt++)
-        {
-            // Round-robin: kalau habis, balik lagi ke awal
-            var testUrl = _config.TestUrls[(attempt - 1) % _config.TestUrls.Length];
-            
-            LogToConsole($"Attempt {attempt} / {maxRetries} testing with URL: {testUrl}");
-
-            if (!remainingProfiles.Any())
-            {
-                LogToConsole("No remaining profiles left to test.");
-                break;
-            }
-
-            var attemptResults = await TestProfiles(remainingProfiles, testUrl);
-
-            var newSuccesses = attemptResults
-                .Where(r => r.Success && !workingResults.Any(x => x.Profile.Address == r.Profile.Address))
-                .ToList();
-
-            foreach (var s in newSuccesses)
-                workingResults.Add(s);
-
-            // Log ringkas attempt
-            LogToConsole(
-                $"Attempt {attempt} / {maxRetries}: testing {remainingProfiles.Count} nodes → {newSuccesses.Count} new, {workingResults.Count} total active."
-            );
-
-            if (workingResults.Count >= _config.MinActiveProxies)
-            {
-                LogToConsole($"Reached minimum required {_config.MinActiveProxies} active proxies, stopping retries.");
-                break;
-            }
-
-            // Update daftar tersisa: hanya yang gagal di attempt ini
-            var successAddresses = new HashSet<string>(
-                attemptResults.Where(r => r.Success).Select(r => r.Profile.Address!)
-            );
-            remainingProfiles = remainingProfiles
-                .Where(p => !successAddresses.Contains(p.Address!))
-                .ToList();
-        }
+        // Anggap semua proxy langsung berhasil
+        var workingResults = profiles
+            .Select(p => new UrlTestResult { Profile = p, Success = true, Delay = 0 })
+            .ToList();
 
         if (workingResults.Count < _config.MinActiveProxies)
         {
@@ -120,21 +75,19 @@ public class ProxyCollector
                             ? $"{ispParts[0]} {ispParts[1]}"
                             : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
                         profile.Name = $"{countryInfo.CountryCode} {x.Index + 1} - {ispName}";
-                        return new { Profile = profile, CountryCode = countryInfo.CountryCode };
+                        return profile;
                     })
             )
             .SelectMany(x => x)
-            .OrderBy(x => x.CountryCode)
-            .Select(x => x.Profile)
+            .OrderBy(x => x.Name)
             .ToList();
 
         LogToConsole("Uploading results...");
-        await CommitResults(finalResults.ToList());
+        await CommitResults(finalResults);
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
     }
-
 
     private async Task CommitResults(List<ProfileItem> profiles)
     {
@@ -155,7 +108,6 @@ public class ProxyCollector
 
         var outputPath = _config.V2rayFormatResultPath;
 
-        // Pastikan folder tujuan ada
         var dir = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
@@ -163,31 +115,6 @@ public class ProxyCollector
         await File.WriteAllTextAsync(outputPath, finalResult.ToString());
         LogToConsole($"Subscription file written to {outputPath}");
     }
-
-    private async Task<IReadOnlyCollection<UrlTestResult>> TestProfiles(IEnumerable<ProfileItem> profiles, string testUrl)
-    {
-        var tester = new ParallelUrlTester(
-            new SingBoxWrapper(_config.SingboxPath),
-            // A list of open local ports, must be equal or bigger than total test thread count
-            // make sure they are not occupied by other applications running on your system
-            20000,
-            // max number of concurrent testing
-            _config.MaxThreadCount,
-            // timeout in miliseconds
-            _config.Timeout,
-            // retry count (will still do the retries even if proxy works, returns fastest result)
-            1024,
-            testUrl);
-
-        var workingResults = new ConcurrentBag<UrlTestResult>();
-        await tester.ParallelTestAsync(profiles, new Progress<UrlTestResult>((result =>
-        {
-            if (result.Success)
-                workingResults.Add(result);
-        })), default);
-        return workingResults;
-    }
-
 
     private async Task<IReadOnlyCollection<ProfileItem>> CollectProfilesFromConfigSources()
     {
@@ -197,7 +124,7 @@ public class ProxyCollector
         };
 
         var profiles = new ConcurrentBag<ProfileItem>();
-        await Parallel.ForEachAsync(_config.Sources,new ParallelOptions {MaxDegreeOfParallelism = _config.MaxThreadCount }, async (source, ct) =>
+        await Parallel.ForEachAsync(_config.Sources, new ParallelOptions { MaxDegreeOfParallelism = _config.MaxThreadCount }, async (source, ct) =>
         {
             try
             {
@@ -210,7 +137,7 @@ public class ProxyCollector
                 }
                 LogToConsole($"Collected {count} proxies from {source}");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 LogToConsole($"Failed to fetch {source}. error: {ex.Message}");
             }
@@ -231,13 +158,12 @@ public class ProxyCollector
             string? line = null;
             while ((line = reader.ReadLine()?.Trim()) is not null)
             {
-                // Skip jika protokol tidak ada di IncludedProtocols
                 if (_config.IncludedProtocols.Length > 0 &&
                     !_config.IncludedProtocols.Any(proto => line.StartsWith(proto, StringComparison.OrdinalIgnoreCase)))
                 {
                     continue;
                 }
-                
+
                 ProfileItem? profile = null;
                 try
                 {
