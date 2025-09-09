@@ -5,16 +5,12 @@ public class CollectorConfig
     public static CollectorConfig Instance { get; private set; }
     public required int MaxProxiesPerCountry { get; init; }
     public required int MinActiveProxies { get; init; }
-    public required int maxRetriesCount { get; init; }
-    public required string SingboxPath { get; init; }
+    public required int MaxThreadCount { get; init; }
     public required string LitePath { get; init; }
     public required string LiteConfigPath { get; init; }
     public required string V2rayFormatResultPath { get; init; }
-    public required int MaxThreadCount { get; init; }
-    public required int Timeout { get; init; }
     public required string[] Sources { get; init; }
     public required string[] IncludedProtocols { get; init; }
-    public required string[] TestUrls { get; init; }
 
     static CollectorConfig()
     {
@@ -41,27 +37,16 @@ public class CollectorConfig
             .Select(p => p.EndsWith("://") ? p : $"{p}://")
             .ToArray();
 
-        // Ambil TestUrls dari env
-        var testUrlsEnv = Environment.GetEnvironmentVariable("TestUrls") ?? "";
-        var testUrls = testUrlsEnv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-
         return new CollectorConfig
         {
             MaxProxiesPerCountry = int.Parse(Environment.GetEnvironmentVariable("MaxProxiesPerCountry")!),
             MinActiveProxies = int.Parse(Environment.GetEnvironmentVariable("MinActiveProxies")!),
-            maxRetriesCount = int.Parse(Environment.GetEnvironmentVariable("maxRetries")!),
-            SingboxPath = Environment.GetEnvironmentVariable("SingboxPath")!,
+            MaxThreadCount = int.Parse(Environment.GetEnvironmentVariable("MaxThreadCount")!),
             LitePath = Environment.GetEnvironmentVariable("LitePath")!,
             LiteConfigPath = Environment.GetEnvironmentVariable("LiteConfigPath")!,
             V2rayFormatResultPath = Environment.GetEnvironmentVariable("V2rayFormatResultPath")!,
-            MaxThreadCount = int.Parse(Environment.GetEnvironmentVariable("MaxThreadCount")!),
-            Timeout = int.Parse(Environment.GetEnvironmentVariable("Timeout")!),
             Sources = sources,
-            IncludedProtocols = includedProtocols,
-            TestUrls = testUrls.Length > 0 
-                        ? testUrls 
-                        : new[] { "https://www.gstatic.com/generate_204", "http://cp.cloudflare.com" }
+            IncludedProtocols = includedProtocols
         };
     }
 }
