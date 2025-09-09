@@ -53,8 +53,18 @@ public class ProxyCollector
 
         // tulis list.txt (base64) untuk lite
         var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
-        var plain = string.Join("\n", finalResults.Select(p => p.ToProfileUrl()));
-        var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(plain));
+        var plain = string.Join("\n", finalResults.Select(p =>
+        {
+            var url = p.ToProfileUrl();
+            if (url.Contains("#"))
+            {
+                var parts = url.Split('#', 2);
+                return parts[0] + "#" + Uri.UnescapeDataString(parts[1]);
+            }
+            return url;
+        }));
+
+        // var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(plain));
         await File.WriteAllTextAsync(listPath, plain);
         LogToConsole($"Temporary list written to {listPath} (base64-encoded, {finalResults.Count} entries)");
 
