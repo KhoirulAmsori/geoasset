@@ -93,11 +93,15 @@ public class ProxyCollector
                 countryMap[profile] = country;
 
                 var isp = string.IsNullOrEmpty(country.Isp) ? "UnknownISP" : country.Isp;
+                var ispParts = isp.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                var ispTwoWords = ispParts.Length > 1
+                    ? string.Join(" ", ispParts.Take(2))
+                    : (ispParts.Length == 1 ? ispParts[0] : "UnknownISP");
                 var idx = parsedProfiles.Count(p => countryMap.ContainsKey(p) &&
                                                     countryMap[p].CountryCode == country.CountryCode);
 
-                profile.Name = $"{country.CountryCode} {idx + 1} - {isp}";
-                parsedProfiles.Add(profile);
+                profile.Name = Uri.UnescapeDataString($"{country.CountryCode} {idx + 1} - {ispTwoWords}");
             }
             catch (Exception ex)
             {
