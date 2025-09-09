@@ -87,10 +87,8 @@ public class ProxyCollector
         {
             var psi = new ProcessStartInfo
             {
-                FileName = _config.LitePath,
-                Arguments = $"--config {_config.LiteConfigPath} -test \"{listPath}\"",
-                RedirectStandardOutput = false,
-                RedirectStandardError = false,
+                FileName = "bash",
+                Arguments = $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} -test '{listPath}' > /dev/null 2>&1\"",
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
