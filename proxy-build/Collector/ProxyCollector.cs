@@ -44,9 +44,6 @@ public class ProxyCollector
 
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            var testUrl = _config.TestUrls[(attempt - 1) % _config.TestUrls.Length];
-            LogToConsole($"Attempt {attempt} / {maxRetries} testing with URL: {testUrl}");
-
             if (!remainingProfiles.Any())
             {
                 LogToConsole("No remaining profiles left to test.");
