@@ -111,11 +111,6 @@ public class ProxyCollector
                     {
                         var profile = x.Item.TestResult.Profile;
                         var countryInfo = x.Item.CountryInfo;
-                        var ispRaw = (countryInfo.Isp ?? string.Empty).Replace(".", "");
-                        var ispParts = ispRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                        var ispName = ispParts.Length >= 2
-                            ? $"{ispParts[0]} {ispParts[1]}"
-                            : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
                         profile.Name = $"{countryInfo.CountryCode}-{x.Index + 1}";
                         return new { Profile = profile, CountryCode = countryInfo.CountryCode };
                     })

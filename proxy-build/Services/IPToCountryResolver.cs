@@ -60,8 +60,7 @@ public sealed class IPToCountryResolver
         return new CountryInfo
         {
             CountryName = ipInfo.CountryName,
-            CountryCode = ipInfo.CountryCode,
-            Isp = ipInfo.Isp
+            CountryCode = ipInfo.CountryCode
         };
     }
 
@@ -77,8 +76,7 @@ public sealed class IPToCountryResolver
                 return new CountryInfo
                 {
                     CountryName = response.Country.Name,
-                    CountryCode = response.Country.IsoCode,
-                    Isp = null // GeoLite2 gratis tidak menyediakan ISP
+                    CountryCode = response.Country.IsoCode
                 };
             }
         }
