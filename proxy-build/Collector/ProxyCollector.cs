@@ -89,8 +89,8 @@ public class ProxyCollector
             {
                 FileName = _config.LitePath,
                 Arguments = $"--config {_config.LiteConfigPath} -test \"{listPath}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                RedirectStandardOutput = false,
+                RedirectStandardError = false,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };

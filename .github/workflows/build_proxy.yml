@@ -49,11 +49,6 @@ jobs:
           ref: main
           path: source
 
-      - name: Install sing-box
-        run: |
-          sudo dpkg -i source/proxy-build/Asset/*.deb
-          sudo apt-get install -f
-
       - name: Build proxy list
         run: |
           cd source/proxy-build
