@@ -102,6 +102,7 @@ public class ProxyCollector
                                                     countryMap[p].CountryCode == country.CountryCode);
 
                 profile.Name = Uri.UnescapeDataString($"{country.CountryCode} {idx + 1} - {ispTwoWords}");
+                parsedProfiles.Add(profile);
             }
             catch (Exception ex)
             {
