@@ -6,9 +6,8 @@ using System.Diagnostics;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using ProxyCollector.Models;
-using ProxyCollector.Services;
 using ProxyCollector.Configuration;
+using ProxyCollector.Services;
 using SingBoxLib.Configuration;
 using SingBoxLib.Parsing;
 using System.Text.Json;
@@ -86,11 +85,9 @@ public class ProxyCollector
         var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
         SaveActiveLinksToFile(jsonPath, outputPath);
 
-
         int activeProxyCount = 0;
         if (File.Exists(outputPath))
         {
-            // Hitung baris di output.txt
             activeProxyCount = File.ReadLines(outputPath).Count();
         }
 
@@ -101,15 +98,16 @@ public class ProxyCollector
             return;
         }
 
-        // --- Proses IPToCountryResolver ---
+        // --- Resolusi negara & ISP ---
         LogToConsole("Resolving countries for active proxies...");
         var resolver = new IPToCountryResolver(
-            _config.GeoLiteCountryDbPath,    // GeoLite2-Country.mmdb
-            _config.GeoLiteAsnDbPath         // GeoLite2-ASN.mmdb
+            _config.GeoLiteCountryDbPath,
+            _config.GeoLiteAsnDbPath
         );
+
         var lines = await File.ReadAllLinesAsync(outputPath);
         var parsedProfiles = new List<ProfileItem>();
-        var countryMap = new Dictionary<ProfileItem, CountryInfo>();
+        var countryMap = new Dictionary<ProfileItem, IPToCountryResolver.ProxyCountryInfo>();
 
         foreach (var line in lines)
         {
@@ -121,11 +119,9 @@ public class ProxyCollector
             {
                 string? host = profile.Address;
 
-                // Jika kosong, coba decode base64
                 if (string.IsNullOrEmpty(host))
                 {
                     var decoded = TryBase64Decode(line);
-
                     if (decoded.StartsWith("{"))
                     {
                         try
@@ -217,11 +213,8 @@ public class ProxyCollector
             }
         }
 
-        // urutkan berdasarkan ping dari kecil ke besar
         var ordered = result.OrderBy(r => r.Ping).Select(r => r.Link).ToList();
-
         File.WriteAllLines(outputPath, ordered);
-
         LogToConsole($"Saved {ordered.Count} active proxies to {outputPath}, ordered by ping.");
     }
 
