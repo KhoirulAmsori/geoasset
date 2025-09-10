@@ -180,6 +180,8 @@ public class ProxyCollector
                 if (batchLines.Length == 0)
                     continue;
 
+                LogToConsole($"Processing batch {batchIndex} ({batchLines.Length} proxies)");
+
                 var batchFile = Path.Combine(Directory.GetCurrentDirectory(), $"batch_{batchIndex}.txt");
                 await File.WriteAllLinesAsync(batchFile, batchLines);
 
