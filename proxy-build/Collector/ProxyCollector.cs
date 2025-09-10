@@ -74,11 +74,9 @@ public class ProxyCollector
         await File.WriteAllTextAsync(listPath, plain);
         LogToConsole($"Final list written to {listPath} ({profiles.Count} entries)");
 
-        // --- Lite test per batch ---
         var liteOk = await RunLiteTest(listPath);
-
         var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
-        if (!liteOk)
+        if (!liteOk || !File.Exists(outputPath))
         {
             LogToConsole("Lite test failed — skipping upload.");
             await File.WriteAllTextAsync("skip_push.flag", "lite test failed");
@@ -88,8 +86,8 @@ public class ProxyCollector
         // --- Proses IPToCountryResolver ---
         LogToConsole("Resolving countries for active proxies...");
         var resolver = new IPToCountryResolver(
-            _config.GeoLiteCountryDbPath,
-            _config.GeoLiteAsnDbPath
+            _config.GeoLiteCountryDbPath,    // GeoLite2-Country.mmdb
+            _config.GeoLiteAsnDbPath         // GeoLite2-ASN.mmdb
         );
         var lines = await File.ReadAllLinesAsync(outputPath);
         var parsedProfiles = new List<ProfileItem>();
@@ -105,6 +103,7 @@ public class ProxyCollector
             {
                 string? host = profile.Address;
 
+                // Jika kosong, coba decode base64
                 if (string.IsNullOrEmpty(host))
                 {
                     var decoded = TryBase64Decode(line);
@@ -171,16 +170,20 @@ public class ProxyCollector
             if (lines.Length == 0)
                 return false;
 
-            var batchSize = 100;
+            var batchSize = 100; // jumlah proxy per batch
             var batchOutputFiles = new List<string>();
             int batchIndex = 0;
 
             for (int i = 0; i < lines.Length; i += batchSize)
             {
                 var batchLines = lines.Skip(i).Take(batchSize).ToArray();
+                if (batchLines.Length == 0)
+                    continue;
+
                 var batchFile = Path.Combine(Directory.GetCurrentDirectory(), $"batch_{batchIndex}.txt");
                 await File.WriteAllLinesAsync(batchFile, batchLines);
 
+                // jalankan Lite (Lite otomatis membuat output.txt)
                 var psi = new ProcessStartInfo
                 {
                     FileName = "bash",
@@ -193,27 +196,43 @@ public class ProxyCollector
                 proc.Start();
                 await proc.WaitForExitAsync();
 
+                if (proc.ExitCode != 0)
+                {
+                    LogToConsole($"Warning: Lite batch {batchIndex} finished with exit code {proc.ExitCode}");
+                }
+
                 var batchOutput = Path.Combine(Directory.GetCurrentDirectory(), $"output_{batchIndex}.txt");
                 if (File.Exists("output.txt"))
                 {
-                    File.Move("output.txt", batchOutput, overwrite: true);
-                    batchOutputFiles.Add(batchOutput);
-
-                    // log jumlah baris per batch
-                    var lineCount = (await File.ReadAllLinesAsync(batchOutput)).Length;
+                    var linesInBatch = await File.ReadAllLinesAsync("output.txt");
+                    var lineCount = linesInBatch.Length;
                     LogToConsole($"Lite batch {batchIndex} produced {lineCount} lines");
+    
+                    if (lineCount > 0)
+                    {
+                        File.Move("output.txt", batchOutput, overwrite: true);
+                        batchOutputFiles.Add(batchOutput);
+                    }
+                    else
+                    {
+                        File.Delete("output.txt"); // hapus output kosong
+                        LogToConsole($"Lite batch {batchIndex} output.txt empty, ignored.");
+                    }
                 }
                 else
                 {
-                    LogToConsole($"Warning: Lite batch {batchIndex} did not produce output.txt");
+                    LogToConsole($"Warning: Lite batch {batchIndex} does not produce output.txt");
                 }
 
+                // hapus batch input file
                 File.Delete(batchFile);
                 batchIndex++;
             }
 
+            // gabungkan semua batch output menjadi satu output.txt final
             var finalOutput = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
             using var writer = new StreamWriter(finalOutput, false, Encoding.UTF8);
+            int totalLines = 0;
 
             foreach (var file in batchOutputFiles)
             {
@@ -221,12 +240,16 @@ public class ProxyCollector
                 {
                     var content = await File.ReadAllLinesAsync(file);
                     foreach (var line in content)
+                    {
                         await writer.WriteLineAsync(line);
-                    File.Delete(file);
+                        totalLines++;
+                    }
+                    File.Delete(file); // hapus batch output sementara
                 }
             }
 
-            return File.Exists(finalOutput) && (await File.ReadAllLinesAsync(finalOutput)).Length > 0;
+            LogToConsole($"Final output.txt dibuat dengan total {totalLines} baris");
+            return totalLines > 0;
         }
         catch (Exception ex)
         {
