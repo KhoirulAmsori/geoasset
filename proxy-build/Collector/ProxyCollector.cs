@@ -183,11 +183,19 @@ public class ProxyCollector
                 var batchFile = Path.Combine(Directory.GetCurrentDirectory(), $"batch_{batchIndex}.txt");
                 await File.WriteAllLinesAsync(batchFile, batchLines);
 
+                var debug = string.Equals(
+                    _config.EnableDebug,
+                    "true", 
+                    StringComparison.OrdinalIgnoreCase
+                );
+
                 // jalankan Lite (Lite otomatis membuat output.txt)
                 var psi = new ProcessStartInfo
                 {
                     FileName = "bash",
-                    Arguments = $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} -test '{batchFile}' > /dev/null 2>&1\"",
+                    Arguments = debug
+                        ? $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} -test '{batchFile}'\""
+                        : $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} -test '{batchFile}' > /dev/null 2>&1\"",
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };

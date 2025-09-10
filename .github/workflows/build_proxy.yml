@@ -7,6 +7,15 @@ on:
     paths:
       - "proxy-build/Asset/sources.txt"
   workflow_dispatch:
+    inputs:
+      debug:
+        description: "Select kernel version (Amlogic only)."
+        required: true
+        default: "False"
+        type: choice
+        options:
+          - True
+          - False
   repository_dispatch:
 
 permissions:
@@ -17,9 +26,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       MaxProxiesPerCountry: 3
-      MinActiveProxies: 20
+      MinActiveProxies: 100
       MaxThreadCount: 96
       BatchSize: 500
+      EnableDebug: ${{ github.event.inputs.debug }}
       LitePath: Asset/lite
       LiteConfigPath: Asset/config.json
       IncludedProtocols: "ss"
