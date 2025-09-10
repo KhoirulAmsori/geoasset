@@ -187,7 +187,7 @@ public class ProxyCollector
                 var psi = new ProcessStartInfo
                 {
                     FileName = "bash",
-                    Arguments = $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} -test '{batchFile}'\"",
+                    Arguments = $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} -test '{batchFile}' > /dev/null 2>&1\"",
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
@@ -201,9 +201,11 @@ public class ProxyCollector
                 var batchOutput = Path.Combine(Directory.GetCurrentDirectory(), $"output_{batchIndex}.txt");
                 if (File.Exists("output.txt"))
                 {
-                    var fileSize = new FileInfo("output.txt").Length;
-                    LogToConsole($"Lite batch {batchIndex} produced {fileSize} bytes");
-                    if (fileSize > 0)
+                    var linesInBatch = await File.ReadAllLinesAsync("output.txt");
+                    var lineCount = linesInBatch.Length;
+                    LogToConsole($"Lite batch {batchIndex} produced {lineCount} lines");
+    
+                    if (lineCount > 0)
                     {
                         File.Move("output.txt", batchOutput, overwrite: true);
                         batchOutputFiles.Add(batchOutput);
