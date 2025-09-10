@@ -149,7 +149,7 @@ public class ProxyCollector
                                 .Replace(",", "")
                                 .Trim();
 
-                var formalSuffixes = new[] { "SAS", "INC", "LTD", "LLC", "CORP", "CO", "SA", "SRO", "ASN", "LIMITED", "COMPANY", "ASIA", "CLOUD", "INTERNATIONAL", "PROVIDER", "ISLAND", "PRIVATE", "ONLINE", "OF", "AS", "BV", "HK" };
+                var formalSuffixes = new[] { "SAS", "INC", "LTD", "LLC", "CORP", "CO", "SA", "SRO", "ASN", "LIMITED", "COMPANY", "ASIA", "CLOUD", "INTERNATIONAL", "PROVIDER", "ISLAND", "PRIVATE", "ONLINE", "OF", "AS", "BV", "HK" , "MSN", "BMC", "PTE" };
 
                 var ispParts = ispRaw.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries)
                     .Where(w => !formalSuffixes.Contains(w.ToUpperInvariant()))
