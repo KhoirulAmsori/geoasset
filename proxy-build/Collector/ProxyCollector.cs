@@ -74,13 +74,26 @@ public class ProxyCollector
         }
         await File.WriteAllLinesAsync(listPath, allLines);
 
-
         var liteOk = await RunLiteTest(listPath);
         var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
         if (!liteOk || !File.Exists(outputPath))
         {
             LogToConsole("Lite test failed — skipping upload.");
             await File.WriteAllTextAsync("skip_push.flag", "lite test failed");
+            return;
+        }
+
+        int activeProxyCount = 0;
+        if (File.Exists(outputPath))
+        {
+            // Hitung baris di output.txt
+            activeProxyCount = File.ReadLines(outputPath).Count();
+        }
+
+        if (activeProxyCount < _config.MinActiveProxies)
+        {
+            LogToConsole($"Active proxies ({activeProxyCount}) less than required ({_config.MinActiveProxies}). Skipping push.");
+            await File.WriteAllTextAsync("skip_push.flag", "not enough proxies");
             return;
         }
 
