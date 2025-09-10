@@ -206,7 +206,7 @@ public class ProxyCollector
                 {
                     var linesInBatch = await File.ReadAllLinesAsync("output.txt");
                     var lineCount = linesInBatch.Length;
-                    LogToConsole($"Lite batch {batchIndex} produced {lineCount} lines");
+                    // LogToConsole($"Lite batch {batchIndex} produced {lineCount} lines");
     
                     if (lineCount > 0)
                     {
