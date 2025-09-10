@@ -166,32 +166,73 @@ public class ProxyCollector
     {
         try
         {
-            var psi = new ProcessStartInfo
+            var lines = await File.ReadAllLinesAsync(listPath);
+            if (lines.Length == 0)
+                return false;
+
+            var batchSize = 500; // jumlah proxy per batch
+            var batchOutputFiles = new List<string>();
+            int batchIndex = 0;
+
+            for (int i = 0; i < lines.Length; i += batchSize)
             {
-                FileName = "bash",
-                Arguments = $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} -test '{listPath}' > /dev/null 2>&1\"",
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
+                var batchLines = lines.Skip(i).Take(batchSize).ToArray();
+                var batchFile = Path.Combine(Directory.GetCurrentDirectory(), $"batch_{batchIndex}.txt");
+                await File.WriteAllLinesAsync(batchFile, batchLines);
 
-            using var proc = new Process { StartInfo = psi };
-            proc.Start();
-            await proc.WaitForExitAsync();
+                // jalankan Lite (Lite otomatis membuat output.txt)
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "bash",
+                    Arguments = $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} -test '{batchFile}'\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
 
-            LogToConsole($"Lite test finished with exit code {proc.ExitCode}");
+                using var proc = new Process { StartInfo = psi };
+                proc.Start();
+                await proc.WaitForExitAsync();
 
-            var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
-            if (proc.ExitCode == 0 && File.Exists(outputPath))
-                return true;
+                LogToConsole($"Lite batch {batchIndex} finished with exit code {proc.ExitCode}");
 
-            LogToConsole("Warning: lite did not produce a valid output.txt or exited with error.");
-            if (File.Exists(outputPath))
-                LogToConsole($"Note: output.txt exists but lite exit code = {proc.ExitCode}.");
-            return false;
+                var batchOutput = Path.Combine(Directory.GetCurrentDirectory(), $"output_{batchIndex}.txt");
+                if (File.Exists("output.txt"))
+                {
+                    // rename output.txt Lite menjadi batch output
+                    File.Move("output.txt", batchOutput, overwrite: true);
+                    batchOutputFiles.Add(batchOutput);
+                }
+                else
+                {
+                    LogToConsole($"Warning: Lite batch {batchIndex} did not produce output.txt");
+                }
+
+                // hapus batch input file
+                File.Delete(batchFile);
+                batchIndex++;
+            }
+
+            // gabungkan semua batch output menjadi satu output.txt final
+            var finalOutput = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
+            using var writer = new StreamWriter(finalOutput, false, Encoding.UTF8);
+
+            foreach (var file in batchOutputFiles)
+            {
+                if (File.Exists(file))
+                {
+                    var content = await File.ReadAllLinesAsync(file);
+                    foreach (var line in content)
+                        await writer.WriteLineAsync(line);
+
+                    File.Delete(file); // hapus batch output sementara
+                }
+            }
+
+            return File.Exists(finalOutput) && new FileInfo(finalOutput).Length > 0;
         }
         catch (Exception ex)
         {
-            LogToConsole($"Failed to run lite test: {ex.Message}");
+            LogToConsole($"Failed to run Lite test: {ex.Message}");
             return false;
         }
     }
