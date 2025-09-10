@@ -212,7 +212,10 @@ public class ProxyCollector
         }
 
         File.WriteAllLines(outputPath, result);
+
+        LogToConsole($"Saved {result.Count} active proxies to {outputPath}");
     }
+
 
     private static string RemoveEmojis(string input)
     {
