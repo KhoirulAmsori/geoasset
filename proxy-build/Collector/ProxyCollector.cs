@@ -59,13 +59,6 @@ public class ProxyCollector
         LogToConsole($"Collected {profiles.Count} unique profiles with protocols: {included}.");
         LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies}.");
 
-        if (profiles.Count < _config.MinActiveProxies)
-        {
-            LogToConsole($"Active proxies ({profiles.Count}) less than required ({_config.MinActiveProxies}). Skipping push.");
-            await File.WriteAllTextAsync("skip_push.flag", "not enough proxies");
-            return;
-        }
-
         LogToConsole("Compiling results...");
         var finalResults = profiles.ToList();
 
