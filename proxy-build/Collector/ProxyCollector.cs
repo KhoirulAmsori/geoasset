@@ -173,6 +173,7 @@ public class ProxyCollector
 
         var grouped = parsedProfiles
             .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
+            .OrderBy(g => g.Key)
             .SelectMany(g => g.Take(_config.MaxProxiesPerCountry))
             .ToList();
 
