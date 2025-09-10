@@ -57,6 +57,13 @@ jobs:
       - name: Build proxy list
         run: |
           cd source/proxy-build
+          
+          git clone --depth 1 -b asset https://github.com/${{ github.repository }} Asset
+
+          file in *.tar.gz; do
+            tar -xvzf "$file" --wildcards '*.mmdb' --transform='s:.*/::'
+          done
+
           dotnet restore
           dotnet run --configuration Release --project .
           cd ../..
