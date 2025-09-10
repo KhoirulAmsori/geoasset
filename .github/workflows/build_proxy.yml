@@ -46,7 +46,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 1
-          ref: main
+          ref: ${{ github.ref_name }}
           path: source
 
       - name: Install sing-box
