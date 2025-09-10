@@ -6,7 +6,6 @@ public class CollectorConfig
     public required int MaxProxiesPerCountry { get; init; }
     public required int MinActiveProxies { get; init; }
     public required int MaxThreadCount { get; init; }
-    public required int BatchSize { get; init; }
     public required string EnableDebug { get; init; }
     public required string LitePath { get; init; }
     public required string LiteConfigPath { get; init; }
@@ -46,7 +45,6 @@ public class CollectorConfig
             MaxProxiesPerCountry = int.Parse(Environment.GetEnvironmentVariable("MaxProxiesPerCountry")!),
             MinActiveProxies = int.Parse(Environment.GetEnvironmentVariable("MinActiveProxies")!),
             MaxThreadCount = int.Parse(Environment.GetEnvironmentVariable("MaxThreadCount")!),
-            BatchSize = int.Parse(Environment.GetEnvironmentVariable("BatchSize")!),
             EnableDebug = Environment.GetEnvironmentVariable("EnableDebug")!,
             LitePath = Environment.GetEnvironmentVariable("LitePath")!,
             LiteConfigPath = Environment.GetEnvironmentVariable("LiteConfigPath")!,

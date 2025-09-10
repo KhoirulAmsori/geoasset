@@ -75,6 +75,11 @@ public class ProxyCollector
         await File.WriteAllLinesAsync(listPath, allLines);
 
         var liteOk = await RunLiteTest(listPath);
+
+        var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
+        var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
+        SaveActiveLinksToFile(jsonPath, outputPath);
+
         var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
         if (!liteOk || !File.Exists(outputPath))
         {
@@ -176,6 +181,31 @@ public class ProxyCollector
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
     }
 
+    private static void SaveActiveLinksToFile(string jsonPath, string outputPath)
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(jsonPath));
+        var nodes = doc.RootElement.GetProperty("nodes");
+        var result = new List<string>();
+
+        foreach (var node in nodes.EnumerateArray())
+        {
+            if (node.TryGetProperty("isok", out var isokProp) &&
+                isokProp.ValueKind == JsonValueKind.True)
+            {
+                if (node.TryGetProperty("link", out var linkProp))
+                {
+                    var link = linkProp.GetString();
+                    if (!string.IsNullOrEmpty(link))
+                    {
+                        result.Add(link);
+                    }
+                }
+            }
+        }
+
+        File.WriteAllLines(outputPath, result);
+    }
+
     private static string RemoveEmojis(string input)
     {
         if (string.IsNullOrEmpty(input))
@@ -191,100 +221,37 @@ public class ProxyCollector
     {
         try
         {
-            var lines = await File.ReadAllLinesAsync(listPath);
-            if (lines.Length == 0)
-                return false;
+            var debug = string.Equals(
+                _config.EnableDebug,
+                "true",
+                StringComparison.OrdinalIgnoreCase
+            );
 
-            var batchSize = _config.BatchSize; // jumlah proxy per batch
-            var batchOutputFiles = new List<string>();
-            int batchIndex = 0;
-
-            for (int i = 0; i < lines.Length; i += batchSize)
+            // jalankan Lite (Lite otomatis membuat output.txt)
+            var psi = new ProcessStartInfo
             {
-                var batchLines = lines.Skip(i).Take(batchSize).ToArray();
-                if (batchLines.Length == 0)
-                    continue;
+                FileName = "bash",
+                Arguments = debug
+                    ? $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} --test '{tempFile}'\""
+                    : $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} --test '{tempFile}' > /dev/null 2>&1\"",
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
 
-                LogToConsole($"Processing batch {batchIndex} ({batchLines.Length} proxies)");
+            using var proc = new Process { StartInfo = psi };
+            proc.Start();
+            await proc.WaitForExitAsync();
+            
+            LogToConsole($"Lite test finished with exit code {proc.ExitCode}");
 
-                var batchFile = Path.Combine(Directory.GetCurrentDirectory(), $"batch_{batchIndex}.txt");
-                await File.WriteAllLinesAsync(batchFile, batchLines);
+            var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
+            if (proc.ExitCode == 0 && File.Exists(outputPath))
+                return true;
 
-                var debug = string.Equals(
-                    _config.EnableDebug,
-                    "true", 
-                    StringComparison.OrdinalIgnoreCase
-                );
-
-                // jalankan Lite (Lite otomatis membuat output.txt)
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "bash",
-                    Arguments = debug
-                        ? $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} -test '{batchFile}'\""
-                        : $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} -test '{batchFile}' > /dev/null 2>&1\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                using var proc = new Process { StartInfo = psi };
-                proc.Start();
-                await proc.WaitForExitAsync();
-
-                if (proc.ExitCode != 0)
-                {
-                    LogToConsole($"Warning: Lite batch {batchIndex} finished with exit code {proc.ExitCode}");
-                }
-
-                var batchOutput = Path.Combine(Directory.GetCurrentDirectory(), $"output_{batchIndex}.txt");
-                if (File.Exists("output.txt"))
-                {
-                    var linesInBatch = await File.ReadAllLinesAsync("output.txt");
-                    var lineCount = linesInBatch.Length;
-                    LogToConsole($"Batch {batchIndex} has {lineCount} active node.");
-    
-                    if (lineCount > 0)
-                    {
-                        File.Move("output.txt", batchOutput, overwrite: true);
-                        batchOutputFiles.Add(batchOutput);
-                    }
-                    else
-                    {
-                        File.Delete("output.txt"); // hapus output kosong
-                        LogToConsole($"Lite batch {batchIndex} output.txt empty, ignored.");
-                    }
-                }
-                else
-                {
-                    LogToConsole($"Warning: Lite batch {batchIndex} does not produce output.txt");
-                }
-
-                // hapus batch input file
-                File.Delete(batchFile);
-                batchIndex++;
-            }
-
-            // gabungkan semua batch output menjadi satu output.txt final
-            var finalOutput = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
-            using var writer = new StreamWriter(finalOutput, false, Encoding.UTF8);
-            int totalLines = 0;
-
-            foreach (var file in batchOutputFiles)
-            {
-                if (File.Exists(file))
-                {
-                    var content = await File.ReadAllLinesAsync(file);
-                    foreach (var line in content)
-                    {
-                        await writer.WriteLineAsync(line);
-                        totalLines++;
-                    }
-                    File.Delete(file); // hapus batch output sementara
-                }
-            }
-
-            LogToConsole($"Final output.txt dibuat dengan total {totalLines} baris");
-            return totalLines > 0;
+            LogToConsole("Warning: lite did not produce a valid output.txt or exited with error.");
+            if (File.Exists(outputPath))
+                LogToConsole($"Note: output.txt exists but lite exit code = {proc.ExitCode}.");
+            return false;
         }
         catch (Exception ex)
         {
