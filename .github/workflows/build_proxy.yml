@@ -11,11 +11,11 @@ on:
       debug:
         description: "Enable Debuging?"
         required: true
-        default: "False"
+        default: "false"
         type: choice
         options:
-          - True
-          - False
+          - true
+          - false
   repository_dispatch:
 
 permissions:
