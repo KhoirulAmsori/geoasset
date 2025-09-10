@@ -144,16 +144,25 @@ public class ProxyCollector
                 var country = resolver.GetCountry(host);
                 countryMap[profile] = country;
 
-                var isp = string.IsNullOrEmpty(country.Isp) ? "UnknownISP" : country.Isp;
-                var ispParts = isp.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var ispRaw = string.IsNullOrEmpty(country.Isp) ? "Unknown" : country.Isp;
+                ispRaw = ispRaw.Replace(".", "")
+                                .Replace(",", "")
+                                .Trim();
 
-                var ispTwoWords = ispParts.Length > 1
-                    ? string.Join(" ", ispParts.Take(2))
-                    : (ispParts.Length == 1 ? ispParts[0] : "UnknownISP");
+                var formalSuffixes = new[] { "SAS", "INC", "LTD", "LLC", "CORP", "CO", "SA", "SRO", "ASN", "LIMITED", "COMPANY", "ASIA", "CLOUD", "INTERNATIONAL", "PROVIDER", "ISLAND", "PRIVATE", "ONLINE", "OF", "AS", "BV", "HK" };
+
+                var ispParts = ispRaw.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Where(w => !formalSuffixes.Contains(w.ToUpperInvariant()))
+                    .ToArray();
+
+                var ispName = ispParts.Length >= 2
+                    ? $"{ispParts[0]} {ispParts[1]}"
+                    : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
+
                 var idx = parsedProfiles.Count(p => countryMap.ContainsKey(p) &&
                                                     countryMap[p].CountryCode == country.CountryCode);
 
-                profile.Name = $"{country.CountryCode} {idx + 1} - {ispTwoWords}";
+                profile.Name = $"{country.CountryCode} {idx + 1} - {ispName}";
                 parsedProfiles.Add(profile);
             }
             catch (Exception ex)
