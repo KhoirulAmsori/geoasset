@@ -77,8 +77,8 @@ public class ProxyCollector
         var liteOk = await RunLiteTest(listPath);
 
         var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
-        var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
-        SaveActiveLinksToFile(jsonPath, outputPath);
+        var saveOutputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
+        SaveActiveLinksToFile(jsonPath, saveOutputPath);
 
         var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
         if (!liteOk || !File.Exists(outputPath))
@@ -232,8 +232,8 @@ public class ProxyCollector
             {
                 FileName = "bash",
                 Arguments = debug
-                    ? $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} --test '{tempFile}'\""
-                    : $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} --test '{tempFile}' > /dev/null 2>&1\"",
+                    ? $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} --test '{listPath}'\""
+                    : $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} --test '{listPath}' > /dev/null 2>&1\"",
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
