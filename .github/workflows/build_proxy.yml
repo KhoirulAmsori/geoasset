@@ -61,7 +61,7 @@ jobs:
           # get mmdb file
           git clone --depth 1 -b asset https://github.com/${{ github.repository }} GEO
 
-          for file in GEO/*.tar.gz; do tar -xzf "$file" --wildcards --transform='s:.*/::' -C Asset '*.mmdb'; done
+          for file in GEO/GEO/*.tar.gz; do tar -xzf "$file" --wildcards --transform='s:.*/::' -C Asset '*.mmdb'; done
 
           dotnet restore
           dotnet run --configuration Release --project .
