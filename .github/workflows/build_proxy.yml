@@ -10,12 +10,9 @@ on:
     inputs:
       debug:
         description: "Enable Debuging?"
-        required: true
+        required: false
         default: "false"
-        type: choice
-        options:
-          - true
-          - false
+        type: boolean
   repository_dispatch:
 
 permissions:
@@ -29,7 +26,7 @@ jobs:
       MinActiveProxies: 100
       MaxThreadCount: 96
       BatchSize: 500
-      EnableDebug: ${{ github.event.inputs.debug }}
+      EnableDebug: ${{ github.event.inputs.debug || 'false' }}
       LitePath: Asset/lite
       LiteConfigPath: Asset/config.json
       IncludedProtocols: "ss"
