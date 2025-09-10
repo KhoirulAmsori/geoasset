@@ -189,7 +189,7 @@ public class ProxyCollector
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
     }
 
-    private static void SaveActiveLinksToFile(string jsonPath, string outputPath)
+    private void SaveActiveLinksToFile(string jsonPath, string outputPath)
     {
         using var doc = JsonDocument.Parse(File.ReadAllText(jsonPath));
         var nodes = doc.RootElement.GetProperty("nodes");
@@ -215,7 +215,6 @@ public class ProxyCollector
 
         LogToConsole($"Saved {result.Count} active proxies to {outputPath}");
     }
-
 
     private static string RemoveEmojis(string input)
     {
