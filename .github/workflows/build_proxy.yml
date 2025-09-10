@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       debug:
-        description: "Select kernel version (Amlogic only)."
+        description: "Enable Debuging?"
         required: true
         default: "False"
         type: choice
