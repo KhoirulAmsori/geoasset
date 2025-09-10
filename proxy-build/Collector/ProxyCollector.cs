@@ -194,27 +194,35 @@ public class ProxyCollector
     {
         using var doc = JsonDocument.Parse(File.ReadAllText(jsonPath));
         var nodes = doc.RootElement.GetProperty("nodes");
-        var result = new List<string>();
+        var result = new List<(string Link, int Ping)>();
 
         foreach (var node in nodes.EnumerateArray())
         {
             if (node.TryGetProperty("isok", out var isokProp) &&
-                isokProp.ValueKind == JsonValueKind.True)
+                isokProp.ValueKind == JsonValueKind.True &&
+                node.TryGetProperty("ping", out var pingProp))
             {
-                if (node.TryGetProperty("link", out var linkProp))
+                var pingStr = pingProp.GetString();
+                if (int.TryParse(pingStr, out int ping) && ping > 0)
                 {
-                    var link = linkProp.GetString();
-                    if (!string.IsNullOrEmpty(link))
+                    if (node.TryGetProperty("link", out var linkProp))
                     {
-                        result.Add(link);
+                        var link = linkProp.GetString();
+                        if (!string.IsNullOrEmpty(link))
+                        {
+                            result.Add((link, ping));
+                        }
                     }
                 }
             }
         }
 
-        File.WriteAllLines(outputPath, result);
+        // urutkan berdasarkan ping dari kecil ke besar
+        var ordered = result.OrderBy(r => r.Ping).Select(r => r.Link).ToList();
 
-        LogToConsole($"Saved {result.Count} active proxies to {outputPath}");
+        File.WriteAllLines(outputPath, ordered);
+
+        LogToConsole($"Saved {ordered.Count} active proxies to {outputPath}, ordered by ping.");
     }
 
     private static string RemoveEmojis(string input)
