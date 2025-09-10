@@ -162,6 +162,23 @@ public class ProxyCollector
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
     }
 
+    private static string RemoveEmojis(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return input;
+
+        var emojiPattern = new System.Text.RegularExpressions.Regex(@"
+            [\u203C-\u3299]|
+            [\uD83C\uDC00-\uD83C\uDFFF]|
+            [\uD83D\uDC00-\uD83D\uDE4F]|
+            [\uD83D\uDE80-\uD83D\uDEFF]|
+            [\uD83E\uDD00-\uD83E\uDDFF]",
+            System.Text.RegularExpressions.RegexOptions.Compiled |
+            System.Text.RegularExpressions.RegexOptions.IgnorePatternWhitespace);
+
+        return emojiPattern.Replace(input, "");
+    }
+
     private async Task<bool> RunLiteTest(string listPath)
     {
         try
@@ -176,7 +193,10 @@ public class ProxyCollector
 
             for (int i = 0; i < lines.Length; i += batchSize)
             {
-                var batchLines = lines.Skip(i).Take(batchSize).ToArray();
+                var batchLines = lines.Skip(i).Take(batchSize)
+                    .Select(line => RemoveEmojis(line)) // hapus semua emoji
+                    .ToArray();
+
                 if (batchLines.Length == 0)
                     continue;
 
@@ -187,7 +207,7 @@ public class ProxyCollector
 
                 var debug = string.Equals(
                     _config.EnableDebug,
-                    "true", 
+                    "true",
                     StringComparison.OrdinalIgnoreCase
                 );
 
@@ -216,8 +236,7 @@ public class ProxyCollector
                 {
                     var linesInBatch = await File.ReadAllLinesAsync("output.txt");
                     var lineCount = linesInBatch.Length;
-                    // LogToConsole($"Lite batch {batchIndex} produced {lineCount} lines");
-    
+
                     if (lineCount > 0)
                     {
                         File.Move("output.txt", batchOutput, overwrite: true);
