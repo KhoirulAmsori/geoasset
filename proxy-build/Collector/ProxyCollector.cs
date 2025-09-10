@@ -74,19 +74,18 @@ public class ProxyCollector
         }
         await File.WriteAllLinesAsync(listPath, allLines);
 
-        var liteOk = await RunLiteTest(listPath);
-
-        var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
-        var saveOutputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
-        SaveActiveLinksToFile(jsonPath, saveOutputPath);
-
-        var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
-        if (!liteOk || !File.Exists(outputPath))
+        var buildJson = await RunLiteTest(listPath);
+        if (buildJson is null)
         {
             LogToConsole("Lite test failed — skipping upload.");
             await File.WriteAllTextAsync("skip_push.flag", "lite test failed");
             return;
         }
+
+        var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
+        var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
+        SaveActiveLinksToFile(jsonPath, outputPath);
+
 
         int activeProxyCount = 0;
         if (File.Exists(outputPath))
@@ -217,7 +216,7 @@ public class ProxyCollector
         return pattern.Replace(input, "");
     }
 
-    private async Task<bool> RunLiteTest(string listPath)
+    private async Task<string?> RunLiteTest(string listPath)
     {
         try
         {
@@ -227,7 +226,6 @@ public class ProxyCollector
                 StringComparison.OrdinalIgnoreCase
             );
 
-            // jalankan Lite (Lite otomatis membuat output.txt)
             var psi = new ProcessStartInfo
             {
                 FileName = "bash",
@@ -241,22 +239,20 @@ public class ProxyCollector
             using var proc = new Process { StartInfo = psi };
             proc.Start();
             await proc.WaitForExitAsync();
-            
-            LogToConsole($"Lite test finished with exit code {proc.ExitCode}");
 
-            var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
-            if (proc.ExitCode == 0 && File.Exists(outputPath))
-                return true;
+            var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
+            if (proc.ExitCode == 0 && File.Exists(jsonPath))
+                return jsonPath;
 
-            LogToConsole("Warning: lite did not produce a valid output.txt or exited with error.");
-            if (File.Exists(outputPath))
-                LogToConsole($"Note: output.txt exists but lite exit code = {proc.ExitCode}.");
-            return false;
+            LogToConsole($"Lite test failed with exit code {proc.ExitCode}");
+            if (File.Exists(jsonPath))
+                LogToConsole("Note: out.json exists but may be invalid.");
+            return null;
         }
         catch (Exception ex)
         {
             LogToConsole($"Failed to run Lite test: {ex.Message}");
-            return false;
+            return null;
         }
     }
 
