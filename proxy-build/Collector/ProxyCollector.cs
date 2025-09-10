@@ -74,6 +74,14 @@ public class ProxyCollector
         await File.WriteAllTextAsync(listPath, plain);
         LogToConsole($"Final list written to {listPath} ({profiles.Count} entries)");
 
+        string[] allLines = await File.ReadAllLinesAsync(listPath);
+        for (int i = 0; i < allLines.Length; i++)
+        {
+            allLines[i] = RemoveEmojis(allLines[i]);
+        }
+        await File.WriteAllLinesAsync(listPath, allLines);
+
+
         var liteOk = await RunLiteTest(listPath);
         var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
         if (!liteOk || !File.Exists(outputPath))
@@ -167,16 +175,10 @@ public class ProxyCollector
         if (string.IsNullOrEmpty(input))
             return input;
 
-        var emojiPattern = new System.Text.RegularExpressions.Regex(@"
-            [\u203C-\u3299]|
-            [\uD83C\uDC00-\uD83C\uDFFF]|
-            [\uD83D\uDC00-\uD83D\uDE4F]|
-            [\uD83D\uDE80-\uD83D\uDEFF]|
-            [\uD83E\uDD00-\uD83E\uDDFF]",
-            System.Text.RegularExpressions.RegexOptions.Compiled |
-            System.Text.RegularExpressions.RegexOptions.IgnorePatternWhitespace);
+        var pattern = new System.Text.RegularExpressions.Regex(@"[\p{Cs}\p{So}\p{Sk}]",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
 
-        return emojiPattern.Replace(input, "");
+        return pattern.Replace(input, "");
     }
 
     private async Task<bool> RunLiteTest(string listPath)
@@ -193,10 +195,7 @@ public class ProxyCollector
 
             for (int i = 0; i < lines.Length; i += batchSize)
             {
-                var batchLines = lines.Skip(i).Take(batchSize)
-                    .Select(line => RemoveEmojis(line)) // hapus semua emoji
-                    .ToArray();
-
+                var batchLines = lines.Skip(i).Take(batchSize).ToArray();
                 if (batchLines.Length == 0)
                     continue;
 
@@ -207,7 +206,7 @@ public class ProxyCollector
 
                 var debug = string.Equals(
                     _config.EnableDebug,
-                    "true",
+                    "true", 
                     StringComparison.OrdinalIgnoreCase
                 );
 
@@ -236,7 +235,8 @@ public class ProxyCollector
                 {
                     var linesInBatch = await File.ReadAllLinesAsync("output.txt");
                     var lineCount = linesInBatch.Length;
-
+                    // LogToConsole($"Lite batch {batchIndex} produced {lineCount} lines");
+    
                     if (lineCount > 0)
                     {
                         File.Move("output.txt", batchOutput, overwrite: true);
