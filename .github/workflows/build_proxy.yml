@@ -19,6 +19,7 @@ jobs:
       MaxProxiesPerCountry: 3
       MinActiveProxies: 20
       MaxThreadCount: 96
+      BatchSize: 500
       LitePath: Asset/lite
       LiteConfigPath: Asset/config.json
       IncludedProtocols: "ss"

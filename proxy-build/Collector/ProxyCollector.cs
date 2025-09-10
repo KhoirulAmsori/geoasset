@@ -170,7 +170,7 @@ public class ProxyCollector
             if (lines.Length == 0)
                 return false;
 
-            var batchSize = 100; // jumlah proxy per batch
+            var batchSize = _config.BatchSize; // jumlah proxy per batch
             var batchOutputFiles = new List<string>();
             int batchIndex = 0;
 
