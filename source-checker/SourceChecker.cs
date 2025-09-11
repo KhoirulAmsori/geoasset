@@ -140,7 +140,7 @@ public class SourceChecker
         Log($"Active sources: {validSources.Count}");
         Log($"Inactive sources: {_config.Sources.Length - validSources.Count}");
 
-        await UploadActiveSourcesAsync(validSources);
+        await CommitFileToGithub(validSources, "proxy-build/Asset/sources.txt");
     }
 
     private int CountActiveProxies(string jsonPath)
@@ -194,66 +194,77 @@ public class SourceChecker
             return null;
         }
     }
-    
-    private async Task UploadActiveSourcesAsync(List<string> validSources)
-    {
-        try
-        {
-        var token = _config.GithubApiToken;
-        var user = _config.GithubUser;
-        var repo = _config.GithubRepo;
 
-        var github = new GitHubClient(new ProductHeaderValue("SourceChecker"))
+    private async Task CommitFileToGithub(string content, string path)
+    {
+        string? sha = null;
+        var client = new GitHubClient(new ProductHeaderValue("SourceChecker"))
         {
-            Credentials = new Credentials(token)
+            Credentials = new Credentials(_config.GithubApiToken)
         };
 
-        // path di repo tempat overwrite
-        var path = "proxy-build/Asset/sources.txt";
-
-        // isi file (gabungkan dengan newline)
-        var newContent = string.Join("\n", validSources);
-
-        // cek apakah file sudah ada
-        RepositoryContentsResponse existing;
         try
         {
-            existing = await github.Repository.Content.GetAllContentsByRef(user, repo, path, "dev");
+            var contents = await client.Repository.Content.GetAllContents(_config.GithubUser, _config.GithubRepo, path);
+            sha = contents.FirstOrDefault()?.Sha;
         }
-        catch (NotFoundException)
+        catch
         {
-            existing = null!;
         }
 
-        if (existing != null && existing.Any())
+        if (sha is null)
         {
-            // update file lama
-            var update = new UpdateFileRequest(
-                "Update sources file.",
-                newContent,
-                existing.First().Sha,
-                branch: "dev"
+            await client.Repository.Content.CreateFile(
+                _config.GithubUser,
+                _config.GithubRepo,
+                path,
+                new CreateFileRequest("chore: add active sources", content)
             );
 
-            await github.Repository.Content.UpdateFile(user, repo, path, update);
+            Log("sources.txt did not exist, created a new file.");
         }
         else
         {
-            // buat file baru
-            var create = new CreateFileRequest(
-                "Add sources file.",
-                newContent,
-                branch: "dev"
+            await client.Repository.Content.UpdateFile(
+                _config.GithubUser,
+                _config.GithubRepo,
+                path,
+                new UpdateFileRequest("chore: update active sources", content, sha)
             );
 
-            await github.Repository.Content.CreateFile(user, repo, path, create);
+            Log("sources.txt updated successfully.");
         }
+    }
 
-        Log("Commit active sources to GitHub.");
-    }
-    catch (Exception ex)
+    private async Task CommitFileToGithub(string content, string path)
     {
-        Log($"Failed to upload active sources: {ex.Message}");
+        string? sha = null;
+        var client = new GitHubClient(new ProductHeaderValue("ProxyCollector"))
+        {
+            Credentials = new Credentials(_config.GithubApiToken)
+        };
+        try
+        {
+            var contents = await client.Repository.Content.GetAllContents(_config.GithubUser, _config.GithubRepo, path);
+            sha = contents.FirstOrDefault()?.Sha;
+        }
+        catch { }
+
+        if (sha is null)
+        {
+            await client.Repository
+                .Content
+                .CreateFile(_config.GithubUser, _config.GithubRepo, path,
+                new CreateFileRequest("Add sources file.", content));
+            Log("Sources file did not exist, created a new file.");
+        }
+        else
+        {
+            await client.Repository
+                .Content
+                .UpdateFile(_config.GithubUser, _config.GithubRepo, path,
+                new UpdateFileRequest("Update active sources.", content, sha));
+            Log("Sources file updated successfully.");
+        }
     }
-}
 }
