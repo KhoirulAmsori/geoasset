@@ -201,19 +201,28 @@ public class SourceChecker
     private async Task CommitFileToGithub(string content, string path)
     {
         string? sha = null;
+        string? existingContent = null;
+
         var client = new GitHubClient(new ProductHeaderValue("ProxyCollector"))
         {
             Credentials = new Credentials(_config.GithubApiToken)
         };
+
         try
         {
             var contents = await client.Repository.Content.GetAllContents(_config.GithubUser, _config.GithubRepo, path);
-            sha = contents.FirstOrDefault()?.Sha;
+            var file = contents.FirstOrDefault();
+            sha = file?.Sha;
+            existingContent = file?.Content; // ambil isi file lama
         }
-        catch { }
+        catch 
+        {
+            // file belum ada → abaikan error
+        }
 
         if (sha is null)
         {
+            // file belum ada → buat baru
             await client.Repository
                 .Content
                 .CreateFile(_config.GithubUser, _config.GithubRepo, path,
@@ -222,6 +231,14 @@ public class SourceChecker
         }
         else
         {
+            // cek apakah ada perubahan konten
+            if (existingContent?.Trim() == content.Trim())
+            {
+                Log("No changes in sources file, skipping commit.");
+                return;
+            }
+
+            // kalau ada perubahan → update
             await client.Repository
                 .Content
                 .UpdateFile(_config.GithubUser, _config.GithubRepo, path,
