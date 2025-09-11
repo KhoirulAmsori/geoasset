@@ -6,10 +6,8 @@ using System.Diagnostics;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using ProxyCollector.Models;
-using ProxyCollector.Services;
 using ProxyCollector.Configuration;
-using SingBoxLib.Configuration;
+using ProxyCollector.Services;
 using SingBoxLib.Parsing;
 using System.Text.Json;
 
@@ -57,22 +55,27 @@ public class ProxyCollector
             : "all";
 
         LogToConsole($"Collected {profiles.Count} unique profiles with protocols: {included}.");
-        LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies}.");
 
         LogToConsole("Compiling results...");
-        var finalResults = profiles.ToList();
+        var finalResults = profiles
+            .Where(p => p != null) // filter null
+            .ToList();
 
         var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
-        var plain = string.Join("\n", finalResults.Select(p => p.ToProfileUrl()));
-        await File.WriteAllTextAsync(listPath, plain);
-        LogToConsole($"Final list written to {listPath} ({profiles.Count} entries)");
 
-        string[] allLines = await File.ReadAllLinesAsync(listPath);
-        for (int i = 0; i < allLines.Length; i++)
-        {
-            allLines[i] = RemoveEmojis(allLines[i]);
-        }
-        await File.WriteAllLinesAsync(listPath, allLines);
+        // Hapus emoji dan convert ke string in-memory
+        var linesMemory = finalResults
+            .Select(p =>
+            {
+                try { return RemoveEmojis(p.ToProfileUrl()); }
+                catch { return null; }
+            })
+            .Where(line => line != null)
+            .Select(line => line!)  // <-- pastikan compiler tahu ini non-null
+            .ToList();
+
+        // Tulis ke disk sekali saja
+        await File.WriteAllLinesAsync(listPath, linesMemory, Encoding.UTF8);
 
         var buildJson = await RunLiteTest(listPath);
         if (buildJson is null)
@@ -86,11 +89,9 @@ public class ProxyCollector
         var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
         SaveActiveLinksToFile(jsonPath, outputPath);
 
-
         int activeProxyCount = 0;
         if (File.Exists(outputPath))
         {
-            // Hitung baris di output.txt
             activeProxyCount = File.ReadLines(outputPath).Count();
         }
 
@@ -101,15 +102,16 @@ public class ProxyCollector
             return;
         }
 
-        // --- Proses IPToCountryResolver ---
+        // --- Resolusi negara & ISP ---
         LogToConsole("Resolving countries for active proxies...");
         var resolver = new IPToCountryResolver(
-            _config.GeoLiteCountryDbPath,    // GeoLite2-Country.mmdb
-            _config.GeoLiteAsnDbPath         // GeoLite2-ASN.mmdb
+            _config.GeoLiteCountryDbPath,
+            _config.GeoLiteAsnDbPath
         );
+
         var lines = await File.ReadAllLinesAsync(outputPath);
         var parsedProfiles = new List<ProfileItem>();
-        var countryMap = new Dictionary<ProfileItem, CountryInfo>();
+        var countryMap = new Dictionary<ProfileItem, IPToCountryResolver.ProxyCountryInfo>();
 
         foreach (var line in lines)
         {
@@ -121,11 +123,9 @@ public class ProxyCollector
             {
                 string? host = profile.Address;
 
-                // Jika kosong, coba decode base64
                 if (string.IsNullOrEmpty(host))
                 {
                     var decoded = TryBase64Decode(line);
-
                     if (decoded.StartsWith("{"))
                     {
                         try
@@ -183,7 +183,10 @@ public class ProxyCollector
         await File.WriteAllLinesAsync(listPath, grouped.Select(p => p.ToProfileUrl()));
         try { File.Delete(outputPath); } catch { }
 
-        LogToConsole("Uploading results...");
+        if (activeProxyCount >= _config.MinActiveProxies)
+        {
+            LogToConsole($"Reached minimum required {_config.MinActiveProxies} active proxies. Uploading results.");
+        }
         await CommitResultsFromFile(listPath);
 
         var timeSpent = DateTime.Now - startTime;
@@ -217,12 +220,9 @@ public class ProxyCollector
             }
         }
 
-        // urutkan berdasarkan ping dari kecil ke besar
         var ordered = result.OrderBy(r => r.Ping).Select(r => r.Link).ToList();
-
         File.WriteAllLines(outputPath, ordered);
-
-        LogToConsole($"Saved {ordered.Count} active proxies to {outputPath}, ordered by ping.");
+        LogToConsole($"Collected {ordered.Count} active proxies.");
     }
 
     private static string RemoveEmojis(string input)
@@ -278,8 +278,6 @@ public class ProxyCollector
 
     private async Task CommitResultsFromFile(string listPath)
     {
-        LogToConsole("Uploading V2ray Subscription...");
-
         if (!File.Exists(listPath))
         {
             LogToConsole("list.txt not found, skipping upload.");
@@ -292,7 +290,6 @@ public class ProxyCollector
             Directory.CreateDirectory(dir);
 
         File.Copy(listPath, outputPath, true);
-        LogToConsole($"Subscription file written to {outputPath}");
 
         await Task.CompletedTask;
     }

@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: "0 */6 * * *"
   push:
+#    branches:
+#    - dev
     paths:
       - "proxy-build/Asset/sources.txt"
   workflow_dispatch:
@@ -24,7 +26,7 @@ jobs:
     env:
       MaxProxiesPerCountry: 3
       MinActiveProxies: 100
-      MaxThreadCount: 96
+      MaxThreadCount: 32
       EnableDebug: ${{ github.event.inputs.debug || 'false' }}
       LitePath: Asset/lite
       LiteConfigPath: Asset/config.json
@@ -53,6 +55,14 @@ jobs:
           fetch-depth: 1
           ref: ${{ github.ref_name }}
           path: source
+
+      - name: Run source checker
+        run: |
+          cd source/source-checker
+          cp -R ../proxy-build/Asset/ .
+
+          dotnet restore
+          dotnet run --configuration Release --project .
 
       - name: Build proxy list
         run: |
