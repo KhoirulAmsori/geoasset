@@ -1,0 +1,49 @@
+name: Source Checker
+
+on:
+  schedule:
+    - cron: "0 15 * * *"
+  push:
+#    branches:
+#    - dev
+    paths:
+      - "proxy-build/Asset/sources.txt"
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: "Enable Debuging?"
+        required: false
+        default: "false"
+        type: boolean
+  repository_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  Run:
+    runs-on: ubuntu-latest
+    env:
+      GithubApiToken: ${{ secrets.GITHUB_TOKEN }}
+      GithubUser: ${{ github.repository_owner }}
+      GithubRepo: geoasset
+      EnableDebug: ${{ github.event.inputs.debug || 'false' }}
+      LitePath: Asset/lite
+      LiteConfigPath: Asset/config.json
+      IncludedProtocols: "ss,trojan,vmess,vless"
+      SourcesFile: Asset/sources.txt
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run source checker
+        run: |
+          cp -R proxy-build/Asset source-checker/Asset
+          cd source-checker
+
+          dotnet restore
+          dotnet run --configuration Release --project .
