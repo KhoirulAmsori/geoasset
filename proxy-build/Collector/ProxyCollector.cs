@@ -83,25 +83,48 @@ public class ProxyCollector
 
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         var allSourcesContent = new List<string>();
+        var allProfiles = new List<ProfileItem>();
 
-        // --- Tahap 1: Per source ---
-        foreach (var source in _config.Sources)  // ini sudah sesuai urutan sources.txt
+        // --- Ambil semua profile dari semua source ---
+        foreach (var source in _config.Sources)
         {
-            LogToConsole($"Processing source: {source}");  // menampilkan source saat ini
-
             string content;
-            try { content = await client.GetStringAsync(source); }
+            try
+            {
+                content = await client.GetStringAsync(source);
+                content = content.Trim();
+                if (LooksLikeBase64(content))
+                    content = Encoding.UTF8.GetString(Convert.FromBase64String(content));
+            }
             catch (Exception ex)
             {
                 LogToConsole($"Failed to fetch {source}: {ex.Message}");
                 continue;
             }
 
-            if (LooksLikeBase64(content))
-                content = Encoding.UTF8.GetString(Convert.FromBase64String(content));
-
             allSourcesContent.Add(content);
 
+            var profiles = ParseProfilesFromContent(content);
+            allProfiles.AddRange(profiles);
+        }
+
+        // Log jumlah unik proxy dan protokol
+        var uniqueProfiles = allProfiles
+            .GroupBy(p => p.ToProfileUrl())
+            .Select(g => g.First())
+            .ToList();
+
+        var protocols = _config.IncludedProtocols.Length > 0
+            ? string.Join(", ", _config.IncludedProtocols.Select(p => p.Replace("://", "").ToUpperInvariant()))
+            : "all";
+
+        LogToConsole($"Collected {uniqueProfiles.Count} unique profiles with protocols: {protocols}.");
+        LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies}.");
+
+        // --- Tahap 1: Lite per source ---
+        foreach (var (source, content) in _config.Sources.Zip(allSourcesContent, (s, c) => (s, c)))
+        {
+            LogToConsole($"Processing source: {source}");
             var profiles = ParseProfilesFromContent(content);
             if (!profiles.Any())
             {
@@ -111,6 +134,10 @@ public class ProxyCollector
 
             var tempListPath = Path.Combine(Directory.GetCurrentDirectory(), "temp_list.txt");
             await File.WriteAllLinesAsync(tempListPath, profiles.Select(p => RemoveEmojis(p.ToProfileUrl())));
+
+            // Hapus out.json lama sebelum Lite
+            var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
+            if (File.Exists(jsonPath)) File.Delete(jsonPath);
 
             var liteJson = await RunLiteTest(tempListPath);
             if (liteJson == null)
@@ -123,16 +150,13 @@ public class ProxyCollector
             SaveActiveLinksToFile(liteJson, tempOutputPath);
 
             var activeCount = File.Exists(tempOutputPath) ? File.ReadAllLines(tempOutputPath).Length : 0;
-            LogToConsole($"Source {source} has {activeCount} active proxies"); // urut sesuai sources.txt
+            LogToConsole($"Source {source} has {activeCount} active proxies");
         }
 
-        // --- Tahap 2: Semua source digabung ---
+        // --- Tahap 2: Lite untuk semua source digabung ---
         LogToConsole("Running final Lite test on all sources combined...");
 
-        var combinedProfiles = allSourcesContent
-            .SelectMany(c => ParseProfilesFromContent(c))
-            .ToList();
-
+        var combinedProfiles = uniqueProfiles; // Lite akan membuang duplikat otomatis
         if (!combinedProfiles.Any())
         {
             LogToConsole("No valid proxies collected from all sources. Exiting.");
@@ -141,6 +165,10 @@ public class ProxyCollector
 
         var combinedListPath = Path.Combine(Directory.GetCurrentDirectory(), "combined_list.txt");
         await File.WriteAllLinesAsync(combinedListPath, combinedProfiles.Select(p => RemoveEmojis(p.ToProfileUrl())));
+
+        // Hapus out.json sebelum Lite final
+        var finalJsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
+        if (File.Exists(finalJsonPath)) File.Delete(finalJsonPath);
 
         var finalLiteJson = await RunLiteTest(combinedListPath);
         if (finalLiteJson == null)
@@ -211,23 +239,53 @@ public class ProxyCollector
             }
         }
 
-        // --- Group by country limit ---
+        // Batasi proxy per country
         var grouped = parsedProfiles
             .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
             .OrderBy(g => g.Key)
             .SelectMany(g => g.Take(_config.MaxProxiesPerCountry))
             .ToList();
 
+        await File.WriteAllLinesAsync(Path.Combine(Directory.GetCurrentDirectory(), "list.txt"), grouped.Select(p => p.ToProfileUrl()));
+
         LogToConsole($"Final proxy count after country limit: {grouped.Count}");
 
-        var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
-        await File.WriteAllLinesAsync(listPath, grouped.Select(p => p.ToProfileUrl()), Encoding.UTF8);
-
-        LogToConsole("Uploading results...");
-        await CommitResultsFromFile(listPath);
+        // --- Upload / Commit ---
+        await CommitResultsFromFile(Path.Combine(Directory.GetCurrentDirectory(), "list.txt"));
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
+    }
+
+    private void SaveActiveLinksToFile(string jsonPath, string outputPath)
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(jsonPath));
+        var nodes = doc.RootElement.GetProperty("nodes");
+        var result = new List<(string Link, int Ping)>();
+
+        foreach (var node in nodes.EnumerateArray())
+        {
+            if (node.TryGetProperty("isok", out var isokProp) &&
+                isokProp.ValueKind == JsonValueKind.True &&
+                node.TryGetProperty("ping", out var pingProp))
+            {
+                var pingStr = pingProp.GetString();
+                if (int.TryParse(pingStr, out int ping) && ping > 0)
+                {
+                    if (node.TryGetProperty("link", out var linkProp))
+                    {
+                        var link = linkProp.GetString();
+                        if (!string.IsNullOrEmpty(link))
+                            result.Add((link, ping));
+                    }
+                }
+            }
+        }
+
+        var ordered = result.OrderBy(r => r.Ping).Select(r => r.Link).ToList();
+        File.WriteAllLines(outputPath, ordered);
+
+        LogToConsole($"Saved {ordered.Count} active proxies to {outputPath}, ordered by ping.");
     }
 
     private async Task<string?> RunLiteTest(string listPath)
@@ -235,6 +293,7 @@ public class ProxyCollector
         try
         {
             var debug = string.Equals(_config.EnableDebug, "true", StringComparison.OrdinalIgnoreCase);
+
             var psi = new ProcessStartInfo
             {
                 FileName = "bash",
@@ -263,38 +322,6 @@ public class ProxyCollector
             LogToConsole($"Failed to run Lite test: {ex.Message}");
             return null;
         }
-    }
-
-    private void SaveActiveLinksToFile(string jsonPath, string outputPath)
-    {
-        using var doc = JsonDocument.Parse(File.ReadAllText(jsonPath));
-        var nodes = doc.RootElement.GetProperty("nodes");
-        var result = new List<(string Link, int Ping)>();
-
-        foreach (var node in nodes.EnumerateArray())
-        {
-            if (node.TryGetProperty("isok", out var isokProp) &&
-                isokProp.ValueKind == JsonValueKind.True &&
-                node.TryGetProperty("ping", out var pingProp))
-            {
-                var pingStr = pingProp.GetString();
-                if (int.TryParse(pingStr, out int ping) && ping > 0)
-                {
-                    if (node.TryGetProperty("link", out var linkProp))
-                    {
-                        var link = linkProp.GetString();
-                        if (!string.IsNullOrEmpty(link))
-                        {
-                            result.Add((link, ping));
-                        }
-                    }
-                }
-            }
-        }
-
-        var ordered = result.OrderBy(r => r.Ping).Select(r => r.Link).ToList();
-        File.WriteAllLines(outputPath, ordered);
-        LogToConsole($"Saved {ordered.Count} active proxies to {outputPath}, ordered by ping.");
     }
 
     private async Task CommitResultsFromFile(string listPath)
