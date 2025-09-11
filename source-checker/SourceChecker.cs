@@ -5,7 +5,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using ProxyChecker.Configuration;
+using SourceChecker.Configuration;
 using SingBoxLib.Parsing;
 using System.Text.Json;
 
