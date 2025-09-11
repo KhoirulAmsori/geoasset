@@ -122,19 +122,18 @@ public class SourceChecker
                 continue;
             }
 
-            var activeCount = CountActiveProxies(liteJson);
-            var testedProxy = profiles.Count;
+            var (activeCount, testedProxy) = CountProxies(liteJson);
             
             if (activeCount >= 2)
             {
-                Log($"{activeCount} / {testedProxy} = {source}");
+                Log($"{activeCount.ToString().PadLeft(4)} / {testedProxy.ToString().PadLeft(6)} = {source}");
                 validSources.Add(source);
                 totalActiveProxies += activeCount;
                 totalTestedProxies += testedProxy;
             }
             else
             {
-                Log($"{activeCount} / {testedProxy} = {source} -> REMOVED!");
+                Log($"{activeCount.ToString().PadLeft(4)} / {testedProxy.ToString().PadLeft(6)} = {source} -> REMOVED!");
             }
         }
 
@@ -154,22 +153,24 @@ public class SourceChecker
         //await CommitFileToGithub(string.Join(Environment.NewLine, validSources), "proxy-build/Asset/sources.txt");
     }
 
-    private int CountActiveProxies(string jsonPath)
+    private (int Active, int Tested) CountActiveProxies(string jsonPath)
     {
         using var doc = JsonDocument.Parse(File.ReadAllText(jsonPath));
         var nodes = doc.RootElement.GetProperty("nodes");
-        int count = 0;
+
+        int active = 0;
+        int tested = nodes.GetArrayLength();
 
         foreach (var node in nodes.EnumerateArray())
         {
             if (node.TryGetProperty("isok", out var isokProp) &&
                 isokProp.ValueKind == JsonValueKind.True)
             {
-                count++;
+                active++;
             }
         }
 
-        return count;
+        return (active, tested);
     }
 
     private async Task<string?> RunLite(string listPath)
