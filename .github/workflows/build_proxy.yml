@@ -59,8 +59,7 @@ jobs:
       - name: Run source checker
         run: |
           cd source/source-checker
-          mkdir -p Asset
-          cp ../proxy-build/Asset/sources.txt Asset/
+          cp -R ../proxy-build/Asset/ .
 
           dotnet restore
           dotnet run --configuration Release --project .
