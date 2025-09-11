@@ -66,16 +66,8 @@ public class ProxyCollector
         LogToConsole("Compiling results...");
         var finalResults = profiles.ToList();
 
-        // --- Filter ProfileItem yang valid sebelum ToProfileUrl ---
-        var linesMemory = finalResults
-            .Where(p => p != null && !string.IsNullOrEmpty(p.Address))
-            .Select(p =>
-            {
-                try { return RemoveEmojis(p.ToProfileUrl()); }
-                catch { return null; }
-            })
-            .Where(line => line != null)
-            .ToList()!;
+        // --- In-memory processing ---
+        var linesMemory = finalResults.Select(p => RemoveEmojis(p.ToProfileUrl())).ToList();
 
         var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
         await File.WriteAllLinesAsync(listPath, linesMemory, Encoding.UTF8);
@@ -117,9 +109,9 @@ public class ProxyCollector
         {
             ProfileItem? profile = null;
             try { profile = ProfileParser.ParseProfileUrl(line); } catch { }
-            if (profile == null || string.IsNullOrEmpty(profile.Address)) continue;
+            if (profile == null) continue;
 
-            string host = profile.Address!;
+            string? host = profile.Address;
             if (string.IsNullOrEmpty(host))
             {
                 var decoded = TryBase64Decode(line);
@@ -129,7 +121,7 @@ public class ProxyCollector
                     {
                         using var doc = JsonDocument.Parse(decoded);
                         if (doc.RootElement.TryGetProperty("add", out var addProp))
-                            host = addProp.GetString() ?? host;
+                            host = addProp.GetString();
                     }
                     catch { }
                 }
