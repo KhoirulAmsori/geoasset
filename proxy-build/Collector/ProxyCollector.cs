@@ -49,38 +49,6 @@ public class ProxyCollector
         var startTime = DateTime.Now;
         LogToConsole("Collector started.");
 
-        // --- Tahap 1: Lite per source ---
-        foreach (var (source, content) in _config.Sources.Zip(allSourcesContent, (s, c) => (s, c)))
-        {
-            var profiles = ParseProfilesFromContent(content);
-            if (!profiles.Any())
-            {
-                LogToConsole($"No valid proxies found in source {source}");
-                continue;
-            }
-
-            var tempListPath = Path.Combine(Directory.GetCurrentDirectory(), "temp_list.txt");
-            await File.WriteAllLinesAsync(tempListPath, profiles.Select(p => RemoveEmojis(p.ToProfileUrl())));
-
-            // Hapus out.json lama sebelum Lite
-            var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
-            if (File.Exists(jsonPath)) File.Delete(jsonPath);
-
-            var liteJson = await RunLiteTest(tempListPath);
-            if (liteJson == null)
-            {
-                LogToConsole($"Lite test failed for source {source}");
-                continue;
-            }
-
-            var tempOutputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
-            SaveActiveLinksToFile(liteJson, tempOutputPath);
-
-            var activeCount = File.Exists(tempOutputPath) ? File.ReadAllLines(tempOutputPath).Length : 0;
-            LogToConsole($"Source {source} has {activeCount} active proxies");
-        }
-
-        // --- Tahap 2: Lite untuk semua source digabung ---
         var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
         var included = _config.IncludedProtocols.Length > 0
             ? string.Join(", ", _config.IncludedProtocols.Select(p => p.Replace("://", "").ToUpperInvariant()))
