@@ -9,7 +9,7 @@ using ProxyCollector.Configuration;
 using SingBoxLib.Parsing;
 using System.Text.Json;
 
-namespace ProxyCheckerApp;
+namespace ProxyChecker;
 
 public class ProxyChecker
 {
