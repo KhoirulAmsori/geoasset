@@ -121,14 +121,17 @@ public class SourceChecker
             }
 
             var activeCount = CountActiveProxies(liteJson);
+            var testedProxy = profiles.Count;
+            
             if (activeCount >= 2)
             {
-                Log($"{source} has {activeCount} active proxies");
+                Log($"{source} has {activeCount} active proxies from {testedProxy} tested.");
                 validSources.Add(source);
+                totalActiveProxies += activeCount;
             }
             else
             {
-                Log($"{source} has no active proxies -> removed");
+                Log($"{source} has 0 active proxies from {testedProxy} -> removed");
             }
         }
 
@@ -143,7 +146,7 @@ public class SourceChecker
         // await CommitFileToGithub(
         //    string.Join(Environment.NewLine, validSources),
         //    "proxy-build/Asset/sources.txt"
-        // );
+        //);
     }
 
     private int CountActiveProxies(string jsonPath)
