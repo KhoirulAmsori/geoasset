@@ -24,6 +24,7 @@ jobs:
     env:
       MaxProxiesPerCountry: 3
       MinActiveProxies: 100
+      MaxThreadCount: 96
       EnableDebug: ${{ github.event.inputs.debug || 'false' }}
       LitePath: Asset/lite
       LiteConfigPath: Asset/config.json
