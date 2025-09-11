@@ -32,26 +32,16 @@ public class SourceChecker
 
     private static string TryBase64Decode(string input)
     {
-        if (string.IsNullOrWhiteSpace(input)) return input;
-
-        // Buang whitespace & newline supaya bisa diparse
-        var compact = input.Trim().Replace("\r", "").Replace("\n", "");
-
-        try
+        if (LooksLikeBase64(input))
         {
-            // Base64 decode
-            var bytes = Convert.FromBase64String(compact);
-            var decoded = Encoding.UTF8.GetString(bytes);
-
-            // Kalau hasil decode ternyata masih berisi URL schema (vmess://, ss://, trojan://, vless://, hysteria2://, dll)
-            if (decoded.Contains("://"))
-                return decoded;
+            try
+            {
+                int mod4 = input.Length % 4;
+                if (mod4 > 0) input = input.PadRight(input.Length + (4 - mod4), '=');
+                return Encoding.UTF8.GetString(Convert.FromBase64String(input));
+            }
+            catch { }
         }
-        catch
-        {
-            // Bukan base64 valid → kembalikan input asli
-        }
-
         return input;
     }
 
@@ -81,6 +71,7 @@ public class SourceChecker
         Log("Checker started.");
 
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+        var validSources = new List<string>();
 
         foreach (var source in _config.Sources)
         {
@@ -107,7 +98,7 @@ public class SourceChecker
             var tempListPath = Path.Combine(Directory.GetCurrentDirectory(), "temp_list.txt");
             await File.WriteAllLinesAsync(tempListPath, profiles.Select(p => p.ToProfileUrl()));
 
-            // Hapus out.json lama sebelum Lite
+            // Hapus out.json lama
             var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
             if (File.Exists(jsonPath)) File.Delete(jsonPath);
 
@@ -118,43 +109,41 @@ public class SourceChecker
                 continue;
             }
 
-            var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
-            SaveActiveLinksToFile(liteJson, outputPath);
-
-            var activeCount = File.Exists(outputPath) ? File.ReadAllLines(outputPath).Length : 0;
-            Log($"Source {source} has {activeCount} active proxies");
+            var activeCount = CountActiveProxies(liteJson);
+            if (activeCount > 0)
+            {
+                Log($"Source {source} has {activeCount} active proxies");
+                validSources.Add(source);
+            }
+            else
+            {
+                Log($"Source {source} has no active proxies -> removed");
+            }
         }
+
+        // Tulis ulang sources.txt hanya dengan link valid
+        var sourcesFile = Environment.GetEnvironmentVariable("SourcesFile") ?? "sources.txt";
+        File.WriteAllLines(sourcesFile, validSources);
 
         Log("All sources processed.");
     }
 
-    private void SaveActiveLinksToFile(string jsonPath, string outputPath)
+    private int CountActiveProxies(string jsonPath)
     {
         using var doc = JsonDocument.Parse(File.ReadAllText(jsonPath));
         var nodes = doc.RootElement.GetProperty("nodes");
-        var result = new List<(string Link, int Ping)>();
+        int count = 0;
 
         foreach (var node in nodes.EnumerateArray())
         {
             if (node.TryGetProperty("isok", out var isokProp) &&
-                isokProp.ValueKind == JsonValueKind.True &&
-                node.TryGetProperty("ping", out var pingProp))
+                isokProp.ValueKind == JsonValueKind.True)
             {
-                var pingStr = pingProp.GetString();
-                if (int.TryParse(pingStr, out int ping) && ping > 0)
-                {
-                    if (node.TryGetProperty("link", out var linkProp))
-                    {
-                        var link = linkProp.GetString();
-                        if (!string.IsNullOrEmpty(link))
-                            result.Add((link, ping));
-                    }
-                }
+                count++;
             }
         }
 
-        var ordered = result.OrderBy(r => r.Ping).Select(r => r.Link).ToList();
-        File.WriteAllLines(outputPath, ordered);
+        return count;
     }
 
     private async Task<string?> RunLite(string listPath)
