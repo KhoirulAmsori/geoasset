@@ -4,10 +4,10 @@ on:
   schedule:
     - cron: "0 */6 * * *"
   push:
-    branches:
-    - dev
-#    paths:
-#      - "proxy-build/Asset/sources.txt"
+#    branches:
+#    - dev
+    paths:
+      - "proxy-build/Asset/sources.txt"
   workflow_dispatch:
     inputs:
       debug:
