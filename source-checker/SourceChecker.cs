@@ -79,8 +79,7 @@ public class SourceChecker
             {
                 content = await client.GetStringAsync(source);
                 content = content.Trim();
-                if (LooksLikeBase64(content))
-                    content = Encoding.UTF8.GetString(Convert.FromBase64String(content));
+                content = TryBase64Decode(content);
             }
             catch (Exception ex)
             {
