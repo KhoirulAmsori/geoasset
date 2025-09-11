@@ -121,7 +121,7 @@ public class SourceChecker
             }
 
             var activeCount = CountActiveProxies(liteJson);
-            if (activeCount > 3)
+            if (activeCount >= 2)
             {
                 Log($"{source} has {activeCount} active proxies");
                 validSources.Add(source);
