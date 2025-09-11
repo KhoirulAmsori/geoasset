@@ -183,7 +183,7 @@ public class ProxyCollector
         await File.WriteAllLinesAsync(listPath, grouped.Select(p => p.ToProfileUrl()));
         try { File.Delete(outputPath); } catch { }
 
-        if (workingResults.Count >= _config.MinActiveProxies)
+        if (activeProxyCount >= _config.MinActiveProxies)
         {
             LogToConsole($"Reached minimum required {_config.MinActiveProxies} active proxies. Uploading results.");
         }
