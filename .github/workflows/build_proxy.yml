@@ -56,7 +56,7 @@ jobs:
           ref: ${{ github.ref_name }}
           path: source
 
-      - name: Run source chekcer
+      - name: Run source checker
         run: |
           cd source/source-checker
 

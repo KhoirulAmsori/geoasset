@@ -30,7 +30,7 @@ public class Config
             .Select(p => p.EndsWith("://") ? p : $"{p}://")
             .ToArray();
 
-        return new CollectorConfig
+        return new Config
         {
             EnableDebug = Environment.GetEnvironmentVariable("EnableDebug")!,
             LitePath = Environment.GetEnvironmentVariable("LitePath")!,
