@@ -147,6 +147,12 @@ public class ProxyCollector
             await File.WriteAllTextAsync("skip_push.flag", "not enough proxies");
             return;
         }
+        
+        // Hapus duplikat sebelum lanjut resolusi IP
+        allActiveProxies = allActiveProxies
+            .GroupBy(p => p.ToProfileUrl())   // grup berdasarkan string URL proxy
+            .Select(g => g.First())           // ambil yang pertama dari grup
+            .ToList();
 
         // --- Resolving IP
         LogToConsole("Resolving countries for active proxies...");
