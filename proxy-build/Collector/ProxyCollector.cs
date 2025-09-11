@@ -54,7 +54,7 @@ public class ProxyCollector
             ? string.Join(", ", _config.IncludedProtocols.Select(p => p.Replace("://", "").ToUpperInvariant()))
             : "all";
 
-        LogToConsole($"Collected {profiles.Count} unique profiles with protocols: {included}.");
+        LogToConsole($"Get {profiles.Count} unique profiles with protocols: {included}.");
 
         LogToConsole("Compiling results...");
         var finalResults = profiles
@@ -222,7 +222,7 @@ public class ProxyCollector
 
         var ordered = result.OrderBy(r => r.Ping).Select(r => r.Link).ToList();
         File.WriteAllLines(outputPath, ordered);
-        LogToConsole($"Collected {ordered.Count} active proxies.");
+        LogToConsole($"Tested {ordered.Count} active proxies.");
     }
 
     private static string RemoveEmojis(string input)
@@ -313,7 +313,7 @@ public class ProxyCollector
                     profiles.Add(profile);
                     count++;
                 }
-                LogToConsole($"Collected {count} proxies from {source}");
+                LogToConsole($"Get {count} proxies from {source}");
             }
             catch (Exception ex)
             {
