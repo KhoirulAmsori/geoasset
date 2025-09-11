@@ -150,7 +150,7 @@ public class SourceChecker
         Log($"Inactive sources: {_config.Sources.Length - validSources.Count}");
         Log($"Summary: {totalActiveProxies} active proxies from {totalTestedProxies} tested proxy with protocols: {included}.");
 
-        //await CommitFileToGithub(string.Join(Environment.NewLine, validSources), "proxy-build/Asset/sources.txt");
+        await CommitFileToGithub(string.Join(Environment.NewLine, validSources), "proxy-build/Asset/sources.txt");
     }
 
     private (int Active, int Tested) CountActiveProxies(string jsonPath)
