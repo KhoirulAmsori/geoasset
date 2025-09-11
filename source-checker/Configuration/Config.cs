@@ -4,6 +4,9 @@ public class Config
 {
     public static Config Instance { get; private set; }
     
+    public required string GithubApiToken { get; init; }
+    public required string GithubUser { get; init; }
+    public required string GithubRepo { get; init; }
     public required string EnableDebug { get; init; }
     public required string LitePath { get; init; }
     public required string LiteConfigPath { get; init; }
@@ -32,6 +35,9 @@ public class Config
 
         return new Config
         {
+            GithubApiToken = Environment.GetEnvironmentVariable("GithubApiToken")!,
+            GithubUser = Environment.GetEnvironmentVariable("GithubUser")!,
+            GithubRepo = Environment.GetEnvironmentVariable("GithubRepo")!,
             EnableDebug = Environment.GetEnvironmentVariable("EnableDebug")!,
             LitePath = Environment.GetEnvironmentVariable("LitePath")!,
             LiteConfigPath = Environment.GetEnvironmentVariable("LiteConfigPath")!,

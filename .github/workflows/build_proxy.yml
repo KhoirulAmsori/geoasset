@@ -24,6 +24,9 @@ jobs:
   Run:
     runs-on: ubuntu-latest
     env:
+      GithubApiToken: ${{ secrets.GITHUB_TOKEN }}
+      GithubUser: ${{ github.repository_owner }}
+      GithubRepo: geoasset
       EnableDebug: ${{ github.event.inputs.debug || 'false' }}
       LitePath: Asset/lite
       LiteConfigPath: Asset/config.json

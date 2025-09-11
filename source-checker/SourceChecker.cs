@@ -1,3 +1,4 @@
+using Octokit;
 using System;
 using System.IO;
 using System.Linq;
@@ -127,7 +128,7 @@ public class SourceChecker
             }
             else
             {
-                Log($"Source {source} has no active proxies -> removed");
+                Log($"{source} has no active proxies -> removed");
             }
         }
 
@@ -138,6 +139,8 @@ public class SourceChecker
         Log($"Total sources checked: {_config.Sources.Length}");
         Log($"Active sources: {validSources.Count}");
         Log($"Inactive sources: {_config.Sources.Length - validSources.Count}");
+
+        await UploadActiveSourcesAsync(validSources);
     }
 
     private int CountActiveProxies(string jsonPath)
@@ -191,4 +194,66 @@ public class SourceChecker
             return null;
         }
     }
+    
+    private async Task UploadActiveSourcesAsync(List<string> validSources)
+    {
+        try
+        {
+        var token = _config.GithubApiToken;
+        var user = _config.GithubUser;
+        var repo = _config.GithubRepo;
+
+        var github = new GitHubClient(new ProductHeaderValue("SourceChecker"))
+        {
+            Credentials = new Credentials(token)
+        };
+
+        // path di repo tempat overwrite
+        var path = ($"proxy-build/{_config.SourcesFile}");
+
+        // isi file (gabungkan dengan newline)
+        var newContent = string.Join("\n", validSources);
+
+        // cek apakah file sudah ada
+        RepositoryContentsResponse existing;
+        try
+        {
+            existing = await github.Repository.Content.GetAllContentsByRef(user, repo, path, "dev");
+        }
+        catch (NotFoundException)
+        {
+            existing = null!;
+        }
+
+        if (existing != null && existing.Any())
+        {
+            // update file lama
+            var update = new UpdateFileRequest(
+                "Update sources file.",
+                newContent,
+                existing.First().Sha,
+                branch: "dev"
+            );
+
+            await github.Repository.Content.UpdateFile(user, repo, path, update);
+        }
+        else
+        {
+            // buat file baru
+            var create = new CreateFileRequest(
+                "Add sources file.",
+                newContent,
+                branch: "dev"
+            );
+
+            await github.Repository.Content.CreateFile(user, repo, path, create);
+        }
+
+        Log("Commit active sources to GitHub.");
+    }
+    catch (Exception ex)
+    {
+        Log($"Failed to upload active sources: {ex.Message}");
+    }
+}
 }
