@@ -2,7 +2,7 @@ name: Source Checker
 
 on:
   schedule:
-    - cron: "0 15 */3 * *"
+    - cron: "0 23 * * 0"
   push:
 #    branches:
 #    - dev
