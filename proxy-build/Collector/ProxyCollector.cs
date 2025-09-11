@@ -55,7 +55,6 @@ public class ProxyCollector
             : "all";
 
         LogToConsole($"Collected {profiles.Count} unique profiles with protocols: {included}.");
-        LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies}.");
 
         LogToConsole("Compiling results...");
         var finalResults = profiles
@@ -77,7 +76,6 @@ public class ProxyCollector
 
         // Tulis ke disk sekali saja
         await File.WriteAllLinesAsync(listPath, linesMemory, Encoding.UTF8);
-        LogToConsole($"Final list written to {listPath} ({linesMemory.Count} entries)");
 
         var buildJson = await RunLiteTest(listPath);
         if (buildJson is null)
@@ -185,7 +183,10 @@ public class ProxyCollector
         await File.WriteAllLinesAsync(listPath, grouped.Select(p => p.ToProfileUrl()));
         try { File.Delete(outputPath); } catch { }
 
-        LogToConsole("Uploading results...");
+        if (workingResults.Count >= _config.MinActiveProxies)
+        {
+            LogToConsole($"Reached minimum required {_config.MinActiveProxies} active proxies. Uploading results.");
+        }
         await CommitResultsFromFile(listPath);
 
         var timeSpent = DateTime.Now - startTime;
@@ -221,7 +222,7 @@ public class ProxyCollector
 
         var ordered = result.OrderBy(r => r.Ping).Select(r => r.Link).ToList();
         File.WriteAllLines(outputPath, ordered);
-        LogToConsole($"Saved {ordered.Count} active proxies to {outputPath}, ordered by ping.");
+        LogToConsole($"Collected {ordered.Count} active proxies.");
     }
 
     private static string RemoveEmojis(string input)
