@@ -68,11 +68,12 @@ public class ProxyCollector
         var linesMemory = finalResults
             .Select(p =>
             {
-            try { return RemoveEmojis(p.ToProfileUrl()); }
-            catch { return null; }
+                try { return RemoveEmojis(p.ToProfileUrl()); }
+                catch { return null; }
             })
             .Where(line => line != null)
-            .ToList()!;
+            .Select(line => line!)  // <-- pastikan compiler tahu ini non-null
+            .ToList();
 
         // Tulis ke disk sekali saja
         await File.WriteAllLinesAsync(listPath, linesMemory, Encoding.UTF8);
