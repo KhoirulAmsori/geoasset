@@ -21,7 +21,7 @@ permissions:
   contents: write
 
 jobs:
-  Run:
+  Check:
     runs-on: ubuntu-latest
     env:
       GithubApiToken: ${{ secrets.GITHUB_TOKEN }}

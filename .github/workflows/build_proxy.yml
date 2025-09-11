@@ -56,14 +56,6 @@ jobs:
           ref: ${{ github.ref_name }}
           path: source
 
-      - name: Run source checker
-        run: |
-          cd source/source-checker
-          cp -R ../proxy-build/Asset/ .
-
-          dotnet restore
-          dotnet run --configuration Release --project .
-
       - name: Build proxy list
         run: |
           cd source/proxy-build
