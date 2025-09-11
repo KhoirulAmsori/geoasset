@@ -83,6 +83,7 @@ public class SourceChecker
 
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         var validSources = new List<string>();
+        int totalActiveProxies = 0;
 
         foreach (var source in _config.Sources)
         {
@@ -125,12 +126,13 @@ public class SourceChecker
             
             if (activeCount >= 2)
             {
-                Log($"{source} has {activeCount} active proxies from {testedProxy} tested.");
+                Log($"{activeCount} / {testedProxy} = {source}");
                 validSources.Add(source);
+                totalActiveProxies += activeCount;
             }
             else
             {
-                Log($"{source} has 0 active proxies from {testedProxy} -> removed");
+                Log($"{activeCount} / {testedProxy} = {source} -> REMOVED!");
             }
         }
 
@@ -138,14 +140,16 @@ public class SourceChecker
         var sourcesFile = Environment.GetEnvironmentVariable("SourcesFile") ?? "sources.txt";
         File.WriteAllLines(sourcesFile, validSources);
 
+        var included = _config.IncludedProtocols.Length > 0
+            ? string.Join(", ", _config.IncludedProtocols.Select(p => p.Replace("://", "").ToUpperInvariant()))
+            : "all";
+
         Log($"Total sources checked: {_config.Sources.Length}");
         Log($"Active sources: {validSources.Count}");
         Log($"Inactive sources: {_config.Sources.Length - validSources.Count}");
+        Log($"Summary: {totalActiveProxies} active proxies from {testedProxy} tested proxy protocols: {included}.");
 
-        // await CommitFileToGithub(
-        //    string.Join(Environment.NewLine, validSources),
-        //    "proxy-build/Asset/sources.txt"
-        //);
+        //await CommitFileToGithub(string.Join(Environment.NewLine, validSources), "proxy-build/Asset/sources.txt");
     }
 
     private int CountActiveProxies(string jsonPath)
