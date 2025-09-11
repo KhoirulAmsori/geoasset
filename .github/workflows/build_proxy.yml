@@ -1,4 +1,4 @@
-name: Build Proxy List
+name: Source Checker
 
 on:
   schedule:
@@ -21,20 +21,14 @@ permissions:
   contents: write
 
 jobs:
-  Build:
+  Run:
     runs-on: ubuntu-latest
     env:
-      MaxProxiesPerCountry: 3
-      MinActiveProxies: 100
-      MaxThreadCount: 32
       EnableDebug: ${{ github.event.inputs.debug || 'false' }}
       LitePath: Asset/lite
       LiteConfigPath: Asset/config.json
       IncludedProtocols: "ss,trojan,vmess,vless"
-      V2rayFormatResultPath: Asset/list.txt
       SourcesFile: Asset/sources.txt
-      GeoLiteCountryDbPath: Asset/GeoLite2-Country.mmdb
-      GeoLiteAsnDbPath: Asset/GeoLite2-ASN.mmdb
 
     steps:
       - name: Set variables
@@ -63,50 +57,3 @@ jobs:
 
           dotnet restore
           dotnet run --configuration Release --project .
-
-      - name: Build proxy list
-        run: |
-          cd source/proxy-build
-          
-          # get mmdb file
-          git clone --depth 1 -b asset https://github.com/${{ github.repository }} GEO
-
-          for file in GEO/GEO/*.tar.gz; do tar -xzf "$file" --wildcards --transform='s:.*/::' -C Asset '*.mmdb'; done
-
-          dotnet restore
-          dotnet run --configuration Release --project .
-          cd ../..
-
-      - name: Prepare local repo for 'asset' branch (create if missing)
-        if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          rm -rf asset
-          mkdir -p asset
-          cd asset
-          git init
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote add origin "https://${{ github.actor }}:${GH_TOKEN}@github.com/${{ github.repository }}"
-          if git ls-remote --exit-code --heads origin asset; then
-            git fetch origin asset
-            git checkout -b asset origin/asset
-          else
-            git checkout --orphan asset
-          fi
-          cd ..
-
-      - name: Copy build results to asset/Proxy
-        if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
-        run: |
-          mkdir -p asset/Proxy
-          cp source/proxy-build/Asset/list.txt asset/Proxy/
-
-      - name: Commit & push Proxy
-        if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
-        run: |
-          cd asset
-          git add Proxy
-          git commit -m "Update proxy list on ${{ env.BUILDTIME }}" || echo "No changes to commit"
-          git push -u origin asset
