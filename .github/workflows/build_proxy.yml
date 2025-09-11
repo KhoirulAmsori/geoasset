@@ -65,8 +65,8 @@ jobs:
 
           for file in GEO/GEO/*.tar.gz; do tar -xzf "$file" --wildcards --transform='s:.*/::' -C Asset '*.mmdb'; done
 
-          dotnet restore ./ProxyCollector.csproj
-          dotnet run --configuration Release --project ./ProxyCollector.csproj
+          dotnet restore
+          dotnet run --configuration Release --project .
           cd ../..
 
       - name: Prepare local repo for 'asset' branch (create if missing)

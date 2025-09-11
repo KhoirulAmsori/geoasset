@@ -1,12 +1,12 @@
 using System.Threading.Tasks;
 
-namespace ProxyChecker;
+namespace SourceChecker;
 
 public static class Program
 {
     public static async Task Main()
     {
-        var checker = new ProxyChecker();
+        var checker = new SourceChecker();
         await checker.StartAsync();
     }
 }

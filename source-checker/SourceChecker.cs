@@ -5,19 +5,19 @@ using System.Text;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using ProxyCollector.Configuration;
+using ProxyChecker.Configuration;
 using SingBoxLib.Parsing;
 using System.Text.Json;
 
-namespace ProxyChecker;
+namespace SourceChecker;
 
-public class ProxyChecker
+public class SourceChecker
 {
-    private readonly CollectorConfig _config;
+    private readonly Config _config;
 
-    public ProxyChecker()
+    public SourceChecker()
     {
-        _config = CollectorConfig.Instance;
+        _config = Config.Instance;
     }
 
     private void Log(string message) =>
