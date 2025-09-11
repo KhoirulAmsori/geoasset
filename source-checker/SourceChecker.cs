@@ -84,6 +84,7 @@ public class SourceChecker
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         var validSources = new List<string>();
         int totalActiveProxies = 0;
+        int totalTestedProxies = 0;
 
         foreach (var source in _config.Sources)
         {
@@ -129,6 +130,7 @@ public class SourceChecker
                 Log($"{activeCount} / {testedProxy} = {source}");
                 validSources.Add(source);
                 totalActiveProxies += activeCount;
+                totalTestedProxies += testedProxy;
             }
             else
             {
@@ -147,7 +149,7 @@ public class SourceChecker
         Log($"Total sources checked: {_config.Sources.Length}");
         Log($"Active sources: {validSources.Count}");
         Log($"Inactive sources: {_config.Sources.Length - validSources.Count}");
-        Log($"Summary: {totalActiveProxies} active proxies from {profiles.Count} tested proxy with protocols: {included}.");
+        Log($"Summary: {totalActiveProxies} active proxies from {totalTestedProxies} tested proxy with protocols: {included}.");
 
         //await CommitFileToGithub(string.Join(Environment.NewLine, validSources), "proxy-build/Asset/sources.txt");
     }
