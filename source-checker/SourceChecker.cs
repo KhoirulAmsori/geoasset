@@ -32,16 +32,26 @@ public class SourceChecker
 
     private static string TryBase64Decode(string input)
     {
-        if (LooksLikeBase64(input))
+        if (string.IsNullOrWhiteSpace(input)) return input;
+
+        // Buang whitespace & newline supaya bisa diparse
+        var compact = input.Trim().Replace("\r", "").Replace("\n", "");
+
+        try
         {
-            try
-            {
-                int mod4 = input.Length % 4;
-                if (mod4 > 0) input = input.PadRight(input.Length + (4 - mod4), '=');
-                return Encoding.UTF8.GetString(Convert.FromBase64String(input));
-            }
-            catch { }
+            // Base64 decode
+            var bytes = Convert.FromBase64String(compact);
+            var decoded = Encoding.UTF8.GetString(bytes);
+
+            // Kalau hasil decode ternyata masih berisi URL schema (vmess://, ss://, trojan://, vless://, hysteria2://, dll)
+            if (decoded.Contains("://"))
+                return decoded;
         }
+        catch
+        {
+            // Bukan base64 valid → kembalikan input asli
+        }
+
         return input;
     }
 
