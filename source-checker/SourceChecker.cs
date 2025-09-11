@@ -140,10 +140,10 @@ public class SourceChecker
         Log($"Active sources: {validSources.Count}");
         Log($"Inactive sources: {_config.Sources.Length - validSources.Count}");
 
-        await CommitFileToGithub(
-            string.Join(Environment.NewLine, validSources),
-            "proxy-build/Asset/sources.txt"
-        );
+        // await CommitFileToGithub(
+        //    string.Join(Environment.NewLine, validSources),
+        //    "proxy-build/Asset/sources.txt"
+        // );
     }
 
     private int CountActiveProxies(string jsonPath)
