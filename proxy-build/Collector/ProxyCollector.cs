@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ProxyCollector.Configuration;
 using ProxyCollector.Services;
+using SingBoxLib.Configuration;
 using SingBoxLib.Parsing;
 using System.Text.Json;
 using System.Net.Http;
