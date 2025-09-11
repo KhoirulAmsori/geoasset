@@ -2,14 +2,14 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+// using System.Text.Json;
 using System.Diagnostics;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Net.Http;
 using ProxyCollector.Configuration;
 using ProxyCollector.Services;
 using SingBoxLib.Parsing;
-using System.Text.Json;
 
 namespace ProxyCollector.Collector;
 
@@ -22,26 +22,37 @@ public class ProxyCollector
         _config = CollectorConfig.Instance;
     }
 
-    private void LogToConsole(string log)
-    {
+    private void LogToConsole(string log) =>
         Console.WriteLine($"{DateTime.Now:HH:mm:ss} - {log}");
+
+    private static string RemoveEmojis(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return input;
+        var pattern = new System.Text.RegularExpressions.Regex(@"[\p{Cs}\p{So}\p{Sk}]",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+        return pattern.Replace(input, "");
+    }
+
+    private static bool LooksLikeBase64(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return false;
+        s = s.Trim();
+        return s.Length % 4 == 0 && s.All(c => char.IsLetterOrDigit(c) || c == '+' || c == '/' || c == '=');
     }
 
     private static string TryBase64Decode(string input)
     {
-        try
+        if (LooksLikeBase64(input))
         {
-            int mod4 = input.Length % 4;
-            if (mod4 > 0)
-                input = input.PadRight(input.Length + (4 - mod4), '=');
-
-            var data = Convert.FromBase64String(input);
-            return Encoding.UTF8.GetString(data);
+            try
+            {
+                int mod4 = input.Length % 4;
+                if (mod4 > 0) input = input.PadRight(input.Length + (4 - mod4), '=');
+                return Encoding.UTF8.GetString(Convert.FromBase64String(input));
+            }
+            catch { }
         }
-        catch
-        {
-            return input;
-        }
+        return input;
     }
 
     public async Task StartAsync()
@@ -49,120 +60,122 @@ public class ProxyCollector
         var startTime = DateTime.Now;
         LogToConsole("Collector started.");
 
-        var profiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
-        var included = _config.IncludedProtocols.Length > 0
-            ? string.Join(", ", _config.IncludedProtocols.Select(p => p.Replace("://", "").ToUpperInvariant()))
-            : "all";
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+        var allActiveProxies = new List<ProfileItem>();
 
-        LogToConsole($"Collected {profiles.Count} unique profiles with protocols: {included}.");
-        LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies}.");
-
-        LogToConsole("Compiling results...");
-        var finalResults = profiles
-            .Where(p => p != null) // filter null
-            .ToList();
-
-        var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
-
-        // Hapus emoji dan convert ke string in-memory
-        var linesMemory = finalResults
-            .Select(p =>
+        foreach (var source in _config.Sources)
+        {
+            LogToConsole($"Processing source: {source}");
+            string sourceContent;
+            try
             {
-                try { return RemoveEmojis(p.ToProfileUrl()); }
-                catch { return null; }
-            })
-            .Where(line => line != null)
-            .Select(line => line!)  // <-- pastikan compiler tahu ini non-null
-            .ToList();
+                sourceContent = await client.GetStringAsync(source);
+            }
+            catch (Exception ex)
+            {
+                LogToConsole($"Failed to fetch {source}: {ex.Message}");
+                continue;
+            }
 
-        // Tulis ke disk sekali saja
-        await File.WriteAllLinesAsync(listPath, linesMemory, Encoding.UTF8);
-        LogToConsole($"Final list written to {listPath} ({linesMemory.Count} entries)");
+            if (LooksLikeBase64(sourceContent))
+            {
+                try { sourceContent = Encoding.UTF8.GetString(Convert.FromBase64String(sourceContent)); }
+                catch { }
+            }
 
-        var buildJson = await RunLiteTest(listPath);
-        if (buildJson is null)
-        {
-            LogToConsole("Lite test failed — skipping upload.");
-            await File.WriteAllTextAsync("skip_push.flag", "lite test failed");
-            return;
+            // Parse menjadi ProfileItem
+            var profiles = new List<ProfileItem>();
+            using var reader = new StringReader(sourceContent);
+            string? line;
+            while ((line = reader.ReadLine()?.Trim()) != null)
+            {
+                if (_config.IncludedProtocols.Length > 0 &&
+                    !_config.IncludedProtocols.Any(proto => line.StartsWith(proto, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                try
+                {
+                    var profile = ProfileParser.ParseProfileUrl(line);
+                    if (profile != null) profiles.Add(profile);
+                }
+                catch { }
+            }
+
+            if (!profiles.Any())
+            {
+                LogToConsole($"No valid proxies found in source {source}");
+                continue;
+            }
+
+            // Tulis sementara untuk Lite
+            var tempListPath = Path.Combine(Directory.GetCurrentDirectory(), "temp_list.txt");
+            await File.WriteAllLinesAsync(tempListPath, profiles.Select(p => p.ToProfileUrl()).Select(RemoveEmojis));
+
+            // Jalankan Lite
+            var liteJsonPath = await RunLiteTest(tempListPath);
+            if (liteJsonPath == null)
+            {
+                LogToConsole($"Lite test failed for source {source}");
+                continue;
+            }
+
+            // Ambil proxy aktif via SaveActiveLinksToFile
+            var tempOutputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
+            SaveActiveLinksToFile(liteJsonPath, tempOutputPath);
+
+            var activeLines = File.Exists(tempOutputPath) ? await File.ReadAllLinesAsync(tempOutputPath) : Array.Empty<string>();
+            var activeProfiles = new List<ProfileItem>();
+            foreach (var activeLine in activeLines)
+            {
+                try
+                {
+                    var profile = ProfileParser.ParseProfileUrl(activeLine);
+                    if (profile != null) activeProfiles.Add(profile);
+                }
+                catch { }
+            }
+
+            LogToConsole($"Source {source} has {activeProfiles.Count} active proxies");
+            allActiveProxies.AddRange(activeProfiles);
         }
 
-        var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
-        var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output.txt");
-        SaveActiveLinksToFile(jsonPath, outputPath);
+        LogToConsole($"Total active proxies from all sources: {allActiveProxies.Count}");
 
-        int activeProxyCount = 0;
-        if (File.Exists(outputPath))
+        if (allActiveProxies.Count < _config.MinActiveProxies)
         {
-            activeProxyCount = File.ReadLines(outputPath).Count();
-        }
-
-        if (activeProxyCount < _config.MinActiveProxies)
-        {
-            LogToConsole($"Active proxies ({activeProxyCount}) less than required ({_config.MinActiveProxies}). Skipping push.");
+            LogToConsole($"Active proxies ({allActiveProxies.Count}) less than required ({_config.MinActiveProxies}). Skipping push.");
             await File.WriteAllTextAsync("skip_push.flag", "not enough proxies");
             return;
         }
 
-        // --- Resolusi negara & ISP ---
+        // --- Resolving IP
         LogToConsole("Resolving countries for active proxies...");
-        var resolver = new IPToCountryResolver(
-            _config.GeoLiteCountryDbPath,
-            _config.GeoLiteAsnDbPath
-        );
+        using var resolver = new IPToCountryResolver(_config.GeoLiteCountryDbPath, _config.GeoLiteAsnDbPath);
 
-        var lines = await File.ReadAllLinesAsync(outputPath);
         var parsedProfiles = new List<ProfileItem>();
         var countryMap = new Dictionary<ProfileItem, IPToCountryResolver.ProxyCountryInfo>();
 
-        foreach (var line in lines)
+        foreach (var profile in allActiveProxies)
         {
-            ProfileItem? profile = null;
-            try { profile = ProfileParser.ParseProfileUrl(line); } catch { }
-            if (profile == null) continue;
+            if (profile == null || string.IsNullOrEmpty(profile.Address)) continue;
+            string host = profile.Address;
 
             try
             {
-                string? host = profile.Address;
-
-                if (string.IsNullOrEmpty(host))
-                {
-                    var decoded = TryBase64Decode(line);
-                    if (decoded.StartsWith("{"))
-                    {
-                        try
-                        {
-                            using var doc = JsonDocument.Parse(decoded);
-                            if (doc.RootElement.TryGetProperty("add", out var addProp))
-                                host = addProp.GetString();
-                        }
-                        catch { }
-                    }
-                }
-
-                if (string.IsNullOrEmpty(host))
-                    continue;
-
                 var country = resolver.GetCountry(host);
                 countryMap[profile] = country;
 
                 var ispRaw = string.IsNullOrEmpty(country.Isp) ? "Unknown" : country.Isp;
-                ispRaw = ispRaw.Replace(".", "")
-                                .Replace(",", "")
-                                .Trim();
+                ispRaw = ispRaw.Replace(".", "").Replace(",", "").Trim();
 
-                var formalSuffixes = new[] { "SAS", "INC", "LTD", "LLC", "CORP", "CO", "SA", "SRO", "ASN", "LIMITED", "COMPANY", "ASIA", "CLOUD", "INTERNATIONAL", "PROVIDER", "ISLAND", "PRIVATE", "ONLINE", "OF", "AS", "BV", "HK" , "MSN", "BMC", "PTE" };
-
+                var formalSuffixes = new[] { "SAS","INC","LTD","LLC","CORP","CO","SA","SRO","ASN","LIMITED","COMPANY","ASIA","CLOUD","INTERNATIONAL","PROVIDER","ISLAND","PRIVATE","ONLINE","OF","AS","BV","HK","MSN","BMC","PTE" };
                 var ispParts = ispRaw.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries)
                     .Where(w => !formalSuffixes.Contains(w.ToUpperInvariant()))
                     .ToArray();
 
-                var ispName = ispParts.Length >= 2
-                    ? $"{ispParts[0]} {ispParts[1]}"
-                    : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
+                var ispName = ispParts.Length >= 2 ? $"{ispParts[0]} {ispParts[1]}" : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
 
-                var idx = parsedProfiles.Count(p => countryMap.ContainsKey(p) &&
-                                                    countryMap[p].CountryCode == country.CountryCode);
+                var idx = parsedProfiles.Count(p => countryMap.ContainsKey(p) && countryMap[p].CountryCode == country.CountryCode);
 
                 profile.Name = $"{country.CountryCode} {idx + 1} - {ispName}";
                 parsedProfiles.Add(profile);
@@ -173,6 +186,7 @@ public class ProxyCollector
             }
         }
 
+        // --- Group by country limit
         var grouped = parsedProfiles
             .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
             .OrderBy(g => g.Key)
@@ -181,15 +195,49 @@ public class ProxyCollector
 
         LogToConsole($"Final proxy count after country limit: {grouped.Count}");
 
-        try { File.Delete(listPath); } catch { }
-        await File.WriteAllLinesAsync(listPath, grouped.Select(p => p.ToProfileUrl()));
-        try { File.Delete(outputPath); } catch { }
+        var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
+        await File.WriteAllLinesAsync(listPath, grouped.Select(p => p.ToProfileUrl()), Encoding.UTF8);
 
         LogToConsole("Uploading results...");
         await CommitResultsFromFile(listPath);
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
+    }
+
+    private async Task<string?> RunLiteTest(string listPath)
+    {
+        try
+        {
+            var debug = string.Equals(_config.EnableDebug, "true", StringComparison.OrdinalIgnoreCase);
+            var psi = new ProcessStartInfo
+            {
+                FileName = "bash",
+                Arguments = debug
+                    ? $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} --test '{listPath}'\""
+                    : $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} --test '{listPath}' > /dev/null 2>&1\"",
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var proc = new Process { StartInfo = psi };
+            proc.Start();
+            await proc.WaitForExitAsync();
+
+            var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
+            if (proc.ExitCode == 0 && File.Exists(jsonPath))
+                return jsonPath;
+
+            LogToConsole($"Lite test failed with exit code {proc.ExitCode}");
+            if (File.Exists(jsonPath))
+                LogToConsole("Note: out.json exists but may be invalid.");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            LogToConsole($"Failed to run Lite test: {ex.Message}");
+            return null;
+        }
     }
 
     private void SaveActiveLinksToFile(string jsonPath, string outputPath)
@@ -224,57 +272,6 @@ public class ProxyCollector
         LogToConsole($"Saved {ordered.Count} active proxies to {outputPath}, ordered by ping.");
     }
 
-    private static string RemoveEmojis(string input)
-    {
-        if (string.IsNullOrEmpty(input))
-            return input;
-
-        var pattern = new System.Text.RegularExpressions.Regex(@"[\p{Cs}\p{So}\p{Sk}]",
-            System.Text.RegularExpressions.RegexOptions.Compiled);
-
-        return pattern.Replace(input, "");
-    }
-
-    private async Task<string?> RunLiteTest(string listPath)
-    {
-        try
-        {
-            var debug = string.Equals(
-                _config.EnableDebug,
-                "true",
-                StringComparison.OrdinalIgnoreCase
-            );
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = "bash",
-                Arguments = debug
-                    ? $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} --test '{listPath}'\""
-                    : $"-c \"{_config.LitePath} --config {_config.LiteConfigPath} --test '{listPath}' > /dev/null 2>&1\"",
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var proc = new Process { StartInfo = psi };
-            proc.Start();
-            await proc.WaitForExitAsync();
-
-            var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
-            if (proc.ExitCode == 0 && File.Exists(jsonPath))
-                return jsonPath;
-
-            LogToConsole($"Lite test failed with exit code {proc.ExitCode}");
-            if (File.Exists(jsonPath))
-                LogToConsole("Note: out.json exists but may be invalid.");
-            return null;
-        }
-        catch (Exception ex)
-        {
-            LogToConsole($"Failed to run Lite test: {ex.Message}");
-            return null;
-        }
-    }
-
     private async Task CommitResultsFromFile(string listPath)
     {
         LogToConsole("Uploading V2ray Subscription...");
@@ -292,68 +289,6 @@ public class ProxyCollector
 
         File.Copy(listPath, outputPath, true);
         LogToConsole($"Subscription file written to {outputPath}");
-
         await Task.CompletedTask;
-    }
-
-    private async Task<IReadOnlyCollection<ProfileItem>> CollectProfilesFromConfigSources()
-    {
-        using var client = new HttpClient()
-        {
-            Timeout = TimeSpan.FromSeconds(8)
-        };
-
-        var profiles = new ConcurrentBag<ProfileItem>();
-        await Parallel.ForEachAsync(_config.Sources, new ParallelOptions { MaxDegreeOfParallelism = _config.MaxThreadCount }, async (source, ct) =>
-        {
-            try
-            {
-                var count = 0;
-                var subContents = await client.GetStringAsync(source);
-                foreach (var profile in TryParseSubContent(subContents))
-                {
-                    profiles.Add(profile);
-                    count++;
-                }
-                LogToConsole($"Collected {count} proxies from {source}");
-            }
-            catch (Exception ex)
-            {
-                LogToConsole($"Failed to fetch {source}. error: {ex.Message}");
-            }
-        });
-
-        return profiles;
-
-        IEnumerable<ProfileItem> TryParseSubContent(string subContent)
-        {
-            try
-            {
-                var contentData = Convert.FromBase64String(subContent);
-                subContent = Encoding.UTF8.GetString(contentData);
-            }
-            catch { }
-
-            using var reader = new StringReader(subContent);
-            string? line = null;
-            while ((line = reader.ReadLine()?.Trim()) is not null)
-            {
-                if (_config.IncludedProtocols.Length > 0 &&
-                    !_config.IncludedProtocols.Any(proto => line.StartsWith(proto, StringComparison.OrdinalIgnoreCase)))
-                {
-                    continue;
-                }
-
-                ProfileItem? profile = null;
-                try
-                {
-                    profile = ProfileParser.ParseProfileUrl(line);
-                }
-                catch { }
-
-                if (profile is not null)
-                    yield return profile;
-            }
-        }
     }
 }
