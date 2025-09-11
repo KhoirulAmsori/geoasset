@@ -209,7 +209,7 @@ public class SourceChecker
         };
 
         // path di repo tempat overwrite
-        var path = ($"proxy-build/{_config.SourcesFile}");
+        var path = "proxy-build/Asset/sources.txt";
 
         // isi file (gabungkan dengan newline)
         var newContent = string.Join("\n", validSources);
