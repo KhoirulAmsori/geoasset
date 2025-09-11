@@ -3,7 +3,7 @@ name: Build Proxy List
 on:
   schedule:
     - cron: "0 */6 * * *"
-  push:
+#  push:
 #    branches:
 #    - dev
   workflow_dispatch:
