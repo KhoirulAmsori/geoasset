@@ -198,47 +198,6 @@ public class SourceChecker
     private async Task CommitFileToGithub(string content, string path)
     {
         string? sha = null;
-        var client = new GitHubClient(new ProductHeaderValue("SourceChecker"))
-        {
-            Credentials = new Credentials(_config.GithubApiToken)
-        };
-
-        try
-        {
-            var contents = await client.Repository.Content.GetAllContents(_config.GithubUser, _config.GithubRepo, path);
-            sha = contents.FirstOrDefault()?.Sha;
-        }
-        catch
-        {
-        }
-
-        if (sha is null)
-        {
-            await client.Repository.Content.CreateFile(
-                _config.GithubUser,
-                _config.GithubRepo,
-                path,
-                new CreateFileRequest("chore: add active sources", content)
-            );
-
-            Log("sources.txt did not exist, created a new file.");
-        }
-        else
-        {
-            await client.Repository.Content.UpdateFile(
-                _config.GithubUser,
-                _config.GithubRepo,
-                path,
-                new UpdateFileRequest("chore: update active sources", content, sha)
-            );
-
-            Log("sources.txt updated successfully.");
-        }
-    }
-
-    private async Task CommitFileToGithub(string content, string path)
-    {
-        string? sha = null;
         var client = new GitHubClient(new ProductHeaderValue("ProxyCollector"))
         {
             Credentials = new Credentials(_config.GithubApiToken)
