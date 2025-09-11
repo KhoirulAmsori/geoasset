@@ -127,7 +127,6 @@ public class SourceChecker
             {
                 Log($"{source} has {activeCount} active proxies from {testedProxy} tested.");
                 validSources.Add(source);
-                totalActiveProxies += activeCount;
             }
             else
             {
