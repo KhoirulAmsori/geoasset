@@ -60,7 +60,7 @@ jobs:
         run: |
           cd source/proxy-build
 
-          # dotnet restore
+          # dotnet restore Checker/ProxyChecker.csproj
           # dotnet run --configuration Release --project ./Checker/ProxyChecker.csproj
 
       - name: Build proxy list
@@ -72,8 +72,8 @@ jobs:
 
           for file in GEO/GEO/*.tar.gz; do tar -xzf "$file" --wildcards --transform='s:.*/::' -C Asset '*.mmdb'; done
 
-          dotnet restore
-          dotnet run --configuration Release --project ./ProxyCollector.csproj
+          dotnet restore ProxyCollector.csproj
+          dotnet run --configuration Release --project ProxyCollector.csproj
           cd ../..
 
       - name: Prepare local repo for 'asset' branch (create if missing)
