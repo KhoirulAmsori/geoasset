@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using ProxyCollector.Configuration;
 using ProxyCollector.Services;
-using SingBoxLib.Configuration;
 using SingBoxLib.Parsing;
 using System.Text.Json;
 
@@ -59,19 +58,25 @@ public class ProxyCollector
         LogToConsole($"Minimum active proxies >= {_config.MinActiveProxies}.");
 
         LogToConsole("Compiling results...");
-        var finalResults = profiles.ToList();
+        var finalResults = profiles
+            .Where(p => p != null) // filter null
+            .ToList();
 
         var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
-        var plain = string.Join("\n", finalResults.Select(p => p.ToProfileUrl()));
-        await File.WriteAllTextAsync(listPath, plain);
-        LogToConsole($"Final list written to {listPath} ({profiles.Count} entries)");
 
-        string[] allLines = await File.ReadAllLinesAsync(listPath);
-        for (int i = 0; i < allLines.Length; i++)
-        {
-            allLines[i] = RemoveEmojis(allLines[i]);
-        }
-        await File.WriteAllLinesAsync(listPath, allLines);
+        // Hapus emoji dan convert ke string in-memory
+        var linesMemory = finalResults
+            .Select(p =>
+            {
+            try { return RemoveEmojis(p.ToProfileUrl()); }
+            catch { return null; }
+            })
+            .Where(line => line != null)
+            .ToList()!;
+
+        // Tulis ke disk sekali saja
+        await File.WriteAllLinesAsync(listPath, linesMemory, Encoding.UTF8);
+        LogToConsole($"Final list written to {listPath} ({linesMemory.Count} entries)");
 
         var buildJson = await RunLiteTest(listPath);
         if (buildJson is null)
