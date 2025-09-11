@@ -122,7 +122,7 @@ public class SourceChecker
             var activeCount = CountActiveProxies(liteJson);
             if (activeCount > 0)
             {
-                Log($"Source {source} has {activeCount} active proxies");
+                Log($"{source} has {activeCount} active proxies");
                 validSources.Add(source);
             }
             else
@@ -135,7 +135,9 @@ public class SourceChecker
         var sourcesFile = Environment.GetEnvironmentVariable("SourcesFile") ?? "sources.txt";
         File.WriteAllLines(sourcesFile, validSources);
 
-        Log("All sources processed.");
+        Log($"Total sources checked: {_config.Sources.Length}");
+        Log($"Active sources: {validSources.Count}");
+        Log($"Inactive sources: {_config.Sources.Length - validSources.Count}");
     }
 
     private int CountActiveProxies(string jsonPath)
