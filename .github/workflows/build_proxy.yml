@@ -56,17 +56,23 @@ jobs:
           ref: ${{ github.ref_name }}
           path: source
 
-      - name: Build proxy list
+      - name: Build source chekcer
         run: |
           cd source/proxy-build
+
+          dotnet restore
+          # dotnet run --configuration Release --project ./Checker/ProxyChecker.csproj
+
+      - name: Build proxy list
+        run: |
+          pwd
           
           # get mmdb file
           git clone --depth 1 -b asset https://github.com/${{ github.repository }} GEO
 
           for file in GEO/GEO/*.tar.gz; do tar -xzf "$file" --wildcards --transform='s:.*/::' -C Asset '*.mmdb'; done
 
-          dotnet restore
-          dotnet run --configuration Release --project .
+          dotnet run --configuration Release --project ./ProxyCollector.csproj
           cd ../..
 
       - name: Prepare local repo for 'asset' branch (create if missing)
