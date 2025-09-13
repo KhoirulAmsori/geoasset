@@ -278,6 +278,14 @@ public class ProxyCollector
 
     private async Task CommitResultsFromFile(string fileName)
     {
+        var sourcePath = Path.Combine(Directory.GetCurrentDirectory(), fileName);
+
+        if (!File.Exists(sourcePath))
+        {
+            LogToConsole($"{fileName} not found, skipping upload.");
+            return;
+        }
+
         var outputDir = Directory.GetCurrentDirectory();
         var outputPath = Path.Combine(outputDir, fileName);
 
