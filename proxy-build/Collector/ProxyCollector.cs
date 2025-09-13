@@ -61,7 +61,9 @@ public class ProxyCollector
             .Where(p => p != null) // filter null
             .ToList();
 
-        var listPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
+        var collectListPath = Path.Combine(Directory.GetCurrentDirectory(), "collect_list.txt");
+        var limitListPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
+        var noLimitListPath = Path.Combine(Directory.GetCurrentDirectory(), "all_list.txt");
 
         // Hapus emoji dan convert ke string in-memory
         var linesMemory = finalResults
@@ -75,9 +77,9 @@ public class ProxyCollector
             .ToList();
 
         // Tulis ke disk sekali saja
-        await File.WriteAllLinesAsync(listPath, linesMemory, Encoding.UTF8);
+        await File.WriteAllLinesAsync(collectListPath, linesMemory, Encoding.UTF8);
 
-        var buildJson = await RunLiteTest(listPath);
+        var buildJson = await RunLiteTest(collectListPath);
         if (buildJson is null)
         {
             LogToConsole("Lite test failed — skipping upload.");
@@ -181,9 +183,8 @@ public class ProxyCollector
         LogToConsole($"Total proxy count (no limit): {allGrouped.Count}");
 
         // simpan all_list.txt
-        var allListPath = Path.Combine(Directory.GetCurrentDirectory(), "all_list.txt");
-        try { File.Delete(allListPath); } catch { }
-        await File.WriteAllLinesAsync(allListPath, allGrouped.Select(p => p.ToProfileUrl()));
+        try { File.Delete(noLimitListPath); } catch { }
+        await File.WriteAllLinesAsync(noLimitListPath, allGrouped.Select(p => p.ToProfileUrl()));
 
         // --- hasil dengan limit per country
         var grouped = parsedProfiles
@@ -195,8 +196,8 @@ public class ProxyCollector
         LogToConsole($"Final proxy count after country limit: {grouped.Count}");
 
         // simpan list.txt (dibatasi)
-        try { File.Delete(listPath); } catch { }
-        await File.WriteAllLinesAsync(listPath, grouped.Select(p => p.ToProfileUrl()));
+        try { File.Delete(limitListPath); } catch { }
+        await File.WriteAllLinesAsync(limitListPath, grouped.Select(p => p.ToProfileUrl()));
 
         try { File.Delete(outputPath); } catch { }
 
@@ -205,7 +206,7 @@ public class ProxyCollector
             LogToConsole($"Reached minimum required {_config.MinActiveProxies} active proxies. Uploading results.");
         }
 
-        await CommitResultsFromFile("list.txt", "all_list.txt");
+        await CommitResultsFromFile(limitListPath, noLimitListPath);
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
@@ -294,21 +295,20 @@ public class ProxyCollector
         }
     }
 
-    private async Task CommitResultsFromFile(params string[] fileNames)
+    private async Task CommitResultsFromFile(params string[] sourcePaths)
     {
-        var outputDir = Directory.GetCurrentDirectory();
-
-        foreach (var fileName in fileNames)
+        foreach (var sourcePath in sourcePaths)
         {
-            var sourcePath = Path.Combine(outputDir, fileName);
-
             if (!File.Exists(sourcePath))
             {
-                LogToConsole($"{fileName} not found, skipping upload.");
+                LogToConsole($"{sourcePath} not found, skipping upload.");
                 continue;
             }
 
+            var fileName = Path.GetFileName(sourcePath);
+            var outputDir = Directory.GetCurrentDirectory();
             var outputPath = Path.Combine(outputDir, fileName);
+
             if (sourcePath != outputPath)
             {
                 File.Copy(sourcePath, outputPath, true);

@@ -66,4 +66,7 @@ jobs:
           dotnet restore
           dotnet run --configuration Release --project .
 
+          pwd
           ls
+          echo "LIST.TXT" && cat list.txt
+          echo "ALL_LIST.TXT" && cat all_list.txt
