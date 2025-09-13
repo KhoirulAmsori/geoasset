@@ -276,20 +276,13 @@ public class ProxyCollector
         }
     }
 
-    private async Task CommitResultsFromFile(string listPath)
+    private async Task CommitResultsFromFile(string fileName)
     {
-        if (!File.Exists(listPath))
-        {
-            LogToConsole("list.txt not found, skipping upload.");
-            return;
-        }
+        var outputDir = Directory.GetCurrentDirectory();
+        var outputPath = Path.Combine(outputDir, fileName);
 
-        var outputPath = _config.V2rayFormatResultPath;
-        var dir = Path.GetDirectoryName(outputPath);
-        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-            Directory.CreateDirectory(dir);
-
-        File.Copy(listPath, outputPath, true);
+        File.Copy(sourcePath, outputPath, true);
+        LogToConsole($"Created output: {outputPath}");
 
         await Task.CompletedTask;
     }
