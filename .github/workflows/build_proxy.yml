@@ -90,7 +90,7 @@ jobs:
         if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
         run: |
           mkdir -p asset/Proxy
-          cp source/proxy-build/Asset/{list.txt,all_list.txt} asset/Proxy/
+          cp source/proxy-build/{list.txt,all_list.txt} asset/Proxy/
 
       - name: Commit & push Proxy
         if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
