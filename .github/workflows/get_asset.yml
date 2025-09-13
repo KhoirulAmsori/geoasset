@@ -16,7 +16,7 @@ jobs:
         run: |
           export TZ="Asia/Jakarta"
           sudo locale-gen id_ID.UTF-8
-          echo "BUILDTIME=$(LC_TIME=id_ID.UTF-8 date '%a, %d/%m/%Y - %H:%M:%S')" >> $GITHUB_ENV
+          echo "BUILDTIME=$(LC_TIME=id_ID.UTF-8 date '+%a, %d/%m/%Y - %H:%M:%S')" >> $GITHUB_ENV
 
       - name: Checkout main branch
         uses: actions/checkout@v5
