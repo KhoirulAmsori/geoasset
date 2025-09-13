@@ -278,18 +278,40 @@ public class ProxyCollector
 
     private async Task CommitResultsFromFile(string listPath)
     {
-        if (!File.Exists(listPath))
+        var outputDir = _config.V2rayFormatResultPath;
+        if (string.IsNullOrEmpty(outputDir))
         {
-            LogToConsole("list.txt not found, skipping upload.");
+            LogToConsole("V2rayFormatResultPath is empty, skipping upload.");
             return;
         }
 
-        var outputPath = _config.V2rayFormatResultPath;
-        var dir = Path.GetDirectoryName(outputPath);
-        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-            Directory.CreateDirectory(dir);
+        // Jika masih berupa file, ambil foldernya
+        if (Path.HasExtension(outputDir))
+        {
+            outputDir = Path.GetDirectoryName(outputDir) ?? Directory.GetCurrentDirectory();
+        }
 
-        File.Copy(listPath, outputPath, true);
+        if (!Directory.Exists(outputDir))
+            Directory.CreateDirectory(outputDir);
+
+        // --- Cari semua file hasil di current directory ---
+        var workDir = Directory.GetCurrentDirectory();
+        var resultFiles = new[] { "*.txt" } // bisa ditambah pattern lain
+            .SelectMany(pattern => Directory.GetFiles(workDir, pattern))
+            .ToList();
+
+        if (!resultFiles.Any())
+        {
+            LogToConsole("No result files found, skipping upload.");
+            return;
+        }
+
+        foreach (var src in resultFiles)
+        {
+            var dest = Path.Combine(outputDir, Path.GetFileName(src));
+            File.Copy(src, dest, true);
+            LogToConsole($"Committed {Path.GetFileName(src)} to {dest}");
+        }
 
         await Task.CompletedTask;
     }
