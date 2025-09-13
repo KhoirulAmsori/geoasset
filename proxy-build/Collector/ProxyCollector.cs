@@ -170,7 +170,22 @@ public class ProxyCollector
                 LogToConsole($"[WARN] Failed resolve {profile.Address}: {ex.Message}");
             }
         }
+        
+        // --- hasil tanpa limit (semua proxy)
+        var allGrouped = parsedProfiles
+            .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
+            .OrderBy(g => g.Key)
+            .SelectMany(g => g) // <-- tidak pakai Take()
+            .ToList();
 
+        LogToConsole($"Total proxy count (no limit): {allGrouped.Count}");
+
+        // simpan all_list.txt
+        var allListPath = Path.Combine(Directory.GetCurrentDirectory(), "all_list.txt");
+        try { File.Delete(allListPath); } catch { }
+        await File.WriteAllLinesAsync(allListPath, allGrouped.Select(p => p.ToProfileUrl()));
+
+        // --- hasil dengan limit per country
         var grouped = parsedProfiles
             .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
             .OrderBy(g => g.Key)
@@ -179,15 +194,18 @@ public class ProxyCollector
 
         LogToConsole($"Final proxy count after country limit: {grouped.Count}");
 
+        // simpan list.txt (dibatasi)
         try { File.Delete(listPath); } catch { }
         await File.WriteAllLinesAsync(listPath, grouped.Select(p => p.ToProfileUrl()));
+
         try { File.Delete(outputPath); } catch { }
 
         if (activeProxyCount >= _config.MinActiveProxies)
         {
             LogToConsole($"Reached minimum required {_config.MinActiveProxies} active proxies. Uploading results.");
         }
-        await CommitResultsFromFile(listPath);
+
+        await CommitResultsFromFile("list.txt", "all_list.txt");
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
@@ -276,21 +294,28 @@ public class ProxyCollector
         }
     }
 
-    private async Task CommitResultsFromFile(string fileName)
+    private async Task CommitResultsFromFile(params string[] fileNames)
     {
-        var sourcePath = Path.Combine(Directory.GetCurrentDirectory(), fileName);
-
-        if (!File.Exists(sourcePath))
-        {
-            LogToConsole($"{fileName} not found, skipping upload.");
-            return;
-        }
-
         var outputDir = Directory.GetCurrentDirectory();
-        var outputPath = Path.Combine(outputDir, fileName);
 
-        File.Copy(sourcePath, outputPath, true);
-        LogToConsole($"Created output: {outputPath}");
+        foreach (var fileName in fileNames)
+        {
+            var sourcePath = Path.Combine(outputDir, fileName);
+
+            if (!File.Exists(sourcePath))
+            {
+                LogToConsole($"{fileName} not found, skipping upload.");
+                continue;
+            }
+
+            var outputPath = Path.Combine(outputDir, fileName);
+            if (sourcePath != outputPath)
+            {
+                File.Copy(sourcePath, outputPath, true);
+            }
+
+            LogToConsole($"Created output: {outputPath}");
+        }
 
         await Task.CompletedTask;
     }
