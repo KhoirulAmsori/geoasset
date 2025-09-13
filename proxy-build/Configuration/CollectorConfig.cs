@@ -9,7 +9,6 @@ public class CollectorConfig
     public required string EnableDebug { get; init; }
     public required string LitePath { get; init; }
     public required string LiteConfigPath { get; init; }
-    public required string V2rayFormatResultPath { get; init; }
     public required string[] Sources { get; init; }
     public required string[] IncludedProtocols { get; init; }
     public required string GeoLiteCountryDbPath { get; init; }
@@ -48,7 +47,6 @@ public class CollectorConfig
             EnableDebug = Environment.GetEnvironmentVariable("EnableDebug")!,
             LitePath = Environment.GetEnvironmentVariable("LitePath")!,
             LiteConfigPath = Environment.GetEnvironmentVariable("LiteConfigPath")!,
-            V2rayFormatResultPath = Environment.GetEnvironmentVariable("V2rayFormatResultPath")!,
             Sources = sources,
             IncludedProtocols = includedProtocols,
             GeoLiteCountryDbPath = Environment.GetEnvironmentVariable("GeoLiteCountryDbPath")!,
