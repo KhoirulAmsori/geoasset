@@ -22,14 +22,14 @@ jobs:
   Build:
     runs-on: ubuntu-latest
     env:
-      MaxProxiesPerCountry: 3
+      MaxProxiesPerCountry: 5
       MinActiveProxies: 100
       MaxThreadCount: 32
       EnableDebug: ${{ github.event.inputs.debug || 'false' }}
       LitePath: Asset/lite
       LiteConfigPath: Asset/config.json
       IncludedProtocols: "ss,trojan,vmess,vless"
-      V2rayFormatResultPath: Asset
+      V2rayFormatResultPath: Asset/list.txt
       SourcesFile: Asset/sources.txt
       GeoLiteCountryDbPath: Asset/GeoLite2-Country.mmdb
       GeoLiteAsnDbPath: Asset/GeoLite2-ASN.mmdb
