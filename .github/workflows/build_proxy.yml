@@ -22,7 +22,7 @@ jobs:
   Build:
     runs-on: ubuntu-latest
     env:
-      MaxProxiesPerCountry: 5
+      MaxProxiesPerCountry: 3
       MinActiveProxies: 100
       MaxThreadCount: 32
       EnableDebug: ${{ github.event.inputs.debug || 'false' }}
