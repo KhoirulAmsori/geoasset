@@ -355,10 +355,7 @@ class ConfigToSingbox:
 
                 # apply filter by tag (country code prefix)
                 if not country_pattern.search(tag):
-                    print(f"exclude {tag}")
                     continue
-                else:
-                    print(tag)
 
                 out = self.make_outbound_from_parsed(p, tag_map)
                 if out:
