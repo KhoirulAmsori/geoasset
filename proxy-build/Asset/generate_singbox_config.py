@@ -5,74 +5,51 @@ import socket
 import geoip2.database
 import ipaddress
 import os
-import re
 from typing import Dict, Optional, Tuple, List, Set
 from urllib.parse import urlparse, parse_qs
 from functools import lru_cache
 
 # Konstanta & Konfigurasi Global
-# Gunakan SET untuk pencarian O(1) yang efisien
 STOPWORDS: Set[str] = {
     "SAS", "INC", "LTD", "LLC", "CORP", "CO", "SA", "SRO", "ASN", "LIMITED", "COMPANY",
     "ASIA", "CLOUD", "INTERNATIONAL", "PROVIDER", "ISLAND", "PRIVATE", "ONLINE",
     "OF", "AS", "BV", "HK", "MSN", "BMC", "PTE"
 }
-# mapping singkat → nama resmi di sing-box
-PROTO_ALIAS: Dict[str, str] = {
-    "ss": "shadowsocks",
-}
+PROTO_ALIAS: Dict[str, str] = {"ss": "shadowsocks"}
 COUNTRY_MMDB_PATH = "GeoLite2-Country.mmdb"
 ASN_MMDB_PATH = "GeoLite2-ASN.mmdb"
 LIST_PATH = "list.txt"
 OUTPUT_FILE = "raven.json"
 
-# --- Fungsi Persiapan Global (lebih baik dieksekusi sekali di awal) ---
-
 def _prepare_filters() -> Tuple[Set[str], Set[str]]:
-    """
-    Mempersiapkan set filter dari variabel lingkungan.
-    Menggunakan set lebih efisien untuk lookup daripada regex.
-    """
     country_filter_env = os.environ.get("IncludedCountry", "")
     protocol_filter_env = os.environ.get("IncludedProtocols", "")
-
     country_filter = {c.strip().lower() for c in country_filter_env.split(",") if c.strip()}
     protocols = {PROTO_ALIAS.get(p.strip().lower(), p.strip().lower()) for p in protocol_filter_env.split(",") if p.strip()}
-
     return country_filter, protocols
 
-# Kompilasi filter di awal
 COUNTRY_FILTERS, PROTOCOL_FILTERS = _prepare_filters()
 
-# --- Kelas & Fungsi Utama ---
-
 class GeoIPResolver:
-    """
-    Kelas untuk resolusi GeoIP dan ASN.
-    Menggunakan lru_cache untuk caching DNS lookup.
-    """
     def __init__(self, country_mmdb_path: str, asn_mmdb_path: str):
         try:
             self.country_reader = geoip2.database.Reader(country_mmdb_path)
             self.asn_reader = geoip2.database.Reader(asn_mmdb_path)
         except Exception as e:
-            raise FileNotFoundError(f"Error loading GeoIP databases: {e}. Make sure {country_mmdb_path} and {asn_mmdb_path} exist.")
+            raise FileNotFoundError(f"Error loading GeoIP databases: {e}")
 
     @staticmethod
-    @lru_cache(maxsize=128) # Caching DNS lookup
+    @lru_cache(maxsize=128)
     def _resolve_hostname(hostname: str) -> str:
         try:
             return socket.gethostbyname(hostname)
         except socket.gaierror:
-            return hostname # Fallback to original hostname on error
+            return hostname
 
     def get_country_and_isp(self, host_or_ip: str) -> Tuple[str, str]:
-        """
-        Resolve host_or_ip to an IP and lookup country_code + isp from mmdb.
-        """
         ip = host_or_ip
         try:
-            ipaddress.ip_address(host_or_ip) # Check if it's a valid IP
+            ipaddress.ip_address(host_or_ip)
         except ValueError:
             ip = self._resolve_hostname(host_or_ip)
 
@@ -87,7 +64,6 @@ class GeoIPResolver:
             isp = asn_response.autonomous_system_organization or ""
         except Exception:
             pass
-
         return country_code, isp
 
 class ConfigToSingbox:
@@ -95,141 +71,104 @@ class ConfigToSingbox:
         self.list_path = list_path
         self.output_file = output_file
         self.resolver = resolver
-    
+
     @staticmethod
-    def _parse_url(config: str, scheme: str, default_port: int, required_fields: List[str]) -> Optional[Dict]:
-        """
-        Fungsi bantu untuk parsing URL yang sering digunakan (Vless, Trojan, Hysteria2)
-        """
-        try:
-            url = urlparse(config)
-            if url.scheme.lower() not in scheme.split(',') or not url.hostname:
-                return None
-            
-            params = parse_qs(url.query)
-            
-            parsed = {
-                'proto': scheme.split(',')[0],
-                'address': url.hostname,
-                'port': url.port or default_port,
-                'password': url.username,
-                'sni': params.get('sni', [url.hostname])[0],
-            }
-            
-            if not all(field in parsed for field in required_fields):
-                return None
-            
-            return parsed
-        except Exception:
+    def safe_b64decode(data: str) -> bytes:
+        return base64.b64decode(data + "==="[: (4 - len(data) % 4) % 4])
+
+    @staticmethod
+    def _parse_url(config: str, schemes: List[str]) -> Optional[Tuple]:
+        url = urlparse(config)
+        if url.scheme.lower() not in schemes or not url.hostname:
             return None
+        return url, parse_qs(url.query)
+
+    @staticmethod
+    def _build_transport(net: str, params: Dict) -> Dict:
+        transport = {"type": net}
+        if "path" in params and params["path"]:
+            path = params["path"][0] if isinstance(params["path"], list) else params["path"]
+            transport["path"] = path
+        if "host" in params and params["host"]:
+            host = params["host"][0] if isinstance(params["host"], list) else params["host"]
+            transport["headers"] = {"Host": host}
+        return transport
 
     @staticmethod
     def clean_isp_name(isp: str) -> str:
-        """Membersihkan nama ISP dari stopwords."""
         if not isp:
             return "Unknown"
-        
         isp_raw = isp.replace(".", "").replace(",", "").strip()
         parts = [w for w in isp_raw.replace("-", " ").split() if w and w.upper() not in STOPWORDS]
-
         if not parts:
             return "Unknown"
-        
-        return " ".join(parts[:2]) # Ambil 1 atau 2 kata pertama
+        return " ".join(parts[:2])
 
-    # --- Parsers (kembalikan dict canonical) ---
     def decode_vmess(self, config: str) -> Optional[Dict]:
         try:
             encoded = config.replace('vmess://', '')
-            rem = len(encoded) % 4
-            if rem:
-                encoded += '=' * (4 - rem)
-            decoded = base64.b64decode(encoded).decode('utf-8')
+            decoded = self.safe_b64decode(encoded).decode('utf-8')
             return json.loads(decoded)
         except (ValueError, json.JSONDecodeError):
             return None
 
     def parse_vless(self, config: str) -> Optional[Dict]:
-        try:
-            url = urlparse(config)
-            if url.scheme.lower() != 'vless' or not url.hostname:
-                return None
-            
-            address = url.hostname
-            port = url.port or 443
-            params = parse_qs(url.query)
-            
-            return {
-                'proto': 'vless',
-                'address': address,
-                'port': port,
-                'uuid': url.username,
-                'flow': params.get('flow', [''])[0],
-                'sni': params.get('sni', [address])[0],
-                'type': params.get('type', ['tcp'])[0],
-                'path': params.get('path', [''])[0],
-                'host': params.get('host', [''])[0]
-            }
-        except Exception:
+        parsed = self._parse_url(config, ["vless"])
+        if not parsed:
             return None
+        url, q = parsed
+        return {
+            'proto': 'vless',
+            'address': url.hostname,
+            'port': url.port or 443,
+            'uuid': url.username,
+            'flow': q.get('flow', [''])[0],
+            'sni': q.get('sni', [url.hostname])[0],
+            'network': q.get('type', ['tcp'])[0],
+            'transport': self._build_transport(q.get('type', ['tcp'])[0], q),
+        }
 
     def parse_trojan(self, config: str) -> Optional[Dict]:
-        try:
-            url = urlparse(config)
-            if url.scheme.lower() != 'trojan' or not url.hostname:
-                return None
-            
-            port = url.port or 443
-            params = parse_qs(url.query)
-            
-            return {
-                'proto': 'trojan',
-                'address': url.hostname,
-                'port': port,
-                'password': url.username,
-                'sni': params.get('sni', [url.hostname])[0],
-                'alpn': params.get('alpn', [''])[0],
-                'type': params.get('type', ['tcp'])[0],
-                'path': params.get('path', [''])[0]
-            }
-        except Exception:
+        parsed = self._parse_url(config, ["trojan"])
+        if not parsed:
             return None
+        url, q = parsed
+        return {
+            'proto': 'trojan',
+            'address': url.hostname,
+            'port': url.port or 443,
+            'password': url.username,
+            'sni': q.get('sni', [url.hostname])[0],
+            'alpn': q.get('alpn', [''])[0],
+            'network': q.get('type', ['tcp'])[0],
+            'transport': self._build_transport(q.get('type', ['tcp'])[0], q),
+        }
 
     def parse_hysteria2(self, config: str) -> Optional[Dict]:
-        try:
-            url = urlparse(config)
-            if url.scheme.lower() not in ['hysteria2', 'hy2'] or not url.hostname or not url.port:
-                return None
-            
-            query = dict(pair.split('=') for pair in url.query.split('&')) if url.query else {}
-            
-            return {
-                'proto': 'hysteria2',
-                'address': url.hostname,
-                'port': url.port,
-                'password': url.username or query.get('password', ''),
-                'sni': query.get('sni', url.hostname)
-            }
-        except Exception:
+        parsed = self._parse_url(config, ["hysteria2", "hy2"])
+        if not parsed:
             return None
+        url, q = parsed
+        return {
+            'proto': 'hysteria2',
+            'address': url.hostname,
+            'port': url.port,
+            'password': url.username or q.get('password', [''])[0],
+            'sni': q.get('sni', [url.hostname])[0],
+        }
 
     def parse_shadowsocks(self, config: str) -> Optional[Dict]:
         try:
             raw = config.replace('ss://', '', 1)
             if '@' in raw:
                 encoded, server_parts = raw.split('@')
-                rem = len(encoded) % 4
-                if rem: encoded += '=' * (4 - rem)
-                method, password = base64.b64decode(encoded).decode('utf-8').split(':', 1)
+                method, password = self.safe_b64decode(encoded).decode('utf-8').split(':', 1)
                 host, port = server_parts.split('#')[0].split(':')
             else:
-                rem = len(raw) % 4
-                if rem: raw += '=' * (4 - rem)
-                decoded = base64.b64decode(raw).decode('utf-8')
+                decoded = self.safe_b64decode(raw).decode('utf-8')
                 creds, server_parts = decoded.split('@')
                 method, password = creds.split(':', 1)
                 host, port = server_parts.split(':')
-            
             return {
                 'proto': 'shadowsocks',
                 'address': host,
@@ -241,13 +180,9 @@ class ConfigToSingbox:
             return None
 
     def parse_any(self, raw: str) -> Optional[Dict]:
-        """
-        Parse raw config line to a canonical dict.
-        """
         raw = raw.strip()
         if not raw:
             return None
-        
         lower = raw.lower()
         if lower.startswith('vmess://'):
             vm = self.decode_vmess(raw)
@@ -273,7 +208,6 @@ class ConfigToSingbox:
             return self.parse_shadowsocks(raw)
         return None
 
-    # --- Konverter (Parsed Dict ke Singbox Outbound) ---
     def make_outbound_from_parsed(self, parsed: Dict, tag: str) -> Optional[Dict]:
         proto = parsed.get('proto')
         address = parsed.get('address')
@@ -357,21 +291,14 @@ class ConfigToSingbox:
         try:
             with open(self.list_path, 'r') as f:
                 raw_lines = f.readlines()
-            
             proxies: List[Dict] = []
-            
             for line in raw_lines:
                 parsed = self.parse_any(line)
                 if not parsed:
                     continue
-                
                 proto = parsed.get('proto', '')
-                address = parsed.get('address', '')
-                
-                # Filter awal dengan Set lookup
                 if PROTOCOL_FILTERS and proto.lower() not in PROTOCOL_FILTERS:
-                    continue
-                
+                    continue  # filter protokol lebih awal
                 proxies.append(parsed)
             
             if not proxies:
@@ -497,7 +424,7 @@ def main():
     
     # Gunakan path yang lebih aman dan eksplisit
     list_path = os.path.join(base_dir, "..", LIST_PATH)
-    output_file = os.path.join(os.path.dirname(list_path), "raven.json")
+    output_file = os.path.join(os.path.dirname(list_path), OUTPUT_FILE)
     country_mmdb_path = os.path.join(base_dir, COUNTRY_MMDB_PATH)
     asn_mmdb_path = os.path.join(base_dir, ASN_MMDB_PATH)
     
