@@ -65,16 +65,12 @@ jobs:
 
           dotnet restore
           dotnet run --configuration Release --project .
-          readlink -f list.txt
 
       - name: Build sing-box configuration
         run: |
           cd source/proxy-build/Asset
           pip install geoip2 -q
           python generate_singbox_config.py
-          ls
-          readlink -f raven.json
-          cat raven.json
           
           cd ../..
 
