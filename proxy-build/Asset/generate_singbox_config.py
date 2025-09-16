@@ -363,10 +363,14 @@ class ConfigToSingbox:
                 # apply include-type
                 if not protocol_pattern.search(proto):
                     continue
+                else:
+                    print(f"not protocol {proto}")
 
                 # apply filter by tag (country code prefix)
                 if not country_pattern.search(tag):
                     continue
+                else:
+                    print(f"not country {tag}")
 
                 out = self.make_outbound_from_parsed(p, tag_map)
                 if out:
