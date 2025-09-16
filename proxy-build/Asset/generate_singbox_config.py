@@ -233,21 +233,13 @@ class ConfigToSingbox:
     # ---------- Tagging utilities ----------
     def build_tags_for_addresses(self, addresses: List[str]) -> Dict[str, str]:
         """
-        addresses: list of addresses in appearance order (may contain duplicates)
+        addresses: list of addresses in appearance order (boleh duplicate)
         returns mapping address -> tag (e.g. "US 1 - ISP")
         """
         tag_map: Dict[str, str] = {}
         counters: Dict[str, int] = {}
 
-        # Use unique-preserving order
-        seen = set()
-        unique_addresses = []
-        for a in addresses:
-            if a not in seen:
-                seen.add(a)
-                unique_addresses.append(a)
-
-        for addr in unique_addresses:
+        for addr in addresses:
             country_code, isp = self.resolver.get_country_and_isp(addr)
             cc = country_code.upper() if country_code else "UNK"
             isp_clean = self.clean_isp_name(isp)
