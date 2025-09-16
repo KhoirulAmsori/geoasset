@@ -15,18 +15,26 @@ STOPWORDS = {
     "OF", "AS", "BV", "HK", "MSN", "BMC", "PTE"
 }
 
-country_filter_env = os.environ.get("IncludedCountry")
-protocol_filter_env = os.environ.get("IncludedProtocols")
+country_filter_env = os.environ.get("IncludedCountry", "")
+protocol_filter_env = os.environ.get("IncludedProtocols", "")
 
-country_pattern = re.compile(
-    "(" + "|".join(c.strip() for c in country_filter_env.split(",") if c.strip()) + ")",
-    re.IGNORECASE
-)
+if country_filter_env.strip():
+    country_pattern = re.compile(
+        r"^(" + "|".join(c.strip() for c in country_filter_env.split(",") if c.strip()) + r")$",
+        re.IGNORECASE
+    )
+else:
+    # fallback: semua negara lolos
+    country_pattern = re.compile(r".*")
 
-protocol_pattern = re.compile(
-    "(" + "|".join(p.strip() for p in protocol_filter_env.split(",") if p.strip()) + ")",
-    re.IGNORECASE
-)
+if protocol_filter_env.strip():
+    protocol_pattern = re.compile(
+        r"^(" + "|".join(p.strip() for p in protocol_filter_env.split(",") if p.strip()) + r")$",
+        re.IGNORECASE
+    )
+else:
+    # fallback: semua protokol lolos
+    protocol_pattern = re.compile(r".*")
 
 
 class GeoIPResolver:
@@ -352,14 +360,10 @@ class ConfigToSingbox:
                 # apply include-type
                 if not protocol_pattern.search(proto):
                     continue
-                else:
-                    print(f"protocol {proto}")
 
                 # apply filter by tag (country code prefix)
                 if not country_pattern.search(tag):
                     continue
-                else:
-                    print(f"country {tag}")
 
                 out = self.make_outbound_from_parsed(p, tag_map)
                 if out:
