@@ -1,0 +1,534 @@
+{
+    "log": {
+        "disabled": false,
+        "level": "fatal",
+        "timestamp": true
+    },
+    "ntp": {
+        "enabled": true,
+        "server": "time.google.com",
+        "server_port": 123,
+        "interval": "30m"
+    },
+    "dns": {
+        "servers": [
+            {
+                "type": "hosts",
+                "tag": "hosts"
+            },
+            {
+                "type": "udp",
+                "tag": "google-udp",
+                "server": "8.8.8.8"
+            },
+            {
+                "type": "h3",
+                "tag": "google-doh3",
+                "server": "dns.google",
+                "domain_resolver": {
+                    "server": "google-udp",
+                    "strategy": "ipv4_only"
+                },
+                "tls": {
+                    "enabled": true,
+                    "insecure": false,
+                    "server_name": "dns.google",
+                    "alpn": "h3"
+                }
+            }
+        ],
+        "rules": [
+            {
+                "ip_accept_any": true,
+                "server": "hosts"
+            }
+        ],
+        "strategy": "ipv4_only",
+        "disable_cache": false,
+        "disable_expire": false,
+        "independent_cache": false,
+        "reverse_mapping": true,
+        "final": "google-udp"
+    },
+    "inbounds": [
+        {
+            "type": "direct",
+            "tag": "dns-in",
+            "listen": "192.168.10.1",
+            "listen_port": 1053
+        },
+        {
+            "type": "tproxy",
+            "tag": "tproxy-in",
+            "listen": "0.0.0.0",
+            "listen_port": 7893
+        }
+    ],
+    "outbounds": [
+        {
+            "type": "block",
+            "tag": "REJECT"
+        },
+        {
+            "type": "direct",
+            "tag": "DIRECT"
+        },
+        {
+            "type": "selector",
+            "tag": "ROUTE-ID",
+            "outbounds": [
+                "REJECT",
+                "DIRECT",
+                "MIXED"
+            ],
+            "default": "DIRECT"
+        },
+        {
+            "type": "selector",
+            "tag": "ROUTE-SG",
+            "outbounds": [
+                "REJECT",
+                "DIRECT",
+                "MIXED"
+            ],
+            "default": "DIRECT"
+        },
+        {
+            "type": "selector",
+            "tag": "MIXED",
+            "outbounds": [
+                "HK 1 - Alibaba US",
+                "HK 2 - Alibaba US",
+                "HK 3 - Alibaba US",
+                "IN 3 - ORACLE 31898",
+                "JP 3 - LATITUDE SH",
+                "MY 2 - GB Network",
+                "MY 3 - MICROSOFT BLOCK",
+                "NL 1 - The Infrastructure",
+                "NL 1 - The Infrastructure",
+                "SG 2 - VULTR",
+                "SG 3 - DIGITALOCEAN",
+                "TW 1 - AKILE",
+                "TW 3 - GLOBAL COMMUNICATION"
+            ]
+        },
+        {
+            "type": "selector",
+            "tag": "ROUTE-ADS",
+            "outbounds": [
+                "REJECT",
+                "DIRECT",
+                "MIXED"
+            ],
+            "default": "REJECT"
+        },
+        {
+            "type": "vmess",
+            "tag": "HK 1 - Alibaba US",
+            "server": "47.86.47.36",
+            "server_port": 32673,
+            "uuid": "3db28dc4-fc75-443f-87c8-b51d1a675a61",
+            "security": "auto",
+            "transport": {
+                "path": "/arki?ed=2048",
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "47.86.47.36"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "HK 2 - Alibaba US",
+            "server": "47.86.16.206",
+            "server_port": 40617,
+            "uuid": "eec9ce64-a124-4f14-b72d-f513b6ad6ab2",
+            "security": "auto",
+            "transport": {
+                "path": "/arki?ed=2048",
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "47.86.16.206"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "HK 3 - Alibaba US",
+            "server": "47.83.162.4",
+            "server_port": 40873,
+            "uuid": "3fd266bc-7691-43cf-a82f-0c9761a69bf0",
+            "security": "auto",
+            "transport": {
+                "path": "/arki?ed=2048",
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "47.83.162.4"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "IN 3 - ORACLE 31898",
+            "server": "152.67.8.205",
+            "server_port": 80,
+            "uuid": "9db4c708-aef8-4359-821b-38e47990be0d",
+            "security": "auto",
+            "transport": {
+                "path": "/",
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "152.67.8.205"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "JP 3 - LATITUDE SH",
+            "server": "172.111.146.64",
+            "server_port": 80,
+            "uuid": "05b8c783-7f59-47f9-9923-06a465679f6a",
+            "security": "auto",
+            "transport": {
+                "path": "/vmess/",
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "172.111.146.64"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "MY 2 - GB Network",
+            "server": "103.186.117.229",
+            "server_port": 45497,
+            "uuid": "2e257f9c-fa0e-442f-f53c-6a452924c0c2",
+            "security": "auto",
+            "transport": {},
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "103.186.117.229"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "MY 3 - MICROSOFT BLOCK",
+            "server": "t.cnmjcn.cyou",
+            "server_port": 16622,
+            "uuid": "743dbce9-ec7d-49dd-b9d6-3b1a151e729f",
+            "security": "auto",
+            "transport": {
+                "path": "/",
+                "headers": {
+                    "Host": "f604066249a784d694db65d3ebf5d60c.mobgslb.tbcache.com"
+                },
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "f604066249a784d694db65d3ebf5d60c.mobgslb.tbcache.com"
+            }
+        },
+        {
+            "type": "trojan",
+            "tag": "NL 1 - The Infrastructure",
+            "server": "5.255.103.217",
+            "server_port": 37757,
+            "password": "XWnVX2ASHl",
+            "tls": {
+                "enabled": true,
+                "server_name": "moshali.arshiacomplus.dpdns.org",
+                "alpn": [
+                    "http/1.1"
+                ],
+                "insecure": true
+            },
+            "transport": {
+                "path": "/moshaliplus",
+                "type": "ws"
+            }
+        },
+        {
+            "type": "trojan",
+            "tag": "NL 1 - The Infrastructure",
+            "server": "5.255.103.217",
+            "server_port": 37757,
+            "password": "XWnVX2ASHl",
+            "tls": {
+                "enabled": true,
+                "server_name": "moshali.arshiacomplus.dpdns.org",
+                "alpn": [
+                    "http/1.1"
+                ],
+                "insecure": true
+            },
+            "transport": {
+                "path": "/moshaliplus",
+                "type": "ws"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "SG 2 - VULTR",
+            "server": "139.180.155.29",
+            "server_port": 20521,
+            "uuid": "08c2a76e-15d1-4ec0-a8d0-1f51bc76a667",
+            "security": "auto",
+            "transport": {
+                "path": "/",
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "139.180.155.29"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "SG 3 - DIGITALOCEAN",
+            "server": "node4.rtxconfigz.com",
+            "server_port": 443,
+            "uuid": "b3c47ed5-d305-4b66-9571-785414457501",
+            "security": "auto",
+            "transport": {
+                "path": "/@Malinda6104",
+                "headers": {
+                    "Host": "node4.rtxconfigz.com"
+                },
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": true,
+                "insecure": true,
+                "server_name": "node4.rtxconfigz.com"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "TW 1 - AKILE",
+            "server": "83.147.12.99",
+            "server_port": 56018,
+            "uuid": "ddb1f976-4239-4086-833f-f9b275f637a0",
+            "security": "auto",
+            "transport": {},
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "83.147.12.99"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "TW 3 - GLOBAL COMMUNICATION",
+            "server": "103.115.109.250",
+            "server_port": 40762,
+            "uuid": "35ce6e3a-4ddc-472c-9e9f-a34362c194e7",
+            "security": "auto",
+            "transport": {},
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "103.115.109.250"
+            }
+        }
+    ],
+    "route": {
+        "rules": [
+            {
+                "action": "sniff",
+                "sniffer": []
+            },
+            {
+                "protocol": "dns",
+                "action": "hijack-dns"
+            },
+            {
+                "protocol": "bittorrent",
+                "action": "direct"
+            },
+            {
+                "domain": [
+                    "dns.google",
+                    "one.one.one.one"
+                ],
+                "outbound": "DIRECT"
+            },
+            {
+                "rule_set": [
+                    "raven_reject",
+                    "raven_nsfw",
+                    "oisd-nsfw-small",
+                    "tiktok",
+                    "AS142160"
+                ],
+                "action": "reject"
+            },
+            {
+                "network": "udp",
+                "port": 443,
+                "action": "reject"
+            },
+            {
+                "network": "udp",
+                "outbound": "DIRECT"
+            },
+            {
+                "ip_is_private": true,
+                "action": "direct"
+            },
+            {
+                "rule_set": [
+                    "raven_lokal"
+                ],
+                "action": "direct"
+            },
+            {
+                "rule_set": [
+                    "oisd-small",
+                    "raven_ads"
+                ],
+                "outbound": "ROUTE-ADS"
+            },
+            {
+                "rule_set": [
+                    "raven_direct"
+                ],
+                "outbound": "ROUTE-ID"
+            },
+            {
+                "rule_set": [
+                    "raven_route-sg"
+                ],
+                "outbound": "ROUTE-SG"
+            },
+            {
+                "rule_set": [
+                    "OpenIXP-IIX",
+                    "raven_route-id",
+                    "telegram"
+                ],
+                "outbound": "ROUTE-ID"
+            }
+        ],
+        "rule_set": [
+            {
+                "type": "local",
+                "tag": "raven_reject",
+                "format": "source",
+                "path": "raven_reject.json"
+            },
+            {
+                "type": "remote",
+                "tag": "AS142160",
+                "format": "binary",
+                "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/asn/AS142160.srs",
+                "download_detour": "DIRECT"
+            },
+            {
+                "type": "remote",
+                "tag": "tiktok",
+                "format": "binary",
+                "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/tiktok.srs",
+                "download_detour": "DIRECT"
+            },
+            {
+                "type": "remote",
+                "tag": "raven_nsfw",
+                "format": "binary",
+                "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/raven_nsfw.srs",
+                "download_detour": "DIRECT"
+            },
+            {
+                "type": "remote",
+                "tag": "oisd-nsfw-small",
+                "format": "binary",
+                "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/oisd-nsfw-small.srs",
+                "download_detour": "DIRECT"
+            },
+            {
+                "type": "local",
+                "tag": "raven_lokal",
+                "format": "binary",
+                "path": "lokal.srs"
+            },
+            {
+                "type": "local",
+                "tag": "raven_ads",
+                "format": "source",
+                "path": "raven_ads.json"
+            },
+            {
+                "type": "remote",
+                "tag": "oisd-small",
+                "format": "binary",
+                "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/oisd-small.srs",
+                "download_detour": "DIRECT"
+            },
+            {
+                "type": "local",
+                "tag": "raven_direct",
+                "format": "source",
+                "path": "raven_direct.json"
+            },
+            {
+                "type": "remote",
+                "tag": "raven_route-sg",
+                "format": "binary",
+                "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/youtube.srs",
+                "download_detour": "DIRECT"
+            },
+            {
+                "type": "remote",
+                "tag": "OpenIXP-IIX",
+                "format": "binary",
+                "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/nice.srs",
+                "download_detour": "DIRECT"
+            },
+            {
+                "type": "local",
+                "tag": "raven_route-id",
+                "format": "source",
+                "path": "raven_route-id.json"
+            },
+            {
+                "type": "remote",
+                "tag": "telegram",
+                "format": "binary",
+                "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geoip/telegram.srs",
+                "download_detour": "DIRECT"
+            }
+        ],
+        "default_domain_resolver": {
+            "server": "google-udp",
+            "strategy": "ipv4_only"
+        },
+        "default_mark": 7894,
+        "auto_detect_interface": true,
+        "final": "ROUTE-SG"
+    },
+    "experimental": {
+        "cache_file": {
+            "enabled": true
+        },
+        "clash_api": {
+            "external_controller": "0.0.0.0:9090",
+            "external_ui": "yacd",
+            "secret": "raven",
+            "external_ui_download_url": "https://github.com/KhoirulAmsori/My-openWRT-Backup/raw/main/openCLASH-YaCD/yacd.zip",
+            "external_ui_download_detour": "DIRECT"
+        }
+    }
+}
