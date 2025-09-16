@@ -97,16 +97,27 @@
             "type": "selector",
             "tag": "MIXED",
             "outbounds": [
+                "GB 1 - Contabo",
+                "GB 2 - OVH",
                 "HK 1 - Alibaba US",
-                "HK 2 - Alibaba US",
-                "HK 3 - HKT",
-                "IN 1 - ORACLE 31898",
-                "JP 2 - SAKURA Internet",
-                "MY 1 - GB Network",
-                "MY 2 - Pq Hosting",
-                "NL 3 - The Infrastructure",
-                "SG 2 - VULTR",
-                "TW 1 - GLOBAL COMMUNICATION"
+                "HK 2 - HKT",
+                "HK 3 - Alibaba US",
+                "IN 1 - UCLOUD INFORMATION",
+                "IN 2 - LEAPSWITCH NETWORKS",
+                "IN 3 - Contabo",
+                "MY 1 - Pq Hosting",
+                "MY 2 - GB Network",
+                "NL 1 - Servhost Group",
+                "NL 2 - The Infrastructure",
+                "NL 2 - The Infrastructure",
+                "SG 1 - DIGITALOCEAN",
+                "SG 1 - DIGITALOCEAN",
+                "SG 2 - Contabo",
+                "TW 1 - AKILE",
+                "TW 2 - GLOBAL COMMUNICATION",
+                "TW 3 - EMGINECONCEPT 01",
+                "VN 1 - MOBIFONE Corporation",
+                "VN 2 - VNPT"
             ]
         },
         {
@@ -121,47 +132,27 @@
         },
         {
             "type": "vmess",
-            "tag": "HK 1 - Alibaba US",
-            "server": "47.86.42.197",
-            "server_port": 20657,
-            "uuid": "96bd6e85-69c0-4907-a92b-071a60b814e3",
+            "tag": "GB 1 - Contabo",
+            "server": "46.250.243.56",
+            "server_port": 50394,
+            "uuid": "a75f3f95-ad4e-4498-fc72-dd740dd02bfc",
             "security": "auto",
-            "transport": {
-                "path": "/arki?ed=2048",
-                "type": "ws"
-            },
+            "transport": {},
             "tls": {
                 "enabled": false,
                 "insecure": true,
-                "server_name": "47.86.42.197"
+                "server_name": "46.250.243.56"
             }
         },
         {
             "type": "vmess",
-            "tag": "HK 2 - Alibaba US",
-            "server": "47.86.43.5",
-            "server_port": 7021,
-            "uuid": "c2a24f8a-78b0-4671-b065-47681d0b9477",
-            "security": "auto",
-            "transport": {
-                "path": "/arki?ed=2048",
-                "type": "ws"
-            },
-            "tls": {
-                "enabled": false,
-                "insecure": true,
-                "server_name": "47.86.43.5"
-            }
-        },
-        {
-            "type": "vmess",
-            "tag": "HK 3 - HKT",
-            "server": "c004e6fe-t1i9s0-tm53cm-1ol97.hkt.tcpbbr.net",
+            "tag": "GB 2 - OVH",
+            "server": "57.129.132.223",
             "server_port": 80,
-            "uuid": "93fb69fc-77cf-11ee-85ee-f23c91369f2d",
+            "uuid": "a25cbf11-2908-4a1b-a3a8-9a571777dca3",
             "security": "auto",
             "transport": {
-                "path": "/",
+                "path": "/vmess/",
                 "headers": {
                     "Host": "google.com"
                 },
@@ -175,10 +166,64 @@
         },
         {
             "type": "vmess",
-            "tag": "IN 1 - ORACLE 31898",
-            "server": "152.67.8.205",
+            "tag": "HK 1 - Alibaba US",
+            "server": "47.239.233.101",
+            "server_port": 11614,
+            "uuid": "8e63bf5b-1ecb-49c9-a53a-5e9f6d0f7d39",
+            "security": "auto",
+            "transport": {
+                "path": "/arki?ed=2048",
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "47.239.233.101"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "HK 2 - HKT",
+            "server": "hkt.gotochinatown.net",
             "server_port": 80,
-            "uuid": "9db4c708-aef8-4359-821b-38e47990be0d",
+            "uuid": "93fb69fc-77cf-11ee-85ee-f23c91369f2d",
+            "security": "auto",
+            "transport": {
+                "path": "/",
+                "headers": {
+                    "Host": "hkt.gotochinatown.net"
+                },
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "hkt.gotochinatown.net"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "HK 3 - Alibaba US",
+            "server": "47.238.252.154",
+            "server_port": 58867,
+            "uuid": "7b80e36f-b082-46fc-ae59-6bb0dd17eee8",
+            "security": "auto",
+            "transport": {
+                "path": "/arki?ed=2048",
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "47.238.252.154"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "IN 1 - UCLOUD INFORMATION",
+            "server": "123.58.203.92",
+            "server_port": 8443,
+            "uuid": "0bb0365b-c183-48c3-ad0d-a90fc76e2926",
             "security": "auto",
             "transport": {
                 "path": "/",
@@ -187,13 +232,218 @@
             "tls": {
                 "enabled": false,
                 "insecure": true,
-                "server_name": "152.67.8.205"
+                "server_name": "123.58.203.92"
             }
         },
         {
             "type": "vmess",
-            "tag": "JP 2 - SAKURA Internet",
-            "server": "jp10.viefast.net",
+            "tag": "IN 2 - LEAPSWITCH NETWORKS",
+            "server": "188.208.141.177",
+            "server_port": 443,
+            "uuid": "0970834f-5b4d-44da-d890-19dcb2a72d4c",
+            "security": "auto",
+            "transport": {},
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "188.208.141.177"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "IN 3 - Contabo",
+            "server": "94.136.185.230",
+            "server_port": 10534,
+            "uuid": "b01c7ef9-33ec-41f6-bfbf-77ddc4d21649",
+            "security": "auto",
+            "transport": {},
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "94.136.185.230"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "MY 1 - Pq Hosting",
+            "server": "45.128.54.84",
+            "server_port": 37313,
+            "uuid": "72feb833-4196-4a70-a3f5-aeb011f7d534",
+            "security": "auto",
+            "transport": {},
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "45.128.54.84"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "MY 2 - GB Network",
+            "server": "103.186.117.229",
+            "server_port": 45497,
+            "uuid": "2e257f9c-fa0e-442f-f53c-6a452924c0c2",
+            "security": "auto",
+            "transport": {},
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "103.186.117.229"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "NL 1 - Servhost Group",
+            "server": "89.169.13.60",
+            "server_port": 28838,
+            "uuid": "b9d3c414-89cc-455d-b717-10c7ca1665a1",
+            "security": "auto",
+            "transport": {
+                "path": "/",
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "89.169.13.60"
+            }
+        },
+        {
+            "type": "trojan",
+            "tag": "NL 2 - The Infrastructure",
+            "server": "5.255.103.217",
+            "server_port": 37757,
+            "password": "XWnVX2ASHl",
+            "tls": {
+                "enabled": true,
+                "server_name": "moshali.arshiacomplus.dpdns.org",
+                "alpn": [],
+                "insecure": true
+            },
+            "transport": {
+                "path": "/moshaliplus",
+                "type": "ws"
+            }
+        },
+        {
+            "type": "trojan",
+            "tag": "NL 2 - The Infrastructure",
+            "server": "5.255.103.217",
+            "server_port": 37757,
+            "password": "XWnVX2ASHl",
+            "tls": {
+                "enabled": true,
+                "server_name": "moshali.arshiacomplus.dpdns.org",
+                "alpn": [
+                    "http/1.1"
+                ],
+                "insecure": true
+            },
+            "transport": {
+                "path": "/moshaliplus",
+                "type": "ws"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "SG 1 - DIGITALOCEAN",
+            "server": "node4.rtxconfigz.com",
+            "server_port": 443,
+            "uuid": "b3c47ed5-d305-4b66-9571-785414457501",
+            "security": "auto",
+            "transport": {
+                "path": "/@Malinda6104",
+                "headers": {
+                    "Host": "node4.rtxconfigz.com"
+                },
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": true,
+                "insecure": true,
+                "server_name": "node4.rtxconfigz.com"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "SG 1 - DIGITALOCEAN",
+            "server": "node4.rtxconfigz.com",
+            "server_port": 443,
+            "uuid": "b3c47ed5-d305-4b66-9571-785414457501",
+            "security": "auto",
+            "transport": {
+                "path": "/@Malinda6104",
+                "headers": {
+                    "Host": "node4.rtxconfigz.com"
+                },
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": true,
+                "insecure": true,
+                "server_name": "node4.rtxconfigz.com"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "SG 2 - Contabo",
+            "server": "62.146.235.193",
+            "server_port": 28011,
+            "uuid": "cfc5a87f-3c13-4e25-b556-176cdd6b5c6a",
+            "security": "auto",
+            "transport": {},
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "62.146.235.193"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "TW 1 - AKILE",
+            "server": "83.147.12.99",
+            "server_port": 56018,
+            "uuid": "ddb1f976-4239-4086-833f-f9b275f637a0",
+            "security": "auto",
+            "transport": {},
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "83.147.12.99"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "TW 2 - GLOBAL COMMUNICATION",
+            "server": "103.115.109.250",
+            "server_port": 40762,
+            "uuid": "35ce6e3a-4ddc-472c-9e9f-a34362c194e7",
+            "security": "auto",
+            "transport": {},
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "103.115.109.250"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "TW 3 - EMGINECONCEPT 01",
+            "server": "45.121.48.174",
+            "server_port": 20788,
+            "uuid": "bfc630aa-4598-4481-9338-cac15e3e6b65",
+            "security": "auto",
+            "transport": {},
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "45.121.48.174"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "VN 1 - MOBIFONE Corporation",
+            "server": "vn1.viefast.net",
             "server_port": 80,
             "uuid": "9e76767d-4bfa-4f04-a800-42e2f63afed2",
             "security": "auto",
@@ -212,55 +462,10 @@
         },
         {
             "type": "vmess",
-            "tag": "MY 1 - GB Network",
-            "server": "103.186.117.229",
-            "server_port": 45497,
-            "uuid": "2e257f9c-fa0e-442f-f53c-6a452924c0c2",
-            "security": "auto",
-            "transport": {},
-            "tls": {
-                "enabled": false,
-                "insecure": true,
-                "server_name": "103.186.117.229"
-            }
-        },
-        {
-            "type": "vmess",
-            "tag": "MY 2 - Pq Hosting",
-            "server": "45.128.54.84",
-            "server_port": 37313,
-            "uuid": "72feb833-4196-4a70-a3f5-aeb011f7d534",
-            "security": "auto",
-            "transport": {},
-            "tls": {
-                "enabled": false,
-                "insecure": true,
-                "server_name": "45.128.54.84"
-            }
-        },
-        {
-            "type": "trojan",
-            "tag": "NL 3 - The Infrastructure",
-            "server": "5.255.103.217",
-            "server_port": 37757,
-            "password": "XWnVX2ASHl",
-            "tls": {
-                "enabled": true,
-                "server_name": "moshali.arshiacomplus.dpdns.org",
-                "alpn": [],
-                "insecure": true
-            },
-            "transport": {
-                "path": "/moshaliplus",
-                "type": "ws"
-            }
-        },
-        {
-            "type": "vmess",
-            "tag": "SG 2 - VULTR",
-            "server": "139.180.155.29",
-            "server_port": 20521,
-            "uuid": "08c2a76e-15d1-4ec0-a8d0-1f51bc76a667",
+            "tag": "VN 2 - VNPT",
+            "server": "161.248.30.3",
+            "server_port": 20086,
+            "uuid": "1006a928-2021-4a3b-beb5-d5853c6281c5",
             "security": "auto",
             "transport": {
                 "path": "/",
@@ -269,21 +474,7 @@
             "tls": {
                 "enabled": false,
                 "insecure": true,
-                "server_name": "139.180.155.29"
-            }
-        },
-        {
-            "type": "vmess",
-            "tag": "TW 1 - GLOBAL COMMUNICATION",
-            "server": "103.115.109.250",
-            "server_port": 40762,
-            "uuid": "35ce6e3a-4ddc-472c-9e9f-a34362c194e7",
-            "security": "auto",
-            "transport": {},
-            "tls": {
-                "enabled": false,
-                "insecure": true,
-                "server_name": "103.115.109.250"
+                "server_name": "161.248.30.3"
             }
         }
     ],
