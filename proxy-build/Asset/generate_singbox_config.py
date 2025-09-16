@@ -6,116 +6,147 @@ import geoip2.database
 import ipaddress
 import os
 import re
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple, List, Set
 from urllib.parse import urlparse, parse_qs
+from functools import lru_cache
 
-STOPWORDS = {
+# Konstanta & Konfigurasi Global
+# Gunakan SET untuk pencarian O(1) yang efisien
+STOPWORDS: Set[str] = {
     "SAS", "INC", "LTD", "LLC", "CORP", "CO", "SA", "SRO", "ASN", "LIMITED", "COMPANY",
     "ASIA", "CLOUD", "INTERNATIONAL", "PROVIDER", "ISLAND", "PRIVATE", "ONLINE",
     "OF", "AS", "BV", "HK", "MSN", "BMC", "PTE"
 }
-
-country_filter_env = os.environ.get("IncludedCountry", "")
-protocol_filter_env = os.environ.get("IncludedProtocols", "")
-
 # mapping singkat → nama resmi di sing-box
-proto_alias = {
+PROTO_ALIAS: Dict[str, str] = {
     "ss": "shadowsocks",
 }
+COUNTRY_MMDB_PATH = "GeoLite2-Country.mmdb"
+ASN_MMDB_PATH = "GeoLite2-ASN.mmdb"
+LIST_PATH = "list.txt"
+OUTPUT_FILE = "raven.json"
 
-if country_filter_env.strip():
-    country_pattern = re.compile(
-        r"^(" + "|".join(c.strip() for c in country_filter_env.split(",") if c.strip()) + r")$",
-        re.IGNORECASE
-    )
+# --- Fungsi Persiapan Global (lebih baik dieksekusi sekali di awal) ---
 
-protocols = []
-for p in (protocol_filter_env.split(",") if protocol_filter_env else []):
-    p = p.strip().lower()
-    if not p:
-        continue
-    protocols.append(proto_alias.get(p, p))
+def _prepare_filters() -> Tuple[Set[str], Set[str]]:
+    """
+    Mempersiapkan set filter dari variabel lingkungan.
+    Menggunakan set lebih efisien untuk lookup daripada regex.
+    """
+    country_filter_env = os.environ.get("IncludedCountry", "")
+    protocol_filter_env = os.environ.get("IncludedProtocols", "")
 
-if protocols:
-    protocol_pattern = re.compile(r"^(" + "|".join(protocols) + r")$", re.IGNORECASE)
+    country_filter = {c.strip().lower() for c in country_filter_env.split(",") if c.strip()}
+    protocols = {PROTO_ALIAS.get(p.strip().lower(), p.strip().lower()) for p in protocol_filter_env.split(",") if p.strip()}
 
+    return country_filter, protocols
+
+# Kompilasi filter di awal
+COUNTRY_FILTERS, PROTOCOL_FILTERS = _prepare_filters()
+
+# --- Kelas & Fungsi Utama ---
 
 class GeoIPResolver:
+    """
+    Kelas untuk resolusi GeoIP dan ASN.
+    Menggunakan lru_cache untuk caching DNS lookup.
+    """
     def __init__(self, country_mmdb_path: str, asn_mmdb_path: str):
-        self.country_reader = geoip2.database.Reader(country_mmdb_path)
-        self.asn_reader = geoip2.database.Reader(asn_mmdb_path)
+        try:
+            self.country_reader = geoip2.database.Reader(country_mmdb_path)
+            self.asn_reader = geoip2.database.Reader(asn_mmdb_path)
+        except Exception as e:
+            raise FileNotFoundError(f"Error loading GeoIP databases: {e}. Make sure {country_mmdb_path} and {asn_mmdb_path} exist.")
+
+    @staticmethod
+    @lru_cache(maxsize=128) # Caching DNS lookup
+    def _resolve_hostname(hostname: str) -> str:
+        try:
+            return socket.gethostbyname(hostname)
+        except socket.gaierror:
+            return hostname # Fallback to original hostname on error
 
     def get_country_and_isp(self, host_or_ip: str) -> Tuple[str, str]:
         """
-        Resolve host_or_ip to an IP (if hostname) and lookup country_code + isp from mmdb.
-        Returns (country_code, isp) where country_code is lowercase ('' if unknown).
+        Resolve host_or_ip to an IP and lookup country_code + isp from mmdb.
         """
         ip = host_or_ip
         try:
-            # cek apakah host_or_ip adalah IP valid
-            ipaddress.ip_address(host_or_ip)
+            ipaddress.ip_address(host_or_ip) # Check if it's a valid IP
         except ValueError:
-            # bukan IP, berarti hostname → coba resolve
-            try:
-                ip = socket.gethostbyname(host_or_ip)
-            except Exception:
-                ip = host_or_ip  # fallback: tetap pakai input (mungkin error di geoip2)
+            ip = self._resolve_hostname(host_or_ip)
 
         country_code, isp = "", ""
         try:
             country_response = self.country_reader.country(ip)
             country_code = (country_response.country.iso_code or "").lower()
         except Exception:
-            country_code = ""
-
+            pass
         try:
             asn_response = self.asn_reader.asn(ip)
             isp = asn_response.autonomous_system_organization or ""
         except Exception:
-            isp = ""
+            pass
 
-        result = (country_code, isp)
-        return result
-
+        return country_code, isp
 
 class ConfigToSingbox:
-    def __init__(self,
-                country_mmdb_path: str,
-                asn_mmdb_path: str,
-                list_path: str,
-                output_file: str):
+    def __init__(self, resolver: GeoIPResolver, list_path: str, output_file: str):
         self.list_path = list_path
         self.output_file = output_file
-        self.resolver = GeoIPResolver(country_mmdb_path, asn_mmdb_path)
+        self.resolver = resolver
+    
+    @staticmethod
+    def _parse_url(config: str, scheme: str, default_port: int, required_fields: List[str]) -> Optional[Dict]:
+        """
+        Fungsi bantu untuk parsing URL yang sering digunakan (Vless, Trojan, Hysteria2)
+        """
+        try:
+            url = urlparse(config)
+            if url.scheme.lower() not in scheme.split(',') or not url.hostname:
+                return None
+            
+            params = parse_qs(url.query)
+            
+            parsed = {
+                'proto': scheme.split(',')[0],
+                'address': url.hostname,
+                'port': url.port or default_port,
+                'password': url.username,
+                'sni': params.get('sni', [url.hostname])[0],
+            }
+            
+            if not all(field in parsed for field in required_fields):
+                return None
+            
+            return parsed
+        except Exception:
+            return None
 
     @staticmethod
     def clean_isp_name(isp: str) -> str:
-        isp_raw = isp if isp else "Unknown"
-        isp_raw = isp_raw.replace(".", "").replace(",", "").strip()
-
+        """Membersihkan nama ISP dari stopwords."""
+        if not isp:
+            return "Unknown"
+        
+        isp_raw = isp.replace(".", "").replace(",", "").strip()
         parts = [w for w in isp_raw.replace("-", " ").split() if w and w.upper() not in STOPWORDS]
 
-        if len(parts) >= 2:
-            isp_name = f"{parts[0]} {parts[1]}"
-        elif len(parts) == 1:
-            isp_name = parts[0]
-        else:
-            isp_name = "Unknown"
+        if not parts:
+            return "Unknown"
+        
+        return " ".join(parts[:2]) # Ambil 1 atau 2 kata pertama
 
-        return isp_name
-
-    # ---------- Parsers (kembalikan dict canonical) ----------
+    # --- Parsers (kembalikan dict canonical) ---
     def decode_vmess(self, config: str) -> Optional[Dict]:
         try:
             encoded = config.replace('vmess://', '')
-            # tambahkan padding kalau hilang
             rem = len(encoded) % 4
             if rem:
                 encoded += '=' * (4 - rem)
             decoded = base64.b64decode(encoded).decode('utf-8')
             return json.loads(decoded)
-        except Exception as e:
-            print(f"[DEBUG] Failed to decode vmess: {e}")
+        except (ValueError, json.JSONDecodeError):
             return None
 
     def parse_vless(self, config: str) -> Optional[Dict]:
@@ -123,13 +154,15 @@ class ConfigToSingbox:
             url = urlparse(config)
             if url.scheme.lower() != 'vless' or not url.hostname:
                 return None
-            netloc = url.netloc.split('@')[-1]
-            address, port = netloc.split(':') if ':' in netloc else (netloc, '443')
+            
+            address = url.hostname
+            port = url.port or 443
             params = parse_qs(url.query)
+            
             return {
                 'proto': 'vless',
                 'address': address,
-                'port': int(port),
+                'port': port,
                 'uuid': url.username,
                 'flow': params.get('flow', [''])[0],
                 'sni': params.get('sni', [address])[0],
@@ -145,8 +178,10 @@ class ConfigToSingbox:
             url = urlparse(config)
             if url.scheme.lower() != 'trojan' or not url.hostname:
                 return None
+            
             port = url.port or 443
             params = parse_qs(url.query)
+            
             return {
                 'proto': 'trojan',
                 'address': url.hostname,
@@ -165,7 +200,9 @@ class ConfigToSingbox:
             url = urlparse(config)
             if url.scheme.lower() not in ['hysteria2', 'hy2'] or not url.hostname or not url.port:
                 return None
+            
             query = dict(pair.split('=') for pair in url.query.split('&')) if url.query else {}
+            
             return {
                 'proto': 'hysteria2',
                 'address': url.hostname,
@@ -179,241 +216,200 @@ class ConfigToSingbox:
     def parse_shadowsocks(self, config: str) -> Optional[Dict]:
         try:
             raw = config.replace('ss://', '', 1)
-
-            # kalau ada '@', berarti format "base64(method:pass)@host:port"
             if '@' in raw:
-                parts = raw.split('@')
-                if len(parts) != 2:
-                    return None
-                encoded = parts[0]
+                encoded, server_parts = raw.split('@')
                 rem = len(encoded) % 4
-                if rem:
-                    encoded += '=' * (4 - rem)
-                method_pass = base64.b64decode(encoded).decode('utf-8')
-                method, password = method_pass.split(':', 1)
-                server_parts = parts[1].split('#')[0]
-                host, port = server_parts.split(':')
-                return {
-                    'proto': 'shadowsocks',
-                    'address': host,
-                    'port': int(port),
-                    'method': method,
-                    'password': password
-                }
+                if rem: encoded += '=' * (4 - rem)
+                method, password = base64.b64decode(encoded).decode('utf-8').split(':', 1)
+                host, port = server_parts.split('#')[0].split(':')
             else:
-                # RFC-style: seluruh string di-encode
                 rem = len(raw) % 4
-                if rem:
-                    raw += '=' * (4 - rem)
+                if rem: raw += '=' * (4 - rem)
                 decoded = base64.b64decode(raw).decode('utf-8')
                 creds, server_parts = decoded.split('@')
                 method, password = creds.split(':', 1)
                 host, port = server_parts.split(':')
-                return {
-                    'proto': 'shadowsocks',
-                    'address': host,
-                    'port': int(port),
-                    'method': method,
-                    'password': password
-                }
+            
+            return {
+                'proto': 'shadowsocks',
+                'address': host,
+                'port': int(port),
+                'method': method,
+                'password': password
+            }
         except Exception:
             return None
 
-
     def parse_any(self, raw: str) -> Optional[Dict]:
         """
-        Parse raw config line to a canonical dict describing the outbound.
+        Parse raw config line to a canonical dict.
         """
         raw = raw.strip()
         if not raw:
             return None
+        
         lower = raw.lower()
         if lower.startswith('vmess://'):
             vm = self.decode_vmess(raw)
             if not vm:
                 return None
-            # canonicalize vmess fields we need
             return {
                 'proto': 'vmess',
                 'address': vm.get('add'),
-                'port': int(vm.get('port', 0)) if vm.get('port') else 0,
+                'port': int(vm.get('port', 0)),
                 'id': vm.get('id'),
                 'net': vm.get('net', 'tcp'),
                 'path': vm.get('path', ''),
                 'host': vm.get('host', ''),
-                'tls': vm.get('tls', '')  # 'tls' if TLS
+                'tls': vm.get('tls', '')
             }
-        if lower.startswith('vless://'):
+        elif lower.startswith('vless://'):
             return self.parse_vless(raw)
-        if lower.startswith('trojan://'):
+        elif lower.startswith('trojan://'):
             return self.parse_trojan(raw)
-        if lower.startswith('hysteria2://') or lower.startswith('hy2://'):
+        elif lower.startswith('hysteria2://') or lower.startswith('hy2://'):
             return self.parse_hysteria2(raw)
-        if lower.startswith('ss://'):
+        elif lower.startswith('ss://'):
             return self.parse_shadowsocks(raw)
         return None
 
-    # ---------- Tagging utilities ----------
-    def build_tags_for_proxies(self, proxies: List[Dict]) -> Dict[str, str]:
-        """
-        proxies: daftar proxy parsed yang sudah difilter
-        Return: mapping key -> tag dengan nomor urut fresh
-        """
-        counters: Dict[Tuple[str, str], int] = {}
-        tag_map: Dict[str, str] = {}
-
-        for p in proxies:
-            proto = p.get("proto", "")
-            addr = p.get("address", "")
-            port = p.get("port", 0)
-            ident = p.get("id") or p.get("uuid") or p.get("password") or ""
-            key = f"{proto}|{addr}|{port}|{ident}"
-
-            cc, isp = self.resolver.get_country_and_isp(addr)
-            cc = cc.upper() if cc else "UNK"
-            isp_clean = self.clean_isp_name(isp)
-
-            counters[cc] = counters.get(cc, 0) + 1
-            index = counters[cc]
-            tag_map[key] = f"{cc} {index} - {isp_clean}"
-
-        return tag_map
-
-    # ---------- Convert canonical parsed dict to singbox outbound ----------
-    def make_outbound_from_parsed(self, parsed: Dict, tag_map: Dict[str, str]) -> Optional[Dict]:
+    # --- Konverter (Parsed Dict ke Singbox Outbound) ---
+    def make_outbound_from_parsed(self, parsed: Dict, tag: str) -> Optional[Dict]:
         proto = parsed.get('proto')
         address = parsed.get('address')
         if not proto or not address:
             return None
-
-        tag = tag_map.get(address, f"UNK 1 - ()")
-        # build outbound base and add proto-specific fields
+        
+        outbound = {
+            "type": proto,
+            "tag": tag,
+            "server": address,
+            "server_port": int(parsed.get('port', 0)),
+        }
+        
         if proto == 'vmess':
-            transport = {}
-            net = parsed.get('net', 'tcp')
-            if net in ('ws', 'h2'):
-                if parsed.get('path'):
-                    transport['path'] = parsed['path']
-                if parsed.get('host'):
-                    transport['headers'] = {'Host': parsed['host']}
-                transport['type'] = net
-            return {
-                "type": "vmess", "tag": tag, "server": address, "server_port": int(parsed.get('port', 0)), "uuid": parsed.get('id'), "security": "auto", "transport": transport, "tls": {
+            outbound.update({
+                "uuid": parsed.get('id'),
+                "security": "auto",
+                "tls": {
                     "enabled": parsed.get('tls') == 'tls',
                     "insecure": True,
                     "server_name": parsed.get('host') or address
-                }
-            }
-        if proto == 'vless':
-            transport = {}
-            if parsed.get('type') == 'ws':
-                if parsed.get('path'):
-                    transport['path'] = parsed['path']
-                if parsed.get('host'):
-                    transport['headers'] = {'Host': parsed['host']}
-                transport['type'] = 'ws'
-            return {
-                "type": "vless", "tag": tag, "server": address, "server_port": int(parsed.get('port', 0)), "uuid": parsed.get('uuid'), "flow": parsed.get('flow'), "tls": {
+                },
+                "transport": {}
+            })
+            if parsed.get('net') in ('ws', 'h2'):
+                outbound['transport']['type'] = parsed['net']
+                if parsed.get('path'): outbound['transport']['path'] = parsed['path']
+                if parsed.get('host'): outbound['transport']['headers'] = {'Host': parsed['host']}
+        
+        elif proto == 'vless':
+            outbound.update({
+                "uuid": parsed.get('uuid'),
+                "flow": parsed.get('flow'),
+                "tls": {
                     "enabled": True,
                     "server_name": parsed.get('sni') or address,
                     "insecure": True
-                }, "transport": transport
-            }
-        if proto == 'trojan':
-            transport = {}
-            if parsed.get('type') != 'tcp' and parsed.get('path'):
-                transport['path'] = parsed['path']
-                transport['type'] = parsed.get('type')
-            return {
-                "type": "trojan", "tag": tag, "server": address, "server_port": int(parsed.get('port', 0)), "password": parsed.get('password'), "tls": {
+                },
+                "transport": {}
+            })
+            if parsed.get('type') == 'ws':
+                outbound['transport']['type'] = 'ws'
+                if parsed.get('path'): outbound['transport']['path'] = parsed['path']
+                if parsed.get('host'): outbound['transport']['headers'] = {'Host': parsed['host']}
+        
+        elif proto == 'trojan':
+            outbound.update({
+                "password": parsed.get('password'),
+                "tls": {
                     "enabled": True,
                     "server_name": parsed.get('sni') or address,
                     "alpn": parsed.get('alpn').split(',') if parsed.get('alpn') else [],
                     "insecure": True
-                }, "transport": transport
-            }
-        if proto == 'hysteria2':
-            return {
-                "type": "hysteria2", "tag": tag, "server": address, "server_port": int(parsed.get('port', 0)), "password": parsed.get('password'), "tls": {
+                },
+                "transport": {}
+            })
+            if parsed.get('type') != 'tcp' and parsed.get('path'):
+                outbound['transport']['type'] = parsed.get('type')
+                outbound['transport']['path'] = parsed['path']
+        
+        elif proto == 'hysteria2':
+            outbound.update({
+                "password": parsed.get('password'),
+                "tls": {
                     "enabled": True,
                     "insecure": True,
                     "server_name": parsed.get('sni') or address
                 }
-            }
-        if proto == 'shadowsocks':
-            return {
-                "type": "shadowsocks", "tag": tag, "server": address, "server_port": int(parsed.get('port', 0)), "method": parsed.get('method'), "password": parsed.get('password')
-            }
-        return None
+            })
+        
+        elif proto == 'shadowsocks':
+            outbound.update({
+                "method": parsed.get('method'),
+                "password": parsed.get('password')
+            })
+        
+        return outbound
 
-    # ---------- Main processing ----------
+    # --- Alur Utama ---
     def process_configs(self):
         try:
             with open(self.list_path, 'r') as f:
-                raw_lines = [l.strip() for l in f.readlines()]
-
-            parsed_list: List[Dict] = []
-            address_order: List[str] = []
-
-            # parse all and collect addresses in appearance order
-            for raw in raw_lines:
-                if not raw or raw.startswith('//'):
-                    continue
-                parsed = self.parse_any(raw)
+                raw_lines = f.readlines()
+            
+            proxies: List[Dict] = []
+            
+            for line in raw_lines:
+                parsed = self.parse_any(line)
                 if not parsed:
                     continue
-                parsed_list.append(parsed)
-                addr = parsed.get('address')
-                if addr:
-                    address_order.append(addr)
-
-            if not parsed_list:
-                print("No valid configs found.")
+                
+                proto = parsed.get('proto', '')
+                address = parsed.get('address', '')
+                
+                # Filter awal dengan Set lookup
+                if PROTOCOL_FILTERS and proto.lower() not in PROTOCOL_FILTERS:
+                    continue
+                
+                proxies.append(parsed)
+            
+            if not proxies:
+                print("No valid configs found or none matched protocol filter.")
                 return
 
-            # Build tag map berdasarkan parsed_list
-            tag_map = self.build_tags_for_proxies(parsed_list)
-
+            tag_counts: Dict[str, int] = {}
             outbounds: List[Dict] = []
             valid_tags: List[str] = []
-            for p in parsed_list:
-                proto = p.get("proto", "")
-                addr = p.get("address", "")
-                port = p.get("port", 0)
 
-                ident = p.get("id") or p.get("uuid") or p.get("password") or ""
-                key = f"{proto}|{addr}|{port}|{ident}"
-
-                tag = tag_map.get(key, "")
-
-                # filter proto
-                if not protocol_pattern.search(proto):
+            for p in proxies:
+                proto = p.get('proto', '')
+                address = p.get('address', '')
+                
+                cc, isp = self.resolver.get_country_and_isp(address)
+                
+                # Filter negara
+                if COUNTRY_FILTERS and cc not in COUNTRY_FILTERS:
                     continue
-
-                # filter negara
-                if not country_pattern.search(tag.split(" ")[0]):
-                    continue
-
-                out = self.make_outbound_from_parsed(p, tag_map)
+                
+                cc_upper = cc.upper() if cc else "UNK"
+                isp_clean = self.clean_isp_name(isp)
+                tag_counts[cc_upper] = tag_counts.get(cc_upper, 0) + 1
+                tag = f"{cc_upper} {tag_counts[cc_upper]} - {isp_clean}"
+                
+                out = self.make_outbound_from_parsed(p, tag)
                 if out:
-                    out["tag"] = tag   # pastikan tag unik dipakai
                     outbounds.append(out)
                     valid_tags.append(tag)
-
+            
             if not outbounds:
-                print("No outbounds matched filter/exclude rules.")
+                print("No outbounds matched country filters.")
                 return
 
-            # assemble final config
-            log_config = {
-                "log": {"disabled": False, "level": "fatal", "timestamp": True}
-            }
-            
-            ntp_config = {
-                "ntp": {"enabled": True, "server": "time.google.com", "server_port": 123, "interval": "30m"}
-            }
-            
-            dns_config = {
+            # Menggabungkan konfigurasi dasar dengan f-string yang lebih rapi
+            base_config = {
+                "log": {"disabled": False, "level": "fatal", "timestamp": True},
+                "ntp": {"enabled": True, "server": "time.google.com", "server_port": 123, "interval": "30m"},
                 "dns": {
                     "servers": [
                         {"type": "hosts", "tag": "hosts"},
@@ -423,105 +419,96 @@ class ConfigToSingbox:
                     "rules": [
                         {"ip_accept_any": True, "server": "hosts"}
                     ],
-                    "strategy": "ipv4_only", "disable_cache": False,
-                    "disable_expire": False,
-                    "independent_cache": False,
-                    "reverse_mapping": True,
-                    "final": "google-udp"
-                }
-            }
-            
-            inbounds_config = [
-                {"type": "direct", "tag": "dns-in", "listen": "192.168.10.1", "listen_port": 1053},
-                {"type": "tproxy", "tag": "tproxy-in", "listen": "0.0.0.0", "listen_port": 7893}
-            ]
-
-            outbounds_config = [
-                {"type": "block", "tag": "REJECT"},
-                {"type": "direct", "tag": "DIRECT"},
-                {"type": "selector", "tag": "ROUTE-ID", "outbounds": ["REJECT", "DIRECT", "MIXED"], "default": "DIRECT"},
-                {"type": "selector", "tag": "ROUTE-SG", "outbounds": ["REJECT", "DIRECT", "MIXED"], "default": "DIRECT"},
-                {"type": "selector", "tag": "MIXED", "outbounds": valid_tags},
-                {"type": "selector", "tag": "ROUTE-ADS", "outbounds": ["REJECT", "DIRECT", "MIXED"], "default": "REJECT"}
-            ] + outbounds
-
-            route_config = {
-                "rules": [
-                    {"action": "sniff", "sniffer": []},
-                    {"protocol": "dns", "action": "hijack-dns"},
-                    {"protocol": "bittorrent", "action": "direct"},
-                    {"domain": ["dns.google", "one.one.one.one"], "outbound": "DIRECT"},
-                    {"rule_set": ["raven_reject", "raven_nsfw", "oisd-nsfw-small", "tiktok", "AS142160"], "action": "reject"},
-                    {"network": "udp", "port": 443, "action": "reject"},
-                    {"network": "udp", "outbound": "DIRECT"},
-                    {"ip_is_private": True, "action": "direct"},
-                    {"rule_set": ["raven_lokal"], "action": "direct"},
-                    {"rule_set": ["oisd-small", "raven_ads"], "outbound": "ROUTE-ADS"},
-                    {"rule_set": ["raven_direct"], "outbound": "ROUTE-ID"},
-                    {"rule_set": ["raven_route-sg"], "outbound": "ROUTE-SG"},
-                    {"rule_set": ["OpenIXP-IIX", "raven_route-id", "telegram"], "outbound": "ROUTE-ID"},
+                    "strategy": "ipv4_only", "disable_cache": False, "disable_expire": False,
+                    "independent_cache": False, "reverse_mapping": True, "final": "google-udp"
+                },
+                "inbounds": [
+                    {"type": "direct", "tag": "dns-in", "listen": "192.168.10.1", "listen_port": 1053},
+                    {"type": "tproxy", "tag": "tproxy-in", "listen": "0.0.0.0", "listen_port": 7893}
                 ],
-                "rule_set": [
-                    {"type": "local", "tag": "raven_reject", "format": "source", "path": "raven_reject.json"},
-                    {"type": "remote", "tag": "AS142160", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/asn/AS142160.srs", "download_detour": "DIRECT"},
-                    {"type": "remote", "tag": "tiktok", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/tiktok.srs", "download_detour": "DIRECT"},
-                    {"type": "remote", "tag": "raven_nsfw", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/raven_nsfw.srs", "download_detour": "DIRECT"},
-                    {"type": "remote", "tag": "oisd-nsfw-small", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/oisd-nsfw-small.srs", "download_detour": "DIRECT"},
-                    {"type": "local", "tag": "raven_lokal", "format": "binary", "path": "lokal.srs"},
-                    {"type": "local", "tag": "raven_ads", "format": "source", "path": "raven_ads.json"},
-                    {"type": "remote", "tag": "oisd-small", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/oisd-small.srs", "download_detour": "DIRECT"},
-                    {"type": "local", "tag": "raven_direct", "format": "source", "path": "raven_direct.json"},
-                    {"type": "remote", "tag": "raven_route-sg", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/youtube.srs", "download_detour": "DIRECT"},
-                    {"type": "remote", "tag": "OpenIXP-IIX", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/nice.srs", "download_detour": "DIRECT"},
-                    {"type": "local", "tag": "raven_route-id", "format": "source", "path": "raven_route-id.json"},
-                    {"type": "remote", "tag": "telegram", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geoip/telegram.srs", "download_detour": "DIRECT"}
-                ],
-                "default_domain_resolver": {"server": "google-udp", "strategy": "ipv4_only"},
-                "default_mark": 7894,
-                "auto_detect_interface": True,
-                "final": "ROUTE-SG"
-            }
-            
-            experimental_config = {
+                "outbounds": [
+                    {"type": "block", "tag": "REJECT"},
+                    {"type": "direct", "tag": "DIRECT"},
+                    {"type": "selector", "tag": "ROUTE-ID", "outbounds": ["REJECT", "DIRECT", "MIXED"], "default": "DIRECT"},
+                    {"type": "selector", "tag": "ROUTE-SG", "outbounds": ["REJECT", "DIRECT", "MIXED"], "default": "DIRECT"},
+                    {"type": "selector", "tag": "MIXED", "outbounds": valid_tags},
+                    {"type": "selector", "tag": "ROUTE-ADS", "outbounds": ["REJECT", "DIRECT", "MIXED"], "default": "REJECT"}
+                ] + outbounds,
+                "route": {
+                    "rules": [
+                        {"action": "sniff", "sniffer": []},
+                        {"protocol": "dns", "action": "hijack-dns"},
+                        {"protocol": "bittorrent", "action": "direct"},
+                        {"domain": ["dns.google", "one.one.one.one"], "outbound": "DIRECT"},
+                        {"rule_set": ["raven_reject", "raven_nsfw", "oisd-nsfw-small", "tiktok", "AS142160"], "action": "reject"},
+                        {"network": "udp", "port": 443, "action": "reject"},
+                        {"network": "udp", "outbound": "DIRECT"},
+                        {"ip_is_private": True, "action": "direct"},
+                        {"rule_set": ["raven_lokal"], "action": "direct"},
+                        {"rule_set": ["oisd-small", "raven_ads"], "outbound": "ROUTE-ADS"},
+                        {"rule_set": ["raven_direct"], "outbound": "ROUTE-ID"},
+                        {"rule_set": ["raven_route-sg"], "outbound": "ROUTE-SG"},
+                        {"rule_set": ["OpenIXP-IIX", "raven_route-id", "telegram"], "outbound": "ROUTE-ID"},
+                    ],
+                    "rule_set": [
+                        {"type": "local", "tag": "raven_reject", "format": "source", "path": "raven_reject.json"},
+                        {"type": "remote", "tag": "AS142160", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/asn/AS142160.srs", "download_detour": "DIRECT"},
+                        {"type": "remote", "tag": "tiktok", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/tiktok.srs", "download_detour": "DIRECT"},
+                        {"type": "remote", "tag": "raven_nsfw", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/raven_nsfw.srs", "download_detour": "DIRECT"},
+                        {"type": "remote", "tag": "oisd-nsfw-small", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/oisd-nsfw-small.srs", "download_detour": "DIRECT"},
+                        {"type": "local", "tag": "raven_lokal", "format": "binary", "path": "lokal.srs"},
+                        {"type": "local", "tag": "raven_ads", "format": "source", "path": "raven_ads.json"},
+                        {"type": "remote", "tag": "oisd-small", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/oisd-small.srs", "download_detour": "DIRECT"},
+                        {"type": "local", "tag": "raven_direct", "format": "source", "path": "raven_direct.json"},
+                        {"type": "remote", "tag": "raven_route-sg", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/youtube.srs", "download_detour": "DIRECT"},
+                        {"type": "remote", "tag": "OpenIXP-IIX", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geosite/nice.srs", "download_detour": "DIRECT"},
+                        {"type": "local", "tag": "raven_route-id", "format": "source", "path": "raven_route-id.json"},
+                        {"type": "remote", "tag": "telegram", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geoip/telegram.srs", "download_detour": "DIRECT"}
+                    ],
+                    "default_domain_resolver": {"server": "google-udp", "strategy": "ipv4_only"},
+                    "default_mark": 7894,
+                    "auto_detect_interface": True,
+                    "final": "ROUTE-SG"
+                },
                 "experimental": {
                     "cache_file": {"enabled": True},
-                    "clash_api": {"external_controller": "0.0.0.0:9090", "external_ui": "yacd", "secret": "raven", "external_ui_download_url": "https://github.com/KhoirulAmsori/My-openWRT-Backup/raw/main/openCLASH-YaCD/yacd.zip", "external_ui_download_detour": "DIRECT"
+                    "clash_api": {
+                        "external_controller": "0.0.0.0:9090",
+                        "external_ui": "yacd",
+                        "secret": "raven",
+                        "external_ui_download_url": "https://github.com/KhoirulAmsori/My-openWRT-Backup/raw/main/openCLASH-YaCD/yacd.zip",
+                        "external_ui_download_detour": "DIRECT"
                     }
                 }
             }
 
-            singbox_config = {
-                **log_config,
-                **ntp_config,
-                **dns_config,
-                "inbounds": inbounds_config,
-                "outbounds": outbounds_config,
-                "route": route_config,
-                **experimental_config
-            }
-
             with open(self.output_file, 'w') as f:
-                json.dump(singbox_config, f, indent=4, ensure_ascii=False)
-
+                json.dump(base_config, f, indent=4, ensure_ascii=False)
+            
             print(f"Wrote {len(outbounds)} outbounds to {self.output_file}")
-
+            
+        except FileNotFoundError as e:
+            print(f"Error: {e}")
         except Exception as e:
-            print(f"Error processing configs: {e}")
-
+            print(f"An unexpected error occurred: {e}")
 
 def main():
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    list_path = os.path.join(base_dir, "..", "list.txt")           # proxy-build/list.txt
-    output_file = os.path.join(os.path.dirname(list_path), "raven.json")  # proxy-build/raven.json
-
-    converter = ConfigToSingbox(
-        country_mmdb_path="GeoLite2-Country.mmdb",
-        asn_mmdb_path="GeoLite2-ASN.mmdb",
-        list_path=os.path.abspath(list_path),
-        output_file=os.path.abspath(output_file)
-    )
-    converter.process_configs()
-
+    
+    # Gunakan path yang lebih aman dan eksplisit
+    list_path = os.path.join(base_dir, "..", LIST_PATH)
+    output_file = os.path.join(os.path.dirname(list_path), "raven.json")
+    country_mmdb_path = os.path.join(base_dir, COUNTRY_MMDB_PATH)
+    asn_mmdb_path = os.path.join(base_dir, ASN_MMDB_PATH)
+    
+    try:
+        resolver = GeoIPResolver(country_mmdb_path, asn_mmdb_path)
+        converter = ConfigToSingbox(resolver, list_path, output_file)
+        converter.process_configs()
+    except FileNotFoundError as e:
+        print(f"Initialization failed: {e}")
+    except Exception as e:
+        print(f"An error occurred during script execution: {e}")
 
 if __name__ == '__main__':
     main()
