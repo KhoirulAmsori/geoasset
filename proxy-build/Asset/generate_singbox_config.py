@@ -9,8 +9,6 @@ import re
 from typing import Dict, Optional, Tuple, List
 from urllib.parse import urlparse, parse_qs
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 STOPWORDS = {
     "SAS", "INC", "LTD", "LLC", "CORP", "CO", "SA", "SRO", "ASN", "LIMITED", "COMPANY",
     "ASIA", "CLOUD", "INTERNATIONAL", "PROVIDER", "ISLAND", "PRIVATE", "ONLINE",
@@ -78,29 +76,13 @@ class GeoIPResolver:
 
 class ConfigToSingbox:
     def __init__(self,
-                 country_mmdb_path: str = "GeoLite2-Country.mmdb",
-                 asn_mmdb_path: str = "GeoLite2-ASN.mmdb",
-                 list_path: str = None,
-                 output_file: str = None):
-
-        # Base dir = folder tempat file python ini berada (Asset/)
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-
-        # Lokasi list.txt = ../../proxy-build/list.txt
-        if list_path is None:
-            list_path = os.path.abspath(os.path.join(base_dir, "..", "list.txt"))
-
-        # Output default ke folder yang sama dengan list.txt
-        if output_file is None:
-            output_file = os.path.join(os.path.dirname(list_path), "raven.json")
-
+                country_mmdb_path: str,
+                asn_mmdb_path: str,
+                list_path: str,
+                output_file: str):
         self.list_path = list_path
         self.output_file = output_file
         self.resolver = GeoIPResolver(country_mmdb_path, asn_mmdb_path)
-
-        # Debug
-        print(f"[DEBUG] list_path   = {self.list_path}")
-        print(f"[DEBUG] output_file = {self.output_file}")
 
     @staticmethod
     def clean_isp_name(isp: str) -> str:
@@ -490,13 +472,18 @@ class ConfigToSingbox:
 
 
 def main():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    list_path = os.path.join(base_dir, "..", "list.txt")           # proxy-build/list.txt
+    output_file = os.path.join(os.path.dirname(list_path), "raven.json")  # proxy-build/raven.json
+
     converter = ConfigToSingbox(
         country_mmdb_path="GeoLite2-Country.mmdb",
         asn_mmdb_path="GeoLite2-ASN.mmdb",
-        list_path="list.txt",
-        output_file="singbox_configs.json"
+        list_path=os.path.abspath(list_path),
+        output_file=os.path.abspath(output_file)
     )
     converter.process_configs()
+
 
 
 if __name__ == '__main__':
