@@ -16,7 +16,7 @@ STOPWORDS = {
 }
 
 country_filter_env = os.environ.get("IncludedCountry")
-protocol_filter_env = os.environ.get("IncludedProtocols")
+protocol_filter_env = os.environ.get("IncludedProtocols").replace("ss", "shadowsocks")
 
 country_pattern = re.compile(
     "(" + "|".join(c.strip() for c in country_filter_env.split(",") if c.strip()) + ")",
@@ -352,6 +352,8 @@ class ConfigToSingbox:
                 # apply include-type
                 if not protocol_pattern.search(proto):
                     continue
+                else:
+                    print(proto)
 
                 # apply filter by tag (country code prefix)
                 if not country_pattern.search(tag):
