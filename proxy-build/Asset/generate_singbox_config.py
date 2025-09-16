@@ -16,7 +16,7 @@ STOPWORDS = {
 }
 
 country_filter_env = os.environ.get("IncludedCountry")
-protocol_filter_env = os.environ.get("IncludedProtocols").replace("ss", "shadowsocks")
+protocol_filter_env = os.environ.get("IncludedProtocols")
 
 country_pattern = re.compile(
     "(" + "|".join(c.strip() for c in country_filter_env.split(",") if c.strip()) + ")",
@@ -353,11 +353,13 @@ class ConfigToSingbox:
                 if not protocol_pattern.search(proto):
                     continue
                 else:
-                    print(proto)
+                    print(f"protocol {proto}")
 
                 # apply filter by tag (country code prefix)
                 if not country_pattern.search(tag):
                     continue
+                else:
+                    print(f"country {tag}")
 
                 out = self.make_outbound_from_parsed(p, tag_map)
                 if out:
