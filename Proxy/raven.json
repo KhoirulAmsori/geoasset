@@ -97,14 +97,13 @@
             "type": "selector",
             "tag": "MIXED",
             "outbounds": [
-                "GB 1 - GLOBALTELEHOST",
                 "HK 1 - Alibaba US",
                 "HK 2 - Alibaba US",
                 "HK 3 - Alibaba US",
-                "IN 1 - ORACLE 31898",
-                "IN 2 - Contabo",
-                "MY 2 - MICROSOFT BLOCK",
-                "MY 3 - Pq Hosting",
+                "IN 2 - UCLOUD INFORMATION",
+                "MY 2 - Pq Hosting",
+                "MY 3 - GB Network",
+                "SG 3 - DIGITALOCEAN",
                 "TW 3 - AKILE"
             ]
         },
@@ -120,30 +119,10 @@
         },
         {
             "type": "vmess",
-            "tag": "GB 1 - GLOBALTELEHOST",
-            "server": "masjide.org",
-            "server_port": 443,
-            "uuid": "03fcc618-b93d-6796-6aed-8a38c975d581",
-            "security": "auto",
-            "transport": {
-                "path": "linkvws",
-                "headers": {
-                    "Host": "masjide.org"
-                },
-                "type": "ws"
-            },
-            "tls": {
-                "enabled": true,
-                "insecure": true,
-                "server_name": "masjide.org"
-            }
-        },
-        {
-            "type": "vmess",
             "tag": "HK 1 - Alibaba US",
-            "server": "47.86.16.206",
-            "server_port": 40617,
-            "uuid": "eec9ce64-a124-4f14-b72d-f513b6ad6ab2",
+            "server": "47.86.47.186",
+            "server_port": 60281,
+            "uuid": "e27ad4a4-ef1f-4902-bee5-0e44ce38e9d6",
             "security": "auto",
             "transport": {
                 "path": "/arki?ed=2048",
@@ -152,32 +131,15 @@
             "tls": {
                 "enabled": false,
                 "insecure": true,
-                "server_name": "47.86.16.206"
+                "server_name": "47.86.47.186"
             }
         },
         {
             "type": "vmess",
             "tag": "HK 2 - Alibaba US",
-            "server": "47.86.47.211",
-            "server_port": 20521,
-            "uuid": "05bd2a20-e32d-407b-8211-6fd4625db5cf",
-            "security": "auto",
-            "transport": {
-                "path": "/",
-                "type": "ws"
-            },
-            "tls": {
-                "enabled": false,
-                "insecure": true,
-                "server_name": "47.86.47.211"
-            }
-        },
-        {
-            "type": "vmess",
-            "tag": "HK 3 - Alibaba US",
-            "server": "47.86.47.36",
-            "server_port": 27079,
-            "uuid": "ffcc83eb-bc52-4395-b1cc-dfe33af3466b",
+            "server": "47.86.45.136",
+            "server_port": 61980,
+            "uuid": "851b7167-6587-4990-b9de-80f76ca49c2a",
             "security": "auto",
             "transport": {
                 "path": "/arki?ed=2048",
@@ -186,15 +148,32 @@
             "tls": {
                 "enabled": false,
                 "insecure": true,
-                "server_name": "47.86.47.36"
+                "server_name": "47.86.45.136"
             }
         },
         {
             "type": "vmess",
-            "tag": "IN 1 - ORACLE 31898",
-            "server": "152.67.8.205",
-            "server_port": 80,
-            "uuid": "9db4c708-aef8-4359-821b-38e47990be0d",
+            "tag": "HK 3 - Alibaba US",
+            "server": "47.86.42.197",
+            "server_port": 20657,
+            "uuid": "96bd6e85-69c0-4907-a92b-071a60b814e3",
+            "security": "auto",
+            "transport": {
+                "path": "/arki?ed=2048",
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "47.86.42.197"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "IN 2 - UCLOUD INFORMATION",
+            "server": "123.58.203.92",
+            "server_port": 8443,
+            "uuid": "0bb0365b-c183-48c3-ad0d-a90fc76e2926",
             "security": "auto",
             "transport": {
                 "path": "/",
@@ -203,46 +182,12 @@
             "tls": {
                 "enabled": false,
                 "insecure": true,
-                "server_name": "152.67.8.205"
+                "server_name": "123.58.203.92"
             }
         },
         {
             "type": "vmess",
-            "tag": "IN 2 - Contabo",
-            "server": "94.136.185.230",
-            "server_port": 10534,
-            "uuid": "b01c7ef9-33ec-41f6-bfbf-77ddc4d21649",
-            "security": "auto",
-            "transport": {},
-            "tls": {
-                "enabled": false,
-                "insecure": true,
-                "server_name": "94.136.185.230"
-            }
-        },
-        {
-            "type": "vmess",
-            "tag": "MY 2 - MICROSOFT BLOCK",
-            "server": "t.cnmjcn.cyou",
-            "server_port": 16622,
-            "uuid": "743dbce9-ec7d-49dd-b9d6-3b1a151e729f",
-            "security": "auto",
-            "transport": {
-                "path": "/",
-                "headers": {
-                    "Host": "f604066249a784d694db65d3ebf5d60c.mobgslb.tbcache.com"
-                },
-                "type": "ws"
-            },
-            "tls": {
-                "enabled": false,
-                "insecure": true,
-                "server_name": "f604066249a784d694db65d3ebf5d60c.mobgslb.tbcache.com"
-            }
-        },
-        {
-            "type": "vmess",
-            "tag": "MY 3 - Pq Hosting",
+            "tag": "MY 2 - Pq Hosting",
             "server": "45.128.54.84",
             "server_port": 37313,
             "uuid": "72feb833-4196-4a70-a3f5-aeb011f7d534",
@@ -252,6 +197,40 @@
                 "enabled": false,
                 "insecure": true,
                 "server_name": "45.128.54.84"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "MY 3 - GB Network",
+            "server": "103.186.117.229",
+            "server_port": 45497,
+            "uuid": "2e257f9c-fa0e-442f-f53c-6a452924c0c2",
+            "security": "auto",
+            "transport": {},
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "103.186.117.229"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "SG 3 - DIGITALOCEAN",
+            "server": "node4.rtxconfigz.com",
+            "server_port": 443,
+            "uuid": "b3c47ed5-d305-4b66-9571-785414457501",
+            "security": "auto",
+            "transport": {
+                "path": "/@Malinda6104",
+                "headers": {
+                    "Host": "node4.rtxconfigz.com"
+                },
+                "type": "ws"
+            },
+            "tls": {
+                "enabled": true,
+                "insecure": true,
+                "server_name": "node4.rtxconfigz.com"
             }
         },
         {
