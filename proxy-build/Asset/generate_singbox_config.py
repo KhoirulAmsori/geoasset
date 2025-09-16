@@ -250,8 +250,9 @@ class ConfigToSingbox:
         for addr in unique_addresses:
             country_code, isp = self.resolver.get_country_and_isp(addr)
             cc = country_code.upper() if country_code else "UNK"
-            counters[cc] = counters.get(cc, 0) + 1
-            index = counters[cc]
+            key = f"{cc}-{isp_clean}"
+            counters[key] = counters.get(key, 0) + 1
+            index = counters[key]
             isp_clean = self.clean_isp_name(isp)
             tag_map[addr] = f"{cc} {index} - {isp_clean}"
 
