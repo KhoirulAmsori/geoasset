@@ -250,7 +250,7 @@ class ConfigToSingbox:
 
             tag_map[addr] = f"{cc} {index} - {isp_clean}"
 
-    return tag_map
+        return tag_map
 
     # ---------- Convert canonical parsed dict to singbox outbound ----------
     def make_outbound_from_parsed(self, parsed: Dict, tag_map: Dict[str, str]) -> Optional[Dict]:
