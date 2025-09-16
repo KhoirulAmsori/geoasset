@@ -78,7 +78,7 @@ class ConfigToSingbox:
     def __init__(self,
                  country_mmdb_path: str = "GeoLite2-Country.mmdb",
                  asn_mmdb_path: str = "GeoLite2-ASN.mmdb",
-                 list_path: str = "../proxy-build/list.txt",
+                 list_path: str = "../../proxy-build/list.txt",
                  output_file: str = "raven.json"):
         self.list_path = list_path
         self.output_file = output_file
