@@ -244,13 +244,13 @@ class ConfigToSingbox:
             cc = country_code.upper() if country_code else "UNK"
             isp_clean = self.clean_isp_name(isp)
 
-            key = f"{cc}-{isp_clean}"
-            counters[key] = counters.get(key, 0) + 1
-            index = counters[key]
+            # counter per country
+            counters[cc] = counters.get(cc, 0) + 1
+            index = counters[cc]
 
             tag_map[addr] = f"{cc} {index} - {isp_clean}"
 
-        return tag_map
+    return tag_map
 
     # ---------- Convert canonical parsed dict to singbox outbound ----------
     def make_outbound_from_parsed(self, parsed: Dict, tag_map: Dict[str, str]) -> Optional[Dict]:
