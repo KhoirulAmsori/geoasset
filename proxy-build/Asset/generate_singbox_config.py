@@ -44,18 +44,12 @@ class GeoIPResolver:
     def __init__(self, country_mmdb_path: str, asn_mmdb_path: str):
         self.country_reader = geoip2.database.Reader(country_mmdb_path)
         self.asn_reader = geoip2.database.Reader(asn_mmdb_path)
-        # cache: key = ip_or_host, value = (country_code, isp)
-        self._cache: Dict[str, Tuple[str, str]] = {}
 
     def get_country_and_isp(self, host_or_ip: str) -> Tuple[str, str]:
         """
         Resolve host_or_ip to an IP (if hostname) and lookup country_code + isp from mmdb.
         Returns (country_code, isp) where country_code is lowercase ('' if unknown).
-        Caches results per input string.
         """
-        if host_or_ip in self._cache:
-            return self._cache[host_or_ip]
-
         ip = host_or_ip
         try:
             # cek apakah host_or_ip adalah IP valid
@@ -81,7 +75,6 @@ class GeoIPResolver:
             isp = ""
 
         result = (country_code, isp)
-        self._cache[host_or_ip] = result
         return result
 
 
@@ -115,9 +108,14 @@ class ConfigToSingbox:
     def decode_vmess(self, config: str) -> Optional[Dict]:
         try:
             encoded = config.replace('vmess://', '')
+            # tambahkan padding kalau hilang
+            rem = len(encoded) % 4
+            if rem:
+                encoded += '=' * (4 - rem)
             decoded = base64.b64decode(encoded).decode('utf-8')
             return json.loads(decoded)
-        except Exception:
+        except Exception as e:
+            print(f"[DEBUG] Failed to decode vmess: {e}")
             return None
 
     def parse_vless(self, config: str) -> Optional[Dict]:
@@ -180,22 +178,47 @@ class ConfigToSingbox:
 
     def parse_shadowsocks(self, config: str) -> Optional[Dict]:
         try:
-            parts = config.replace('ss://', '').split('@')
-            if len(parts) != 2:
-                return None
-            method_pass = base64.b64decode(parts[0]).decode('utf-8')
-            method, password = method_pass.split(':', 1)
-            server_parts = parts[1].split('#')[0]
-            host, port = server_parts.split(':')
-            return {
-                'proto': 'shadowsocks',
-                'address': host,
-                'port': int(port),
-                'method': method,
-                'password': password
-            }
+            raw = config.replace('ss://', '', 1)
+
+            # kalau ada '@', berarti format "base64(method:pass)@host:port"
+            if '@' in raw:
+                parts = raw.split('@')
+                if len(parts) != 2:
+                    return None
+                encoded = parts[0]
+                rem = len(encoded) % 4
+                if rem:
+                    encoded += '=' * (4 - rem)
+                method_pass = base64.b64decode(encoded).decode('utf-8')
+                method, password = method_pass.split(':', 1)
+                server_parts = parts[1].split('#')[0]
+                host, port = server_parts.split(':')
+                return {
+                    'proto': 'shadowsocks',
+                    'address': host,
+                    'port': int(port),
+                    'method': method,
+                    'password': password
+                }
+            else:
+                # RFC-style: seluruh string di-encode
+                rem = len(raw) % 4
+                if rem:
+                    raw += '=' * (4 - rem)
+                decoded = base64.b64decode(raw).decode('utf-8')
+                creds, server_parts = decoded.split('@')
+                method, password = creds.split(':', 1)
+                host, port = server_parts.split(':')
+                return {
+                    'proto': 'shadowsocks',
+                    'address': host,
+                    'port': int(port),
+                    'method': method,
+                    'password': password
+                }
         except Exception:
             return None
+
 
     def parse_any(self, raw: str) -> Optional[Dict]:
         """
@@ -231,24 +254,28 @@ class ConfigToSingbox:
         return None
 
     # ---------- Tagging utilities ----------
-    def build_tags_for_addresses(self, addresses: List[str]) -> Dict[str, str]:
+    def build_tags_for_proxies(self, proxies: List[Dict]) -> Dict[str, str]:
         """
-        addresses: list of addresses in appearance order (boleh duplicate)
-        returns mapping address -> tag (e.g. "US 1 - ISP")
+        proxies: daftar proxy parsed yang sudah difilter
+        Return: mapping key -> tag dengan nomor urut fresh
         """
+        counters: Dict[Tuple[str, str], int] = {}
         tag_map: Dict[str, str] = {}
-        counters: Dict[str, int] = {}
 
-        for addr in addresses:
-            country_code, isp = self.resolver.get_country_and_isp(addr)
-            cc = country_code.upper() if country_code else "UNK"
+        for p in proxies:
+            proto = p.get("proto", "")
+            addr = p.get("address", "")
+            port = p.get("port", 0)
+            ident = p.get("id") or p.get("uuid") or p.get("password") or ""
+            key = f"{proto}|{addr}|{port}|{ident}"
+
+            cc, isp = self.resolver.get_country_and_isp(addr)
+            cc = cc.upper() if cc else "UNK"
             isp_clean = self.clean_isp_name(isp)
 
-            # counter per country
             counters[cc] = counters.get(cc, 0) + 1
             index = counters[cc]
-
-            tag_map[addr] = f"{cc} {index} - {isp_clean}"
+            tag_map[key] = f"{cc} {index} - {isp_clean}"
 
         return tag_map
 
@@ -344,29 +371,34 @@ class ConfigToSingbox:
                 print("No valid configs found.")
                 return
 
-            # Resolve addresses once and build per-country-indexed tags
-            tag_map = self.build_tags_for_addresses(address_order)
+            # Build tag map berdasarkan parsed_list
+            tag_map = self.build_tags_for_proxies(parsed_list)
 
-            # Build outbounds
             outbounds: List[Dict] = []
             valid_tags: List[str] = []
             for p in parsed_list:
-                proto = p.get('proto', '')
-                addr = p.get('address', '')
-                tag = tag_map.get(addr, '').split(' ')[0]
+                proto = p.get("proto", "")
+                addr = p.get("address", "")
+                port = p.get("port", 0)
 
-                # apply include-type
+                ident = p.get("id") or p.get("uuid") or p.get("password") or ""
+                key = f"{proto}|{addr}|{port}|{ident}"
+
+                tag = tag_map.get(key, "")
+
+                # filter proto
                 if not protocol_pattern.search(proto):
                     continue
 
-                # apply filter by tag (country code prefix)
-                if not country_pattern.search(tag):
+                # filter negara
+                if not country_pattern.search(tag.split(" ")[0]):
                     continue
 
                 out = self.make_outbound_from_parsed(p, tag_map)
                 if out:
+                    out["tag"] = tag   # pastikan tag unik dipakai
                     outbounds.append(out)
-                    valid_tags.append(out['tag'])
+                    valid_tags.append(tag)
 
             if not outbounds:
                 print("No outbounds matched filter/exclude rules.")
@@ -485,11 +517,12 @@ def main():
     converter = ConfigToSingbox(
         country_mmdb_path="GeoLite2-Country.mmdb",
         asn_mmdb_path="GeoLite2-ASN.mmdb",
-        list_path=os.path.abspath(list_path),
-        output_file=os.path.abspath(output_file)
+        list_path="list.txt",
+        output_file="raven.json"
+        # list_path=os.path.abspath(list_path),
+        # output_file=os.path.abspath(output_file)
     )
     converter.process_configs()
-
 
 
 if __name__ == '__main__':
