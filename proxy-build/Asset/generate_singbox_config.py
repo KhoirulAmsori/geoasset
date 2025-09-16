@@ -96,6 +96,8 @@ class ConfigToSingbox:
         self.list_path = list_path
         self.output_file = output_file
         self.resolver = GeoIPResolver(country_mmdb_path, asn_mmdb_path)
+        print(f"[DEBUG] list_path   = {self.list_path}")
+        print(f"[DEBUG] output_file = {self.output_file}")
 
     @staticmethod
     def clean_isp_name(isp: str) -> str:
