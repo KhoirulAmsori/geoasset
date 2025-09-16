@@ -28,7 +28,7 @@ jobs:
       EnableDebug: ${{ github.event.inputs.debug || 'false' }}
       LitePath: Asset/lite
       LiteConfigPath: Asset/config.json
-      IncludedProtocols: "ss"
+      IncludedProtocols: "ss,trojan,vmess,vless"
       IncludedCountry: "HK,GB,IN,JP,MY,NL,SG,TW,VE,VN"
       SourcesFile: Asset/sources.txt
       GeoLiteCountryDbPath: Asset/GeoLite2-Country.mmdb
