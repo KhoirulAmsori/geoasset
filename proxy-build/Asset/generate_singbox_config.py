@@ -23,7 +23,7 @@ country_pattern = re.compile(
     re.IGNORECASE
 )
 
-protocol_patter = re.compile(
+protocol_pattern = re.compile(
     "(" + "|".join(p.strip() for p in protocol_filter_env.split(",") if p.strip()) + ")",
     re.IGNORECASE
 )

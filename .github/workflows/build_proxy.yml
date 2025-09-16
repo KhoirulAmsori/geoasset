@@ -65,8 +65,6 @@ jobs:
 
           dotnet restore
           dotnet run --configuration Release --project .
-          pwd
-          readlink -f list.txt
 
       - name: Build sing-box configuration
         run: |
