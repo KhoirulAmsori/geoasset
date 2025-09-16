@@ -9,6 +9,8 @@ import re
 from typing import Dict, Optional, Tuple, List
 from urllib.parse import urlparse, parse_qs
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 STOPWORDS = {
     "SAS", "INC", "LTD", "LLC", "CORP", "CO", "SA", "SRO", "ASN", "LIMITED", "COMPANY",
     "ASIA", "CLOUD", "INTERNATIONAL", "PROVIDER", "ISLAND", "PRIVATE", "ONLINE",
@@ -78,8 +80,19 @@ class ConfigToSingbox:
     def __init__(self,
                  country_mmdb_path: str = "GeoLite2-Country.mmdb",
                  asn_mmdb_path: str = "GeoLite2-ASN.mmdb",
-                 list_path: str = "../../proxy-build/list.txt",
-                 output_file: str = "raven.json"):
+                 list_path: str = None,
+                 output_file: str = None):
+        # Base dir = folder Asset tempat script ini berada
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+
+        # list.txt ada di ../../proxy-build/list.txt relatif ke Asset/
+        if list_path is None:
+            list_path = os.path.abspath(os.path.join(base_dir, "..", "..", "proxy-build", "list.txt"))
+
+        # output_file defaultnya di folder yang sama dengan list.txt
+        if output_file is None:
+            output_file = os.path.join(os.path.dirname(list_path), "raven.json")
+
         self.list_path = list_path
         self.output_file = output_file
         self.resolver = GeoIPResolver(country_mmdb_path, asn_mmdb_path)

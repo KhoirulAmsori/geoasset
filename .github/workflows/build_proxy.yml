@@ -74,7 +74,7 @@ jobs:
           python generate_singbox_config.py
           ls
           readlink -f raven.json
-          pwd
+          cat raven.json
           
           cd ../..
 
