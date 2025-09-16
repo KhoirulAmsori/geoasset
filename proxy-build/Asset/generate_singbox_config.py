@@ -517,10 +517,8 @@ def main():
     converter = ConfigToSingbox(
         country_mmdb_path="GeoLite2-Country.mmdb",
         asn_mmdb_path="GeoLite2-ASN.mmdb",
-        list_path="list.txt",
-        output_file="raven.json"
-        # list_path=os.path.abspath(list_path),
-        # output_file=os.path.abspath(output_file)
+        list_path=os.path.abspath(list_path),
+        output_file=os.path.abspath(output_file)
     )
     converter.process_configs()
 
