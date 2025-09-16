@@ -69,6 +69,7 @@ jobs:
       - name: Build sing-box configuration
         run: |
           cd source/proxy-build/Asset
+          pip install geoip2
           python generate_singbox_config.py
           
           cd ../..
