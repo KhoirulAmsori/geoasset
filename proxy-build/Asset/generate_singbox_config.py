@@ -82,20 +82,23 @@ class ConfigToSingbox:
                  asn_mmdb_path: str = "GeoLite2-ASN.mmdb",
                  list_path: str = None,
                  output_file: str = None):
-        # Base dir = folder Asset tempat script ini berada
+
+        # Base dir = folder tempat file python ini berada (Asset/)
         base_dir = os.path.dirname(os.path.abspath(__file__))
 
-        # list.txt ada di ../../proxy-build/list.txt relatif ke Asset/
+        # Lokasi list.txt = ../../proxy-build/list.txt
         if list_path is None:
-            list_path = os.path.abspath(os.path.join(base_dir, "..", "..", "proxy-build", "list.txt"))
+            list_path = os.path.abspath(os.path.join(base_dir, "..", "list.txt"))
 
-        # output_file defaultnya di folder yang sama dengan list.txt
+        # Output default ke folder yang sama dengan list.txt
         if output_file is None:
             output_file = os.path.join(os.path.dirname(list_path), "raven.json")
 
         self.list_path = list_path
         self.output_file = output_file
         self.resolver = GeoIPResolver(country_mmdb_path, asn_mmdb_path)
+
+        # Debug
         print(f"[DEBUG] list_path   = {self.list_path}")
         print(f"[DEBUG] output_file = {self.output_file}")
 
