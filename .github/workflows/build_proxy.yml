@@ -65,6 +65,12 @@ jobs:
 
           dotnet restore
           dotnet run --configuration Release --project .
+
+      - name: Build sing-box configuration
+        run: |
+          cd source/proxy-build/Asset
+          python generate_singbox_config.py
+          
           cd ../..
 
       - name: Prepare local repo for 'asset' branch (create if missing)
