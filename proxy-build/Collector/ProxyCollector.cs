@@ -44,7 +44,9 @@ public class ProxyCollector
         var allProfiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
 
         // 2️⃣ Pisahkan profil vless dan non-vless
-        var vlessProfiles = allProfiles.Where(p => string.Equals(p.Protocol, "vless", StringComparison.OrdinalIgnoreCase)).ToList();
+        var vlessProfiles = allProfiles
+            .Where(p => p.ToProfileUrl().StartsWith("vless://", StringComparison.OrdinalIgnoreCase))
+            .ToList();
         var liteProfiles = allProfiles.Except(vlessProfiles).ToList();
 
         LogToConsole($"Total profiles: {allProfiles.Count}, Lite: {liteProfiles.Count}, VLESS: {vlessProfiles.Count}");
@@ -209,14 +211,14 @@ public class ProxyCollector
     {
         if (!profiles.Any()) return new List<ProfileItem>();
 
-        var testUrl = _config.TestUrls.First();
+        var testUrl = "http://www.gstatic.com/generate_204";
         var tester = new ParallelUrlTester(
             new SingBoxWrapper(_config.SingboxPath),
             20000,
             _config.MaxThreadCount,
             _config.Timeout,
             1024,
-            "http://www.gstatic.com/generate_204"
+            testUrl
         );
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
