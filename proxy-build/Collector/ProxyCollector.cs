@@ -56,12 +56,21 @@ public class ProxyCollector
 
         LogToConsole($"Total profiles: {allProfiles.Count}, NON-VLESS: {liteProfiles.Count}, VLESS: {vlessProfiles.Count}");
 
-        // Test Lite untuk non-vless
-        var liteTestResult = liteProfiles.Any() ? await RunLiteTest(liteProfiles) : new List<ProfileItem>();
+        // Jalankan Lite dan Singbox paralel
+        var liteTask = liteProfiles.Any()
+            ? RunLiteTest(liteProfiles)
+            : Task.FromResult(new List<ProfileItem>());
+
+        var singboxTask = vlessProfiles.Any()
+            ? RunSingboxTest(vlessProfiles)
+            : Task.FromResult(new List<ProfileItem>());
+
+        await Task.WhenAll(liteTask, singboxTask);
+
+        var liteTestResult = liteTask.Result;
         LogToConsole($"Active proxies (Lite): {liteTestResult.Count}");
 
-        // Test SingBoxWrapper untuk vless
-        var vlessTestResult = vlessProfiles.Any() ? await RunSingboxTest(vlessProfiles) : new List<ProfileItem>();
+        var vlessTestResult = singboxTask.Result;
         LogToConsole($"Active proxies (Singbox): {vlessTestResult.Count}");
 
         // Gabungkan hasil

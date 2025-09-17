@@ -61,8 +61,14 @@ public class SourceChecker
                 .ToList();
             var liteProfiles = profiles.Except(vlessProfiles).ToList();
 
-            var liteResult = liteProfiles.Any() ? await RunLiteTest(liteProfiles) : new List<ProfileItem>();
-            var vlessResult = vlessProfiles.Any() ? await RunSingboxTest(vlessProfiles) : new List<ProfileItem>();
+            // Jalankan Lite dan Singbox paralel
+            var liteTask = liteProfiles.Any() ? RunLiteTest(liteProfiles) : Task.FromResult(new List<ProfileItem>());
+            var singboxTask = vlessProfiles.Any() ? RunSingboxTest(vlessProfiles) : Task.FromResult(new List<ProfileItem>());
+
+            await Task.WhenAll(liteTask, singboxTask);
+
+            var liteResult = liteTask.Result;
+            var vlessResult = singboxTask.Result;
 
             var activeLite = liteResult.Count;
             var activeSingbox = vlessResult.Count;
