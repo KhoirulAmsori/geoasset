@@ -80,6 +80,8 @@ public class ProxyCollector
 
         // Resolusi negara & limit per country
         var countryMap = new Dictionary<ProfileItem, IPToCountryResolver.ProxyCountryInfo>();
+        var countryCounters = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var profile in combinedResults)
         {
             if (string.IsNullOrEmpty(profile.Address))
@@ -93,16 +95,23 @@ public class ProxyCollector
             ispRaw = ispRaw.Replace(".", "").Replace(",", "").Trim();
 
             var ispParts = ispRaw.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries)
-                                 .Where(w => !FormalSuffixes.Contains(w.ToUpperInvariant()))
-                                 .ToArray();
+                                .Where(w => !FormalSuffixes.Contains(w.ToUpperInvariant()))
+                                .ToArray();
 
             var ispName = ispParts.Length >= 2
                 ? $"{ispParts[0]} {ispParts[1]}"
                 : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
 
-            // Hitung indeks unik per negara
-            var idx = combinedResults.Count(p => countryMap.ContainsKey(p) && countryMap[p].CountryCode == country.CountryCode);
-            profile.Name = $"{country.CountryCode} {idx} - {ispName}";
+            // Hitung indeks unik per negara (pakai counter dictionary)
+            var cc = country.CountryCode ?? "ZZ";
+            if (!countryCounters.TryGetValue(cc, out var currentIdx))
+            {
+                currentIdx = 0;
+            }
+            currentIdx++;
+            countryCounters[cc] = currentIdx;
+
+            profile.Name = $"{cc} {currentIdx} - {ispName}";
         }
 
         // --- hasil tanpa limit (semua aktif)
