@@ -3,16 +3,18 @@
 public class Config
 {
     public static Config Instance { get; private set; }
-    
-    public required string GithubApiToken { get; init; }
-    public required string GithubUser { get; init; }
-    public required string GithubRepo { get; init; }
-    public required string EnableDebug { get; init; }
-    public required string LitePath { get; init; }
-    public required string LiteConfigPath { get; init; }
+    public required int MaxThreadCount { get; init; }
     public required int MinActiveProxies { get; init; }
-    public required string[] Sources { get; init; }
+    public required int Timeout { get; init; }
+    public required string EnableDebug { get; init; }
+    public required string GithubApiToken { get; init; }
+    public required string GithubRepo { get; init; }
+    public required string GithubUser { get; init; }
+    public required string LiteConfigPath { get; init; }
+    public required string LitePath { get; init; }
+    public required string SingboxPath { get; init; }
     public required string[] IncludedProtocols { get; init; }
+    public required string[] Sources { get; init; }
 
     static Config() => Instance = CreateInstance();
 
@@ -36,15 +38,18 @@ public class Config
 
         return new Config
         {
-            GithubApiToken = Environment.GetEnvironmentVariable("GithubApiToken")!,
-            GithubUser = Environment.GetEnvironmentVariable("GithubUser")!,
-            GithubRepo = Environment.GetEnvironmentVariable("GithubRepo")!,
             EnableDebug = Environment.GetEnvironmentVariable("EnableDebug")!,
-            LitePath = Environment.GetEnvironmentVariable("LitePath")!,
+            GithubApiToken = Environment.GetEnvironmentVariable("GithubApiToken")!,
+            GithubRepo = Environment.GetEnvironmentVariable("GithubRepo")!,
+            GithubUser = Environment.GetEnvironmentVariable("GithubUser")!,
+            IncludedProtocols = includedProtocols,
             LiteConfigPath = Environment.GetEnvironmentVariable("LiteConfigPath")!,
+            LitePath = Environment.GetEnvironmentVariable("LitePath")!,
+            MaxThreadCount = int.Parse(Environment.GetEnvironmentVariable("MaxThreadCount")!),
             MinActiveProxies = int.Parse(Environment.GetEnvironmentVariable("MinActiveProxies")!),
+            SingboxPath = Environment.GetEnvironmentVariable("SingboxPath")!,
             Sources = sources,
-            IncludedProtocols = includedProtocols
+            Timeout = int.Parse(Environment.GetEnvironmentVariable("Timeout")!)
         };
     }
 }
