@@ -31,7 +31,7 @@ jobs:
       IncludedProtocols: "ss,trojan,vmess,vless"
       LiteConfigPath: Asset/config.json
       LitePath: Asset/lite
-      MaxThreadCount: 2048
+      MaxThreadCount: 128
       MinActiveProxies: 5
       SingboxPath: sing-box
       SourcesFile: Asset/sources.txt

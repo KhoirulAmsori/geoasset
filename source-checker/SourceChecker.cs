@@ -82,7 +82,7 @@ public class SourceChecker
             }
             else
             {
-                Log($"{activeLite.ToString().PadLeft(6)} (Lite) {activeSingbox.ToString().PadLeft(6)} (Singbox) / {testedProxy.ToString().PadLeft(6)} = {source} -> REMOVED!");
+                Log($"{activeCount.ToString().PadLeft(6)} / {testedProxy.ToString().PadLeft(6)} = {source} -> REMOVED!");
             }
         }
 
@@ -180,9 +180,10 @@ public class SourceChecker
     {
         if (!profiles.Any()) return new List<ProfileItem>();
 
+        var ports = Enumerable.Range(20000, _config.MaxThreadCount).ToArray();
         var tester = new ParallelUrlTester(
             new SingBoxWrapper(_config.SingboxPath),
-            20000,
+            ports,
             _config.MaxThreadCount,
             _config.Timeout,
             1024,
