@@ -55,7 +55,7 @@ public class ProxyCollector
         var liteTestResult = liteProfiles.Any() ? await RunLiteTest(liteProfiles) : new List<ProfileItem>();
 
         // Test SingBoxWrapper untuk vless
-        var vlessTestResult = vlessProfiles.Any() ? await TestProfilesWithSingbox(vlessProfiles) : new List<ProfileItem>();
+        var vlessTestResult = vlessProfiles.Any() ? await RunSingboxTest(vlessProfiles) : new List<ProfileItem>();
 
         // Gabungkan hasil
         var combinedResults = liteTestResult.Concat(vlessTestResult).ToList();
@@ -210,7 +210,7 @@ public class ProxyCollector
         }
     }
 
-    private async Task<List<ProfileItem>> TestProfilesWithSingbox(List<ProfileItem> profiles)
+    private async Task<List<ProfileItem>> RunSingboxTest(List<ProfileItem> profiles)
     {
         if (!profiles.Any()) return new List<ProfileItem>();
 
