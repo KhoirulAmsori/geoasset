@@ -46,8 +46,11 @@ public class ProxyCollector
         LogToConsole("Collector started.");
 
         // Ambil semua profile dari sumber (sudah unik)
-        var allProfiles = (await CollectProfilesFromConfigSources()).ToList();
-        LogToConsole($"Collected total unique profiles: {allProfiles.Count}");
+        var allProfiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
+        var included = _config.IncludedProtocols.Length > 0
+            ? string.Join(", ", _config.IncludedProtocols.Select(p => p.Replace("://", "").ToUpperInvariant()))
+            : "all";
+        LogToConsole($"Get unique profiles with protocols: {included}.");
 
         // Pisahkan VLESS dan non-VLESS
         var vlessProfiles = allProfiles
@@ -201,27 +204,18 @@ public class ProxyCollector
         // --- helper
         IEnumerable<ProfileItem> TryParseSubContent(string subContent)
         {
-            // Jika tidak ada "://" maka kemungkinan besar base64 encoded subscription
-            if (!subContent.Contains("://"))
+            // coba decode base64, kalau gagal biarkan apa adanya
+            try
             {
-                try
-                {
-                    var data = Convert.FromBase64String(subContent);
-                    subContent = Encoding.UTF8.GetString(data);
-                }
-                catch
-                {
-                    // kalau gagal decode, biarkan tetap apa adanya
-                }
+                var data = Convert.FromBase64String(subContent);
+                subContent = Encoding.UTF8.GetString(data);
             }
+            catch { }
 
             using var reader = new StringReader(subContent);
             string? line;
             while ((line = reader.ReadLine()?.Trim()) is not null)
             {
-                if (string.IsNullOrWhiteSpace(line))
-                    continue;
-
                 if (_config.IncludedProtocols.Length > 0 &&
                     !_config.IncludedProtocols.Any(p => line.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
                     continue;
@@ -233,7 +227,6 @@ public class ProxyCollector
                     yield return profile;
             }
         }
-
     }
 
     private async Task<List<ProfileItem>> RunLiteTest(List<ProfileItem> profiles)
