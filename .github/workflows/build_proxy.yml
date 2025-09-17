@@ -26,12 +26,12 @@ jobs:
       GeoLiteAsnDbPath: Asset/GeoLite2-ASN.mmdb
       GeoLiteCountryDbPath: Asset/GeoLite2-Country.mmdb
       IncludedCountry: "IN,JP,MY,NL,SG,TW,TH,VE,VN"
-      IncludedProtocols: "vless"
+      IncludedProtocols: "ss,trojan,vmess,vless"
       LiteConfigPath: Asset/config.json
       LitePath: Asset/lite
       MaxProxiesPerCountry: 3
       MaxThreadCount: 128
-      MinActiveProxies: 1
+      MinActiveProxies: 100
       SingboxPath: sing-box
       SourcesFile: Asset/sources.txt
       Timeout: 15000
