@@ -40,10 +40,10 @@ public class ProxyCollector
         var startTime = DateTime.Now;
         LogToConsole("Collector started.");
 
-        // 1️⃣ Ambil semua profile dari sumber
+        // Ambil semua profile dari sumber
         var allProfiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
 
-        // 2️⃣ Pisahkan profil vless dan non-vless
+        // Pisahkan profil vless dan non-vless
         var vlessProfiles = allProfiles
             .Where(p => p.ToProfileUrl().StartsWith("vless://", StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -51,13 +51,13 @@ public class ProxyCollector
 
         LogToConsole($"Total profiles: {allProfiles.Count}, Lite: {liteProfiles.Count}, VLESS: {vlessProfiles.Count}");
 
-        // 3️⃣ Test Lite untuk non-vless
+        // Test Lite untuk non-vless
         var liteTestResult = liteProfiles.Any() ? await RunLiteTest(liteProfiles) : new List<ProfileItem>();
 
-        // 4️⃣ Test SingBoxWrapper untuk vless
+        // Test SingBoxWrapper untuk vless
         var vlessTestResult = vlessProfiles.Any() ? await TestProfilesWithSingbox(vlessProfiles) : new List<ProfileItem>();
 
-        // 5️⃣ Gabungkan hasil
+        // Gabungkan hasil
         var combinedResults = liteTestResult.Concat(vlessTestResult).ToList();
         LogToConsole($"Total active proxies after tests: {combinedResults.Count}");
 
@@ -68,10 +68,13 @@ public class ProxyCollector
             return;
         }
 
-        // 6️⃣ Resolusi negara & limit per country
+        // Resolusi negara & limit per country
         var countryMap = new Dictionary<ProfileItem, IPToCountryResolver.ProxyCountryInfo>();
         foreach (var profile in combinedResults)
         {
+            if (string.IsNullOrEmpty(profile.Address))
+                continue; // skip profile tanpa alamat
+
             var country = _resolver.GetCountry(profile.Address);
             countryMap[profile] = country;
 
@@ -211,14 +214,13 @@ public class ProxyCollector
     {
         if (!profiles.Any()) return new List<ProfileItem>();
 
-        var testUrl = "http://www.gstatic.com/generate_204";
         var tester = new ParallelUrlTester(
             new SingBoxWrapper(_config.SingboxPath),
             20000,
             _config.MaxThreadCount,
             _config.Timeout,
             1024,
-            testUrl
+            "http://www.gstatic.com/generate_204"
         );
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
