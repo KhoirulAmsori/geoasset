@@ -192,7 +192,7 @@ public class SourceChecker
             }
             else
             {
-                Log($"Singbox test failed for {r.Profile.ToProfileUrl()} - Error: {r.ErrorMessage}");
+                Log($"Singbox test failed: {r.Profile.ToProfileUrl()} | Result: {r}");
             }
         }), default);
 
