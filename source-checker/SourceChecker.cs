@@ -202,9 +202,17 @@ public class SourceChecker
             Credentials = new Credentials(_config.GithubApiToken)
         };
 
+        // ambil branch dari environment GitHub Actions
+        var branch = Environment.GetEnvironmentVariable("GITHUB_REF_NAME") ?? "main";
+
         try
         {
-            var contents = await client.Repository.Content.GetAllContents(_config.GithubUser, _config.GithubRepo, path);
+            var contents = await client.Repository.Content.GetAllContentsByRef(
+                _config.GithubUser,
+                _config.GithubRepo,
+                path,
+                branch
+            );
             var file = contents.FirstOrDefault();
             sha = file?.Sha;
             existingContent = file?.Content;
@@ -220,9 +228,9 @@ public class SourceChecker
                 _config.GithubUser,
                 _config.GithubRepo,
                 path,
-                new CreateFileRequest("Add sources file.", content)
+                new CreateFileRequest("Add sources file.", content, branch)
             );
-            Log("Sources file did not exist, created a new file.");
+            Log($"Sources file did not exist, created a new file on branch {branch}.");
         }
         else
         {
@@ -236,9 +244,9 @@ public class SourceChecker
                 _config.GithubUser,
                 _config.GithubRepo,
                 path,
-                new UpdateFileRequest("Update active sources.", content, sha)
+                new UpdateFileRequest("Update active sources.", content, sha, branch)
             );
-            Log("Sources file updated successfully.");
+            Log($"Sources file updated successfully on branch {branch}.");
         }
     }
 }
