@@ -7,7 +7,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Web;
 using ProxyCollector.Configuration;
 using ProxyCollector.Services;
 using SingBoxLib.Parsing;
@@ -21,8 +20,8 @@ public class ProxyCollector
     private readonly CollectorConfig _config;
     private readonly IPToCountryResolver _resolver;
 
-    // Dipindah ke static readonly agar tidak dibuat berulang di loop
-    private static readonly string[] FormalSuffixes =
+    // Ganti ke HashSet untuk O(1) lookup
+    private static readonly HashSet<string> FormalSuffixes = new(StringComparer.OrdinalIgnoreCase)
     {
         "SAS","INC","LTD","LLC","CORP","CO","SA","SRO","ASN","LIMITED",
         "COMPANY","ASIA","CLOUD","INTERNATIONAL","PROVIDER","ISLAND",
@@ -38,10 +37,8 @@ public class ProxyCollector
         );
     }
 
-    private void LogToConsole(string log)
-    {
+    private void LogToConsole(string log) =>
         Console.WriteLine($"{DateTime.Now:HH:mm:ss} - {log}");
-    }
 
     public async Task StartAsync()
     {
@@ -78,52 +75,30 @@ public class ProxyCollector
             return;
         }
 
-        // Resolusi negara & limit per country
+        // Resolusi negara & penamaan
         var countryMap = new Dictionary<ProfileItem, IPToCountryResolver.ProxyCountryInfo>();
         var countryCounters = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var profile in combinedResults)
         {
             if (string.IsNullOrEmpty(profile.Address))
-                continue; // skip profile tanpa alamat
+                continue;
 
             var country = _resolver.GetCountry(profile.Address);
             countryMap[profile] = country;
 
-            // Normalisasi ISP
-            var ispRaw = string.IsNullOrEmpty(country.Isp) ? "Unknown" : country.Isp;
-            ispRaw = ispRaw.Replace(".", "").Replace(",", "").Trim();
-
-            var ispParts = ispRaw.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries)
-                                .Where(w => !FormalSuffixes.Contains(w.ToUpperInvariant()))
-                                .ToArray();
-
-            var ispName = ispParts.Length >= 2
-                ? $"{ispParts[0]} {ispParts[1]}"
-                : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
-
-            // Hitung indeks unik per negara (pakai counter dictionary)
-            var cc = country.CountryCode ?? "ZZ";
-            if (!countryCounters.TryGetValue(cc, out var currentIdx))
-            {
-                currentIdx = 0;
-            }
-            currentIdx++;
-            countryCounters[cc] = currentIdx;
-
-            profile.Name = $"{cc} {currentIdx} - {ispName}";
+            var ispName = NormalizeIspName(country.Isp);
+            AssignProxyName(profile, country, ispName, countryCounters);
         }
 
-        // --- hasil tanpa limit (semua aktif)
+        // --- hasil tanpa limit
         var allGrouped = combinedResults
             .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
             .OrderBy(g => g.Key)
             .SelectMany(g => g)
             .ToList();
 
-        var noLimitListPath = Path.Combine(Directory.GetCurrentDirectory(), "all_list.txt");
-        await File.WriteAllLinesAsync(noLimitListPath, allGrouped.Select(p => p.ToProfileUrl()));
-        LogToConsole($"Saved all_list.txt ({allGrouped.Count} proxies)");
+        await SaveProfileList("all_list.txt", allGrouped);
 
         // --- hasil dengan limit per country
         var limited = combinedResults
@@ -132,12 +107,50 @@ public class ProxyCollector
             .SelectMany(g => g.Take(_config.MaxProxiesPerCountry))
             .ToList();
 
-        var limitListPath = Path.Combine(Directory.GetCurrentDirectory(), "list.txt");
-        await File.WriteAllLinesAsync(limitListPath, limited.Select(p => p.ToProfileUrl()));
-        LogToConsole($"Saved list.txt ({limited.Count} proxies)");
+        await SaveProfileList("list.txt", limited);
 
         var timeSpent = DateTime.Now - startTime;
         LogToConsole($"Job finished, time spent: {timeSpent.Minutes:00} minutes and {timeSpent.Seconds:00} seconds.");
+    }
+
+    private static string NormalizeIspName(string? isp)
+    {
+        if (string.IsNullOrWhiteSpace(isp)) return "Unknown";
+
+        var ispRaw = isp.Replace(".", "").Replace(",", "").Trim();
+
+        var ispParts = ispRaw.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries)
+                             .Where(w => !FormalSuffixes.Contains(w))
+                             .ToArray();
+
+        return ispParts.Length switch
+        {
+            >= 2 => $"{ispParts[0]} {ispParts[1]}",
+            1 => ispParts[0],
+            _ => "Unknown"
+        };
+    }
+
+    private static void AssignProxyName(ProfileItem profile,
+        IPToCountryResolver.ProxyCountryInfo country,
+        string ispName,
+        Dictionary<string, int> counters)
+    {
+        var cc = country.CountryCode ?? "ZZ";
+        if (!counters.TryGetValue(cc, out var idx))
+            idx = 0;
+
+        idx++;
+        counters[cc] = idx;
+
+        profile.Name = $"{cc} {idx} - {ispName}";
+    }
+
+    private async Task SaveProfileList(string fileName, List<ProfileItem> profiles)
+    {
+        var path = Path.Combine(Directory.GetCurrentDirectory(), fileName);
+        await File.WriteAllLinesAsync(path, profiles.Select(p => p.ToProfileUrl()));
+        LogToConsole($"Saved {fileName} ({profiles.Count} proxies)");
     }
 
     private async Task<IReadOnlyCollection<ProfileItem>> CollectProfilesFromConfigSources()
@@ -177,7 +190,8 @@ public class ProxyCollector
             string? line;
             while ((line = reader.ReadLine()?.Trim()) is not null)
             {
-                if (_config.IncludedProtocols.Length > 0 && !_config.IncludedProtocols.Any(p => line.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+                if (_config.IncludedProtocols.Length > 0 &&
+                    !_config.IncludedProtocols.Any(p => line.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
                     continue;
 
                 ProfileItem? profile = null;
