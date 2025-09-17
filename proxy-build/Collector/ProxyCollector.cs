@@ -169,59 +169,58 @@ public class ProxyCollector
 
     private async Task<IReadOnlyCollection<ProfileItem>> CollectProfilesFromConfigSources()
     {
-        using var client = new HttpClient() { Timeout = TimeSpan.FromSeconds(8) };
-
-        // Dictionary untuk deduplikasi berbasis URL
-        var profiles = new ConcurrentDictionary<string, ProfileItem>(StringComparer.OrdinalIgnoreCase);
-
-        await Parallel.ForEachAsync(
-            _config.Sources,
-            new ParallelOptions { MaxDegreeOfParallelism = _config.MaxThreadCount },
-            async (source, ct) =>
-            {
-                try
-                {
-                    var subContents = await client.GetStringAsync(source, ct);
-
-                    int added = 0;
-                    foreach (var profile in TryParseSubContent(subContents))
-                    {
-                        var url = profile.ToProfileUrl();
-                        if (profiles.TryAdd(url, profile))
-                            added++;
-                    }
-
-                    LogToConsole($"Collected {added} unique proxies from {source} (Total: {profiles.Count})");
-                }
-                catch (Exception ex)
-                {
-                    LogToConsole($"Failed to fetch {source}. error: {ex.Message}");
-                }
-            });
-
-        return profiles.Values.ToList();
-
-        // --- helper
-        IEnumerable<ProfileItem> TryParseSubContent(string subContent)
+        using var client = new HttpClient()
         {
-            // coba decode base64, kalau gagal biarkan apa adanya
+            Timeout = TimeSpan.FromSeconds(8)
+        };
+
+        var profiles = new ConcurrentBag<ProfileItem>();
+        await Parallel.ForEachAsync(_config.Sources, new ParallelOptions { MaxDegreeOfParallelism = _config.MaxThreadCount }, async (source, ct) =>
+        {
             try
             {
-                var data = Convert.FromBase64String(subContent);
-                subContent = Encoding.UTF8.GetString(data);
+                var count = 0;
+                var subContents = await client.GetStringAsync(source);
+                foreach (var profile in TryParseSubContent(subContents))
+                {
+                    profiles.Add(profile);
+                    count++;
+                }
+                LogToConsole($"Get {count} proxies from {source}");
+            }
+            catch (Exception ex)
+            {
+                LogToConsole($"Failed to fetch {source}. error: {ex.Message}");
+            }
+        });
+
+        return profiles;
+
+        IEnumerable<ProfileItem> TryParseSubContent(string subContent)
+        {
+            try
+            {
+                var contentData = Convert.FromBase64String(subContent);
+                subContent = Encoding.UTF8.GetString(contentData);
             }
             catch { }
 
             using var reader = new StringReader(subContent);
-            string? line;
+            string? line = null;
             while ((line = reader.ReadLine()?.Trim()) is not null)
             {
                 if (_config.IncludedProtocols.Length > 0 &&
-                    !_config.IncludedProtocols.Any(p => line.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+                    !_config.IncludedProtocols.Any(proto => line.StartsWith(proto, StringComparison.OrdinalIgnoreCase)))
+                {
                     continue;
+                }
 
                 ProfileItem? profile = null;
-                try { profile = ProfileParser.ParseProfileUrl(line); } catch { }
+                try
+                {
+                    profile = ProfileParser.ParseProfileUrl(line);
+                }
+                catch { }
 
                 if (profile is not null)
                     yield return profile;
