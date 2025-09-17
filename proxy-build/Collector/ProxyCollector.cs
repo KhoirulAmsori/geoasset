@@ -201,18 +201,27 @@ public class ProxyCollector
         // --- helper
         IEnumerable<ProfileItem> TryParseSubContent(string subContent)
         {
-            // coba decode base64, kalau gagal biarkan apa adanya
-            try
+            // Jika tidak ada "://" maka kemungkinan besar base64 encoded subscription
+            if (!subContent.Contains("://"))
             {
-                var data = Convert.FromBase64String(subContent);
-                subContent = Encoding.UTF8.GetString(data);
+                try
+                {
+                    var data = Convert.FromBase64String(subContent);
+                    subContent = Encoding.UTF8.GetString(data);
+                }
+                catch
+                {
+                    // kalau gagal decode, biarkan tetap apa adanya
+                }
             }
-            catch { }
 
             using var reader = new StringReader(subContent);
             string? line;
             while ((line = reader.ReadLine()?.Trim()) is not null)
             {
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
                 if (_config.IncludedProtocols.Length > 0 &&
                     !_config.IncludedProtocols.Any(p => line.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
                     continue;
@@ -224,6 +233,7 @@ public class ProxyCollector
                     yield return profile;
             }
         }
+
     }
 
     private async Task<List<ProfileItem>> RunLiteTest(List<ProfileItem> profiles)
