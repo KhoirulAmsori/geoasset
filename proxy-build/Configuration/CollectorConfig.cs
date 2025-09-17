@@ -4,15 +4,18 @@ public class CollectorConfig
 {
     public static CollectorConfig Instance { get; private set; }
     public required int MaxProxiesPerCountry { get; init; }
-    public required int MinActiveProxies { get; init; }
     public required int MaxThreadCount { get; init; }
+    public required int MinActiveProxies { get; init; }
+    public required int Timeout { get; init; }
     public required string EnableDebug { get; init; }
-    public required string LitePath { get; init; }
-    public required string LiteConfigPath { get; init; }
-    public required string[] Sources { get; init; }
-    public required string[] IncludedProtocols { get; init; }
-    public required string GeoLiteCountryDbPath { get; init; }
     public required string GeoLiteAsnDbPath { get; init; }
+    public required string GeoLiteCountryDbPath { get; init; }
+    public required string LiteConfigPath { get; init; }
+    public required string LitePath { get; init; }
+    public required string SingboxPath { get; init; }
+    public required string V2rayFormatResultPath { get; init; }
+    public required string[] IncludedProtocols { get; init; }
+    public required string[] Sources { get; init; }
 
     static CollectorConfig()
     {
@@ -41,16 +44,19 @@ public class CollectorConfig
 
         return new CollectorConfig
         {
-            MaxProxiesPerCountry = int.Parse(Environment.GetEnvironmentVariable("MaxProxiesPerCountry")!),
-            MinActiveProxies = int.Parse(Environment.GetEnvironmentVariable("MinActiveProxies")!),
-            MaxThreadCount = int.Parse(Environment.GetEnvironmentVariable("MaxThreadCount")!),
             EnableDebug = Environment.GetEnvironmentVariable("EnableDebug")!,
-            LitePath = Environment.GetEnvironmentVariable("LitePath")!,
-            LiteConfigPath = Environment.GetEnvironmentVariable("LiteConfigPath")!,
-            Sources = sources,
-            IncludedProtocols = includedProtocols,
+            GeoLiteAsnDbPath = Environment.GetEnvironmentVariable("GeoLiteAsnDbPath")!,
             GeoLiteCountryDbPath = Environment.GetEnvironmentVariable("GeoLiteCountryDbPath")!,
-            GeoLiteAsnDbPath = Environment.GetEnvironmentVariable("GeoLiteAsnDbPath")!
+            IncludedProtocols = includedProtocols,
+            LiteConfigPath = Environment.GetEnvironmentVariable("LiteConfigPath")!,
+            LitePath = Environment.GetEnvironmentVariable("LitePath")!,
+            MaxProxiesPerCountry = int.Parse(Environment.GetEnvironmentVariable("MaxProxiesPerCountry")!),
+            MaxThreadCount = int.Parse(Environment.GetEnvironmentVariable("MaxThreadCount")!),
+            MinActiveProxies = int.Parse(Environment.GetEnvironmentVariable("MinActiveProxies")!),
+            SingboxPath = Environment.GetEnvironmentVariable("SingboxPath")!,
+            Sources = sources,
+            Timeout = int.Parse(Environment.GetEnvironmentVariable("Timeout")!),
+            V2rayFormatResultPath = Environment.GetEnvironmentVariable("V2rayFormatResultPath")!
         };
     }
 }

@@ -24,15 +24,18 @@ jobs:
   Check:
     runs-on: ubuntu-latest
     env:
-      GithubApiToken: ${{ secrets.GITHUB_TOKEN }}
-      GithubUser: ${{ github.repository_owner }}
-      GithubRepo: geoasset
       EnableDebug: ${{ github.event.inputs.debug || 'false' }}
-      LitePath: Asset/lite
+      GithubApiToken: ${{ secrets.GITHUB_TOKEN }}
+      GithubRepo: geoasset
+      GithubUser: ${{ github.repository_owner }}
+      IncludedProtocols: "ss,trojan,vmess,vless"
       LiteConfigPath: Asset/config.json
+      LitePath: Asset/lite
+      MaxThreadCount: 128
       MinActiveProxies: 5
-      IncludedProtocols: "ss,trojan,vmess"
+      SingboxPath: sing-box
       SourcesFile: Asset/sources.txt
+      Timeout: 15000
 
     steps:
       - uses: actions/checkout@v5
@@ -40,6 +43,11 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+
+      - name: Install sing-box
+        run: |
+          sudo dpkg -i proxy-build/Asset/*.deb
+          sudo apt-get install -f
 
       - name: Run source checker
         run: |
