@@ -64,19 +64,18 @@ public class SourceChecker
             var liteResult = liteProfiles.Any() ? await RunLiteTest(liteProfiles) : new List<ProfileItem>();
             var vlessResult = vlessProfiles.Any() ? await RunSingboxTest(vlessProfiles) : new List<ProfileItem>();
 
-            var activeLite = liteResult.Count;
-            var activeSingbox = vlessResult.Count;
-            var activeCount = activeLite + activeSingbox;
+            var combined = liteResult.Concat(vlessResult).ToList();
+            var activeCount = combined.Count;
             var testedProxy = profiles.Count;
 
             if (activeCount >= _config.MinActiveProxies)
             {
-                Log($"{activeLite.ToString().PadLeft(6)} (Lite) {activeSingbox.ToString().PadLeft(6)} (Singbox) / {testedProxy.ToString().PadLeft(6)} = {source}");
+                Log($"{activeCount.ToString().PadLeft(6)} / {testedProxy.ToString().PadLeft(6)} = {source}");
                 validSources.Add(source);
             }
             else
             {
-                Log($"{activeLite.ToString().PadLeft(6)} (Lite) {activeSingbox.ToString().PadLeft(6)} (Singbox) / {testedProxy.ToString().PadLeft(6)} = {source} -> REMOVED!");
+                Log($"{activeCount.ToString().PadLeft(6)} / {testedProxy.ToString().PadLeft(6)} = {source} -> REMOVED!");
             }
         }
 
