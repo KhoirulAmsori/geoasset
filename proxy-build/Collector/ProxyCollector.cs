@@ -45,16 +45,18 @@ public class ProxyCollector
         var startTime = DateTime.Now;
         LogToConsole("Collector started.");
 
-        // Ambil semua profile dari sumber
-        var allProfiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
+        // Ambil semua profile dari sumber (sudah unik)
+        var allProfiles = (await CollectProfilesFromConfigSources()).ToList();
+        LogToConsole($"Collected total unique profiles: {allProfiles.Count}");
 
-        // Pisahkan profil vless dan non-vless
+        // Pisahkan VLESS dan non-VLESS
         var vlessProfiles = allProfiles
             .Where(p => p.ToProfileUrl().StartsWith("vless://", StringComparison.OrdinalIgnoreCase))
             .ToList();
+
         var liteProfiles = allProfiles.Except(vlessProfiles).ToList();
 
-        LogToConsole($"Total profiles: {allProfiles.Count}, NON-VLESS: {liteProfiles.Count}, VLESS: {vlessProfiles.Count}");
+        LogToConsole($"NON-VLESS: {liteProfiles.Count}, VLESS: {vlessProfiles.Count}");
 
         // Jalankan Lite dan Singbox paralel
         var liteTask = liteProfiles.Any()
@@ -68,9 +70,9 @@ public class ProxyCollector
         await Task.WhenAll(liteTask, singboxTask);
 
         var liteTestResult = liteTask.Result;
-        LogToConsole($"Active proxies (Lite): {liteTestResult.Count}");
-
         var vlessTestResult = singboxTask.Result;
+
+        LogToConsole($"Active proxies (Lite): {liteTestResult.Count}");
         LogToConsole($"Active proxies (Singbox): {vlessTestResult.Count}");
 
         // Gabungkan hasil
@@ -165,29 +167,41 @@ public class ProxyCollector
     private async Task<IReadOnlyCollection<ProfileItem>> CollectProfilesFromConfigSources()
     {
         using var client = new HttpClient() { Timeout = TimeSpan.FromSeconds(8) };
-        var profiles = new ConcurrentBag<ProfileItem>();
 
-        await Parallel.ForEachAsync(_config.Sources, new ParallelOptions { MaxDegreeOfParallelism = _config.MaxThreadCount }, async (source, ct) =>
-        {
-            try
+        // Dictionary untuk deduplikasi berbasis URL
+        var profiles = new ConcurrentDictionary<string, ProfileItem>(StringComparer.OrdinalIgnoreCase);
+
+        await Parallel.ForEachAsync(
+            _config.Sources,
+            new ParallelOptions { MaxDegreeOfParallelism = _config.MaxThreadCount },
+            async (source, ct) =>
             {
-                var subContents = await client.GetStringAsync(source);
-                foreach (var profile in TryParseSubContent(subContents))
+                try
                 {
-                    profiles.Add(profile);
+                    var subContents = await client.GetStringAsync(source, ct);
+
+                    int added = 0;
+                    foreach (var profile in TryParseSubContent(subContents))
+                    {
+                        var url = profile.ToProfileUrl();
+                        if (profiles.TryAdd(url, profile))
+                            added++;
+                    }
+
+                    LogToConsole($"Collected {added} unique proxies from {source} (Total: {profiles.Count})");
                 }
-                LogToConsole($"Collected {profiles.Count} proxies from {source}");
-            }
-            catch (Exception ex)
-            {
-                LogToConsole($"Failed to fetch {source}. error: {ex.Message}");
-            }
-        });
+                catch (Exception ex)
+                {
+                    LogToConsole($"Failed to fetch {source}. error: {ex.Message}");
+                }
+            });
 
-        return profiles;
+        return profiles.Values.ToList();
 
+        // --- helper
         IEnumerable<ProfileItem> TryParseSubContent(string subContent)
         {
+            // coba decode base64, kalau gagal biarkan apa adanya
             try
             {
                 var data = Convert.FromBase64String(subContent);
@@ -205,7 +219,9 @@ public class ProxyCollector
 
                 ProfileItem? profile = null;
                 try { profile = ProfileParser.ParseProfileUrl(line); } catch { }
-                if (profile is not null) yield return profile;
+
+                if (profile is not null)
+                    yield return profile;
             }
         }
     }
