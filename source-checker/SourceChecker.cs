@@ -122,7 +122,7 @@ public class SourceChecker
 
             var (activeCount, testedProxy) = CountActiveProxies(liteJson);
 
-            if (activeCount > 0)
+            if (activeCount >= _config.MinActiveProxies)
             {
                 Log($"{activeCount.ToString().PadLeft(6)} / {testedProxy.ToString().PadLeft(6)} = {source}");
                 validSources.Add(source);

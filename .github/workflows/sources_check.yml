@@ -30,6 +30,7 @@ jobs:
       EnableDebug: ${{ github.event.inputs.debug || 'false' }}
       LitePath: Asset/lite
       LiteConfigPath: Asset/config.json
+      MinActiveProxies: 5
       IncludedProtocols: "ss,trojan,vmess,vless"
       SourcesFile: Asset/sources.txt
 
