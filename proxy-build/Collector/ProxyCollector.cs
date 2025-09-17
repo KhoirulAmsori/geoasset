@@ -39,41 +39,29 @@ public class ProxyCollector
 
     private static string GetProxyKey(ProfileItem profile)
     {
-        var sb = new StringBuilder();
-        var proto = profile.Protocol?.ToLowerInvariant() ?? "";
+        var url = profile.ToProfileUrl();
 
-        sb.Append(proto);
-        sb.Append("://");
+        // Pisahkan bagian "protokol://..." dengan param
+        var parts = url.Split(new[] { "?" }, 2, StringSplitOptions.None);
+        var basePart = parts[0]; // protokol://user@host:port
 
-        switch (proto)
+        // Kalau ada query, buang parameter yang tidak penting
+        if (parts.Length > 1)
         {
-            case "vless":
-            case "vmess":
-                sb.Append(profile.UserId ?? "");
-                break;
+            var query = parts[1];
+            var cleanParams = query.Split('&')
+                .Where(p => !p.StartsWith("encryption=", StringComparison.OrdinalIgnoreCase) &&
+                            !p.StartsWith("security=", StringComparison.OrdinalIgnoreCase) &&
+                            !p.StartsWith("host=", StringComparison.OrdinalIgnoreCase) &&
+                            !p.StartsWith("sni=", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(p => p) // biar stabil
+                .ToArray();
 
-            case "trojan":
-                sb.Append(profile.Password ?? "");
-                break;
-
-            case "ss":
-            case "shadowsocks":
-                sb.Append(profile.Method ?? "");
-                sb.Append(":");
-                sb.Append(profile.Password ?? "");
-                break;
+            if (cleanParams.Length > 0)
+                return basePart + "?" + string.Join("&", cleanParams);
         }
 
-        sb.Append("@");
-        sb.Append(profile.Address ?? "");
-        sb.Append(":");
-        sb.Append(profile.Port);
-
-        // kalau mau pembeda antar transport (ws/tcp/grpc), bisa tambahkan:
-        // sb.Append("?type=");
-        // sb.Append(profile.Type?.ToLowerInvariant() ?? "");
-
-        return sb.ToString();
+        return basePart;
     }
 
     private void LogToConsole(string log) =>
