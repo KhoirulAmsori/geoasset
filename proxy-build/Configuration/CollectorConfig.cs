@@ -6,6 +6,8 @@ public class CollectorConfig
     public required int MaxProxiesPerCountry { get; init; }
     public required int MinActiveProxies { get; init; }
     public required int MaxThreadCount { get; init; }
+    public required string SingboxPath { get; init; }
+    public required string V2rayFormatResultPath { get; init; }
     public required string EnableDebug { get; init; }
     public required string LitePath { get; init; }
     public required string LiteConfigPath { get; init; }
@@ -44,6 +46,8 @@ public class CollectorConfig
             MaxProxiesPerCountry = int.Parse(Environment.GetEnvironmentVariable("MaxProxiesPerCountry")!),
             MinActiveProxies = int.Parse(Environment.GetEnvironmentVariable("MinActiveProxies")!),
             MaxThreadCount = int.Parse(Environment.GetEnvironmentVariable("MaxThreadCount")!),
+            SingboxPath = Environment.GetEnvironmentVariable("SingboxPath")!,
+            V2rayFormatResultPath = Environment.GetEnvironmentVariable("V2rayFormatResultPath")!,
             EnableDebug = Environment.GetEnvironmentVariable("EnableDebug")!,
             LitePath = Environment.GetEnvironmentVariable("LitePath")!,
             LiteConfigPath = Environment.GetEnvironmentVariable("LiteConfigPath")!,

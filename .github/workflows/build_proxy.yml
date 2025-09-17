@@ -24,11 +24,14 @@ jobs:
     env:
       MaxProxiesPerCountry: 3
       MinActiveProxies: 100
-      MaxThreadCount: 32
+      MaxThreadCount: 96
+      Timeout: 5000
+      SingboxPath: sing-box
+      V2rayFormatResultPath: Asset/singlist.txt
       EnableDebug: ${{ github.event.inputs.debug || 'false' }}
       LitePath: Asset/lite
       LiteConfigPath: Asset/config.json
-      IncludedProtocols: "ss,trojan,vmess"
+      IncludedProtocols: "vless"
       IncludedCountry: "IN,JP,MY,NL,SG,TW,TH,VE,VN"
       SourcesFile: Asset/sources.txt
       GeoLiteCountryDbPath: Asset/GeoLite2-Country.mmdb
@@ -53,6 +56,11 @@ jobs:
           fetch-depth: 1
           ref: ${{ github.ref_name }}
           path: source
+
+      - name: Install sing-box
+        run: |
+          sudo dpkg -i source/proxy-build/Asset/*.deb
+          sudo apt-get install -f
 
       - name: Build proxy list
         run: |
