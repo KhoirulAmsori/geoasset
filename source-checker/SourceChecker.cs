@@ -3,12 +3,15 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using SourceChecker.Configuration;
 using SingBoxLib.Parsing;
-using System.Text.Json;
+using SingBoxLib.Runtime;
+using SingBoxLib.Runtime.Testing;
 
 namespace SourceChecker;
 
@@ -24,59 +27,6 @@ public class SourceChecker
     private void Log(string message) =>
         Console.WriteLine($"{DateTime.Now:HH:mm:ss} - {message}");
 
-    private static bool LooksLikeBase64(string s)
-    {
-        if (string.IsNullOrWhiteSpace(s)) return false;
-        s = s.Trim();
-        return s.Length % 4 == 0 && s.All(c => char.IsLetterOrDigit(c) || c == '+' || c == '/' || c == '=');
-    }
-
-    private static string TryBase64Decode(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input)) return input;
-
-        // Buang whitespace & newline supaya bisa diparse
-        var compact = input.Trim().Replace("\r", "").Replace("\n", "");
-
-        try
-        {
-            // Base64 decode
-            var bytes = Convert.FromBase64String(compact);
-            var decoded = Encoding.UTF8.GetString(bytes);
-
-            // Kalau hasil decode ternyata masih berisi URL schema (vmess://, ss://, trojan://, vless://, hysteria2://, dll)
-            if (decoded.Contains("://"))
-                return decoded;
-        }
-        catch
-        {
-            // Bukan base64 valid → kembalikan input asli
-        }
-
-        return input;
-    }
-
-    private List<ProfileItem> ParseProfiles(string content)
-    {
-        var profiles = new List<ProfileItem>();
-        using var reader = new StringReader(content);
-        string? line;
-        while ((line = reader.ReadLine()?.Trim()) != null)
-        {
-            if (_config.IncludedProtocols.Length > 0 &&
-                !_config.IncludedProtocols.Any(proto => line.StartsWith(proto, StringComparison.OrdinalIgnoreCase)))
-                continue;
-
-            try
-            {
-                var profile = ProfileParser.ParseProfileUrl(line);
-                if (profile != null) profiles.Add(profile);
-            }
-            catch { }
-        }
-        return profiles;
-    }
-
     public async Task RunAsync()
     {
         Log("Checker started.");
@@ -86,12 +36,11 @@ public class SourceChecker
 
         foreach (var source in _config.Sources)
         {
-            string content;
+            List<ProfileItem> profiles;
             try
             {
-                content = await client.GetStringAsync(source);
-                content = content.Trim();
-                content = TryBase64Decode(content);
+                var subContent = await client.GetStringAsync(source);
+                profiles = TryParseSubContent(subContent).ToList();
             }
             catch (Exception ex)
             {
@@ -99,28 +48,24 @@ public class SourceChecker
                 continue;
             }
 
-            var profiles = ParseProfiles(content);
             if (!profiles.Any())
             {
                 Log($"No valid proxies found in source {source}");
                 continue;
             }
 
-            var tempListPath = Path.Combine(Directory.GetCurrentDirectory(), "temp_list.txt");
-            await File.WriteAllLinesAsync(tempListPath, profiles.Select(p => p.ToProfileUrl()));
+            // Pisahkan vless dan non-vless
+            var vlessProfiles = profiles
+                .Where(p => p.ToProfileUrl().StartsWith("vless://", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            var liteProfiles = profiles.Except(vlessProfiles).ToList();
 
-            // Hapus out.json lama
-            var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
-            if (File.Exists(jsonPath)) File.Delete(jsonPath);
+            var liteResult = liteProfiles.Any() ? await RunLiteTest(liteProfiles) : new List<ProfileItem>();
+            var vlessResult = vlessProfiles.Any() ? await RunSingboxTest(vlessProfiles) : new List<ProfileItem>();
 
-            var liteJson = await RunLite(tempListPath);
-            if (liteJson == null)
-            {
-                Log($"Lite test failed for source {source}");
-                continue;
-            }
-
-            var (activeCount, testedProxy) = CountActiveProxies(liteJson);
+            var combined = liteResult.Concat(vlessResult).ToList();
+            var activeCount = combined.Count;
+            var testedProxy = profiles.Count;
 
             if (activeCount >= _config.MinActiveProxies)
             {
@@ -144,33 +89,44 @@ public class SourceChecker
         await CommitFileToGithub(string.Join(Environment.NewLine, validSources), "proxy-build/Asset/sources.txt");
     }
 
-    private (int Active, int Tested) CountActiveProxies(string jsonPath)
+    // === Helper untuk parsing content (dengan base64 decode aman) ===
+    private IEnumerable<ProfileItem> TryParseSubContent(string subContent)
     {
-        using var doc = JsonDocument.Parse(File.ReadAllText(jsonPath));
-        var nodes = doc.RootElement.GetProperty("nodes");
-
-        int active = 0;
-        int tested = nodes.GetArrayLength();
-
-        foreach (var node in nodes.EnumerateArray())
+        try
         {
-            if (node.TryGetProperty("isok", out var isokProp) &&
-                isokProp.ValueKind == JsonValueKind.True)
-            {
-                active++;
-            }
+            var data = Convert.FromBase64String(subContent.Trim());
+            subContent = Encoding.UTF8.GetString(data);
+        }
+        catch
+        {
+            // bukan base64 → gunakan apa adanya
         }
 
-        return (active, tested);
+        using var reader = new StringReader(subContent);
+        string? line;
+        while ((line = reader.ReadLine()?.Trim()) is not null)
+        {
+            if (_config.IncludedProtocols.Length > 0 &&
+                !_config.IncludedProtocols.Any(proto => line.StartsWith(proto, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            ProfileItem? profile = null;
+            try { profile = ProfileParser.ParseProfileUrl(line); } catch { }
+            if (profile is not null) yield return profile;
+        }
     }
 
-    private async Task<string?> RunLite(string listPath)
+    // === Lite test untuk non-vless ===
+    private async Task<List<ProfileItem>> RunLiteTest(List<ProfileItem> profiles)
     {
+        var listPath = Path.Combine(Directory.GetCurrentDirectory(), "temp_list.txt");
+        await File.WriteAllLinesAsync(listPath, profiles.Select(p => p.ToProfileUrl()));
+
         try
         {
             var debug = string.Equals(_config.EnableDebug, "true", StringComparison.OrdinalIgnoreCase);
 
-            var psi = new System.Diagnostics.ProcessStartInfo
+            var psi = new ProcessStartInfo
             {
                 FileName = "bash",
                 Arguments = debug
@@ -180,30 +136,67 @@ public class SourceChecker
                 CreateNoWindow = true
             };
 
-            using var proc = new System.Diagnostics.Process { StartInfo = psi };
+            using var proc = new Process { StartInfo = psi };
             proc.Start();
             await proc.WaitForExitAsync();
 
             var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
-            if (proc.ExitCode == 0 && File.Exists(jsonPath))
-                return jsonPath;
+            if (!File.Exists(jsonPath)) return new List<ProfileItem>();
 
-            Log($"Lite test failed with exit code {proc.ExitCode}");
-            return null;
+            using var doc = JsonDocument.Parse(File.ReadAllText(jsonPath));
+            var nodes = doc.RootElement.GetProperty("nodes");
+            var result = new List<ProfileItem>();
+
+            foreach (var node in nodes.EnumerateArray())
+            {
+                if (node.TryGetProperty("isok", out var isokProp) &&
+                    isokProp.ValueKind == JsonValueKind.True &&
+                    node.TryGetProperty("link", out var linkProp))
+                {
+                    var profile = ProfileParser.ParseProfileUrl(linkProp.GetString()!);
+                    if (profile != null) result.Add(profile);
+                }
+            }
+
+            return result;
         }
         catch (Exception ex)
         {
-            Log($"Failed to run Lite test: {ex.Message}");
-            return null;
+            Log($"Lite test failed: {ex.Message}");
+            return new List<ProfileItem>();
         }
     }
 
+    // === SingBox test untuk vless ===
+    private async Task<List<ProfileItem>> RunSingboxTest(List<ProfileItem> profiles)
+    {
+        if (!profiles.Any()) return new List<ProfileItem>();
+
+        var tester = new ParallelUrlTester(
+            new SingBoxWrapper(_config.SingboxPath),
+            20000,
+            _config.MaxThreadCount,
+            _config.Timeout,
+            1024,
+            "http://www.gstatic.com/generate_204"
+        );
+
+        var workingResults = new ConcurrentBag<UrlTestResult>();
+        await tester.ParallelTestAsync(profiles, new Progress<UrlTestResult>(r =>
+        {
+            if (r.Success) workingResults.Add(r);
+        }), default);
+
+        return workingResults.Select(r => r.Profile).ToList();
+    }
+
+    // === Commit hasil ke Github ===
     private async Task CommitFileToGithub(string content, string path)
     {
         string? sha = null;
         string? existingContent = null;
 
-        var client = new GitHubClient(new ProductHeaderValue("ProxyCollector"))
+        var client = new GitHubClient(new ProductHeaderValue("SourceChecker"))
         {
             Credentials = new Credentials(_config.GithubApiToken)
         };
@@ -213,36 +206,37 @@ public class SourceChecker
             var contents = await client.Repository.Content.GetAllContents(_config.GithubUser, _config.GithubRepo, path);
             var file = contents.FirstOrDefault();
             sha = file?.Sha;
-            existingContent = file?.Content; // ambil isi file lama
+            existingContent = file?.Content;
         }
-        catch 
+        catch
         {
-            // file belum ada → abaikan error
+            // file belum ada → abaikan
         }
 
         if (sha is null)
         {
-            // file belum ada → buat baru
-            await client.Repository
-                .Content
-                .CreateFile(_config.GithubUser, _config.GithubRepo, path,
-                new CreateFileRequest("Add sources file.", content));
+            await client.Repository.Content.CreateFile(
+                _config.GithubUser,
+                _config.GithubRepo,
+                path,
+                new CreateFileRequest("Add sources file.", content)
+            );
             Log("Sources file did not exist, created a new file.");
         }
         else
         {
-            // cek apakah ada perubahan konten
             if (existingContent?.Trim() == content.Trim())
             {
                 Log("No changes in sources file, skipping commit.");
                 return;
             }
 
-            // kalau ada perubahan → update
-            await client.Repository
-                .Content
-                .UpdateFile(_config.GithubUser, _config.GithubRepo, path,
-                new UpdateFileRequest("Update active sources.", content, sha));
+            await client.Repository.Content.UpdateFile(
+                _config.GithubUser,
+                _config.GithubRepo,
+                path,
+                new UpdateFileRequest("Update active sources.", content, sha)
+            );
             Log("Sources file updated successfully.");
         }
     }
