@@ -4,15 +4,9 @@ using SingBoxLib.Runtime.Testing;
 using SingBoxLib.Runtime;
 using SourceChecker.Configuration;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Text.Json;
 using System.Text;
-using System.Threading.Tasks;
-using System;
 
 namespace SourceChecker;
 
@@ -37,11 +31,12 @@ public class SourceChecker
 
         foreach (var source in _config.Sources)
         {
+            // --- Ambil & parse profiles ---
             List<ProfileItem> profiles;
             try
             {
                 var subContent = await client.GetStringAsync(source);
-                profiles = TryParseSubContent(subContent).ToList();
+                profiles = TryParseSubContent(subContent).Distinct().ToList();
             }
             catch (Exception ex)
             {
@@ -55,15 +50,21 @@ public class SourceChecker
                 continue;
             }
 
-            // Pisahkan vless dan non-vless
+            // --- Pisahkan VLESS dan non-VLESS ---
             var vlessProfiles = profiles
                 .Where(p => p.ToProfileUrl().StartsWith("vless://", StringComparison.OrdinalIgnoreCase))
                 .ToList();
+
             var liteProfiles = profiles.Except(vlessProfiles).ToList();
 
-            // Jalankan Lite dan Singbox paralel
-            var liteTask = liteProfiles.Any() ? RunLiteTest(liteProfiles) : Task.FromResult(new List<ProfileItem>());
-            var singboxTask = vlessProfiles.Any() ? RunSingboxTest(vlessProfiles) : Task.FromResult(new List<ProfileItem>());
+            // --- Jalankan test paralel ---
+            var liteTask = liteProfiles.Any()
+                ? RunLiteTest(liteProfiles)
+                : Task.FromResult(new List<ProfileItem>());
+
+            var singboxTask = vlessProfiles.Any()
+                ? RunSingboxTest(vlessProfiles)
+                : Task.FromResult(new List<ProfileItem>());
 
             await Task.WhenAll(liteTask, singboxTask);
 
@@ -75,6 +76,7 @@ public class SourceChecker
             var activeCount = activeLite + activeSingbox;
             var testedProxy = profiles.Count;
 
+            // --- Logging hasil ---
             if (activeCount >= _config.MinActiveProxies)
             {
                 Log($"{activeLite.ToString().PadLeft(6)} (Lite) {activeSingbox.ToString().PadLeft(6)} (Singbox) / {testedProxy.ToString().PadLeft(6)} = {source}");
@@ -86,18 +88,18 @@ public class SourceChecker
             }
         }
 
-        // Tulis ulang sources.txt hanya dengan link valid
+        // --- Tulis ulang sources.txt ---
         var sourcesFile = Environment.GetEnvironmentVariable("SourcesFile") ?? "sources.txt";
         File.WriteAllLines(sourcesFile, validSources);
 
-        Log($"Total sources checked: {_config.Sources.Length}");
-        Log($"Active sources: {validSources.Count}");
-        Log($"Inactive sources: {_config.Sources.Length - validSources.Count}");
+        Log($"Total sources checked : {_config.Sources.Length}");
+        Log($"Active sources        : {validSources.Count}");
+        Log($"Inactive sources      : {_config.Sources.Length - validSources.Count}");
 
         await CommitFileToGithub(string.Join(Environment.NewLine, validSources), "proxy-build/Asset/sources.txt");
     }
 
-    // === Helper untuk parsing content (dengan base64 decode aman) ===
+    // === Helper untuk parsing content (base64 aman) ===
     private IEnumerable<ProfileItem> TryParseSubContent(string subContent)
     {
         try
@@ -107,7 +109,7 @@ public class SourceChecker
         }
         catch
         {
-            // bukan base64 → gunakan apa adanya
+            // bukan base64 → abaikan
         }
 
         using var reader = new StringReader(subContent);
