@@ -186,14 +186,7 @@ public class SourceChecker
         var workingResults = new ConcurrentBag<UrlTestResult>();
         await tester.ParallelTestAsync(profiles, new Progress<UrlTestResult>(r =>
         {
-            if (r.Success)
-            {
-                workingResults.Add(r);
-            }
-            else
-            {
-                Log($"Singbox test failed: {r.Profile.ToProfileUrl()} | Result: {r}");
-            }
+            if (r.Success) workingResults.Add(r);
         }), default);
 
         return workingResults.Select(r => r.Profile).ToList();
