@@ -45,7 +45,7 @@ public class CollectorConfig
         return new CollectorConfig
         {
             EnableDebug = Environment.GetEnvironmentVariable("EnableDebug")!,
-            GeoLiteAsnDbPath = Environment.GetEnvironmentVariable("GeoLiteAsnDbPath")!
+            GeoLiteAsnDbPath = Environment.GetEnvironmentVariable("GeoLiteAsnDbPath")!,
             GeoLiteCountryDbPath = Environment.GetEnvironmentVariable("GeoLiteCountryDbPath")!,
             IncludedProtocols = includedProtocols,
             LiteConfigPath = Environment.GetEnvironmentVariable("LiteConfigPath")!,
@@ -56,7 +56,7 @@ public class CollectorConfig
             SingboxPath = Environment.GetEnvironmentVariable("SingboxPath")!,
             Sources = sources,
             Timeout = int.Parse(Environment.GetEnvironmentVariable("Timeout")!),
-            V2rayFormatResultPath = Environment.GetEnvironmentVariable("V2rayFormatResultPath")!,
+            V2rayFormatResultPath = Environment.GetEnvironmentVariable("V2rayFormatResultPath")!
         };
     }
 }
