@@ -67,7 +67,7 @@ public class SourceChecker
             // --- Logging hasil ---
             if (activeCount >= _config.MinActiveProxies)
             {
-                Log($"{activeLite.ToString().PadLeft(6)} (Lite) {activeSingbox.ToString().PadLeft(6)} (Singbox) / {testedProxy.ToString().PadLeft(6)} = {source}");
+                Log($"{activeLite.ToString().PadLeft(6)} (NON-VLESS) {activeSingbox.ToString().PadLeft(6)} (VLESS) / {testedProxy.ToString().PadLeft(6)} = {source}");
                 validSources.Add(source);
             }
             else
