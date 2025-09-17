@@ -50,26 +50,14 @@ public class SourceChecker
                 continue;
             }
 
-            // --- Pisahkan VLESS dan non-VLESS ---
+            // Pisahkan vless dan non-vless
             var vlessProfiles = profiles
                 .Where(p => p.ToProfileUrl().StartsWith("vless://", StringComparison.OrdinalIgnoreCase))
                 .ToList();
-
             var liteProfiles = profiles.Except(vlessProfiles).ToList();
 
-            // --- Jalankan test paralel ---
-            var liteTask = liteProfiles.Any()
-                ? RunLiteTest(liteProfiles)
-                : Task.FromResult(new List<ProfileItem>());
-
-            var singboxTask = vlessProfiles.Any()
-                ? RunSingboxTest(vlessProfiles)
-                : Task.FromResult(new List<ProfileItem>());
-
-            await Task.WhenAll(liteTask, singboxTask);
-
-            var liteResult = liteTask.Result;
-            var vlessResult = singboxTask.Result;
+            var liteResult = liteProfiles.Any() ? await RunLiteTest(liteProfiles) : new List<ProfileItem>();
+            var vlessResult = vlessProfiles.Any() ? await RunSingboxTest(vlessProfiles) : new List<ProfileItem>();
 
             var activeLite = liteResult.Count;
             var activeSingbox = vlessResult.Count;
