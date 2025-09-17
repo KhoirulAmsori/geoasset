@@ -10,7 +10,7 @@ public class Config
     public required string EnableDebug { get; init; }
     public required string LitePath { get; init; }
     public required string LiteConfigPath { get; init; }
-    public required string MinActiveProxies { get; init; }
+    public required int MinActiveProxies { get; init; }
     public required string[] Sources { get; init; }
     public required string[] IncludedProtocols { get; init; }
 
@@ -42,7 +42,7 @@ public class Config
             EnableDebug = Environment.GetEnvironmentVariable("EnableDebug")!,
             LitePath = Environment.GetEnvironmentVariable("LitePath")!,
             LiteConfigPath = Environment.GetEnvironmentVariable("LiteConfigPath")!,
-            MinActiveProxies = Environment.GetEnvironmentVariable("MinActiveProxies")!,
+            MinActiveProxies = int.Parse(Environment.GetEnvironmentVariable("MinActiveProxies")!),
             Sources = sources,
             IncludedProtocols = includedProtocols
         };
