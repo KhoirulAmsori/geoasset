@@ -37,6 +37,45 @@ public class ProxyCollector
         );
     }
 
+    private static string GetProxyKey(ProfileItem profile)
+    {
+        var sb = new StringBuilder();
+        var proto = profile.Protocol?.ToLowerInvariant() ?? "";
+
+        sb.Append(proto);
+        sb.Append("://");
+
+        switch (proto)
+        {
+            case "vless":
+            case "vmess":
+                sb.Append(profile.UserId ?? "");
+                break;
+
+            case "trojan":
+                sb.Append(profile.Password ?? "");
+                break;
+
+            case "ss":
+            case "shadowsocks":
+                sb.Append(profile.Method ?? "");
+                sb.Append(":");
+                sb.Append(profile.Password ?? "");
+                break;
+        }
+
+        sb.Append("@");
+        sb.Append(profile.Address ?? "");
+        sb.Append(":");
+        sb.Append(profile.Port);
+
+        // kalau mau pembeda antar transport (ws/tcp/grpc), bisa tambahkan:
+        // sb.Append("?type=");
+        // sb.Append(profile.Type?.ToLowerInvariant() ?? "");
+
+        return sb.ToString();
+    }
+
     private void LogToConsole(string log) =>
         Console.WriteLine($"{DateTime.Now:HH:mm:ss} - {log}");
 
@@ -100,6 +139,8 @@ public class ProxyCollector
 
         // --- hasil tanpa limit
         var allGrouped = combinedResults
+            .GroupBy(p => GetProxyKey(p))
+            .Select(g => g.First()) // ambil satu saja untuk tiap key
             .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
             .OrderBy(g => g.Key)
             .SelectMany(g => g)
@@ -109,6 +150,8 @@ public class ProxyCollector
 
         // --- hasil dengan limit per country
         var limited = combinedResults
+            .GroupBy(p => GetProxyKey(p))
+            .Select(g => g.First())
             .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
             .OrderBy(g => g.Key)
             .SelectMany(g => g.Take(_config.MaxProxiesPerCountry))
