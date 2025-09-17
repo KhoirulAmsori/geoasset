@@ -231,6 +231,10 @@ public class ProxyCollector
         var listPath = Path.Combine(Directory.GetCurrentDirectory(), "collect_list.txt");
         await File.WriteAllLinesAsync(listPath, profiles.Select(p => p.ToProfileUrl()));
 
+        var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
+        if (File.Exists(jsonPath))
+            File.Delete(jsonPath);
+
         try
         {
             var psi = new ProcessStartInfo
@@ -247,7 +251,6 @@ public class ProxyCollector
             proc.Start();
             await proc.WaitForExitAsync();
 
-            var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
             if (!File.Exists(jsonPath)) return new List<ProfileItem>();
 
             using var doc = JsonDocument.Parse(File.ReadAllText(jsonPath));
@@ -256,7 +259,8 @@ public class ProxyCollector
 
             foreach (var node in nodes.EnumerateArray())
             {
-                if (node.TryGetProperty("isok", out var isokProp) && isokProp.ValueKind == JsonValueKind.True &&
+                if (node.TryGetProperty("isok", out var isokProp) &&
+                    isokProp.ValueKind == JsonValueKind.True &&
                     node.TryGetProperty("link", out var linkProp))
                 {
                     var profile = ProfileParser.ParseProfileUrl(linkProp.GetString()!);
