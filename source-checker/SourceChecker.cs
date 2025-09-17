@@ -180,10 +180,9 @@ public class SourceChecker
     {
         if (!profiles.Any()) return new List<ProfileItem>();
 
-        var ports = Enumerable.Range(20000, _config.MaxThreadCount).ToArray();
         var tester = new ParallelUrlTester(
             new SingBoxWrapper(_config.SingboxPath),
-            ports,
+            20000,
             _config.MaxThreadCount,
             _config.Timeout,
             1024,
