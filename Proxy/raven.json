@@ -97,9 +97,12 @@
             "type": "selector",
             "tag": "MIXED",
             "outbounds": [
+                "JP 1 - LATITUDE SH",
+                "MY 1 - Pq Hosting",
                 "NL 1 - DIGITALOCEAN",
                 "NL 2 - DIGITALOCEAN",
-                "NL 3 - DIGITALOCEAN"
+                "NL 3 - OVH",
+                "SG 1 - PT Herza"
             ]
         },
         {
@@ -111,6 +114,34 @@
                 "MIXED"
             ],
             "default": "REJECT"
+        },
+        {
+            "type": "vless",
+            "tag": "JP 1 - LATITUDE SH",
+            "server": "172.111.146.64",
+            "server_port": 80,
+            "uuid": "904f8ffa-4652-4076-8f2f-e586807840ec",
+            "flow": "",
+            "tls": {
+                "enabled": true,
+                "server_name": "172.111.146.64",
+                "insecure": true
+            },
+            "transport": {}
+        },
+        {
+            "type": "vless",
+            "tag": "MY 1 - Pq Hosting",
+            "server": "45.89.107.232",
+            "server_port": 8880,
+            "uuid": "df0680ca-e43c-498d-ed86-8e196eedd012",
+            "flow": "",
+            "tls": {
+                "enabled": true,
+                "server_name": "45.89.107.232",
+                "insecure": true
+            },
+            "transport": {}
         },
         {
             "type": "vless",
@@ -129,20 +160,6 @@
         {
             "type": "vless",
             "tag": "NL 2 - DIGITALOCEAN",
-            "server": "159.223.209.139",
-            "server_port": 46964,
-            "uuid": "4bb35928-40bb-4bf3-95f1-9efdc4169147",
-            "flow": "",
-            "tls": {
-                "enabled": true,
-                "server_name": "159.223.209.139",
-                "insecure": true
-            },
-            "transport": {}
-        },
-        {
-            "type": "vless",
-            "tag": "NL 3 - DIGITALOCEAN",
             "server": "165.22.200.45",
             "server_port": 45323,
             "uuid": "3e3cec72-9eb4-4aa2-834d-b3c641ef1e6d",
@@ -150,6 +167,34 @@
             "tls": {
                 "enabled": true,
                 "server_name": "165.22.200.45",
+                "insecure": true
+            },
+            "transport": {}
+        },
+        {
+            "type": "vless",
+            "tag": "NL 3 - OVH",
+            "server": "141.227.130.35",
+            "server_port": 45497,
+            "uuid": "7e556f7c-ee48-4474-881e-a35f8900803a",
+            "flow": "",
+            "tls": {
+                "enabled": true,
+                "server_name": "141.227.130.35",
+                "insecure": true
+            },
+            "transport": {}
+        },
+        {
+            "type": "vless",
+            "tag": "SG 1 - PT Herza",
+            "server": "38.47.176.134",
+            "server_port": 59967,
+            "uuid": "a19fd311-c343-4b54-9ca3-fe6dcd84c0fc",
+            "flow": "",
+            "tls": {
+                "enabled": true,
+                "server_name": "38.47.176.134",
                 "insecure": true
             },
             "transport": {}
