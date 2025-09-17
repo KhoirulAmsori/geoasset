@@ -132,6 +132,10 @@ public class SourceChecker
         var listPath = Path.Combine(Directory.GetCurrentDirectory(), "temp_list.txt");
         await File.WriteAllLinesAsync(listPath, profiles.Select(p => p.ToProfileUrl()));
 
+        var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
+        if (File.Exists(jsonPath)) 
+            File.Delete(jsonPath);
+
         try
         {
             var debug = string.Equals(_config.EnableDebug, "true", StringComparison.OrdinalIgnoreCase);
@@ -150,7 +154,6 @@ public class SourceChecker
             proc.Start();
             await proc.WaitForExitAsync();
 
-            var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "out.json");
             if (!File.Exists(jsonPath)) return new List<ProfileItem>();
 
             using var doc = JsonDocument.Parse(File.ReadAllText(jsonPath));
