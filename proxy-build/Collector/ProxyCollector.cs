@@ -49,7 +49,7 @@ public class ProxyCollector
             .ToList();
         var liteProfiles = allProfiles.Except(vlessProfiles).ToList();
 
-        LogToConsole($"Total profiles: {allProfiles.Count}, Lite: {liteProfiles.Count}, VLESS: {vlessProfiles.Count}");
+        LogToConsole($"Total profiles: {allProfiles.Count}, NON-VLESS: {liteProfiles.Count}, VLESS: {vlessProfiles.Count}");
 
         // Test Lite untuk non-vless
         var liteTestResult = liteProfiles.Any() ? await RunLiteTest(liteProfiles) : new List<ProfileItem>();
