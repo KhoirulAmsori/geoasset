@@ -21,6 +21,14 @@ public class ProxyCollector
     private readonly CollectorConfig _config;
     private readonly IPToCountryResolver _resolver;
 
+    // Dipindah ke static readonly agar tidak dibuat berulang di loop
+    private static readonly string[] FormalSuffixes =
+    {
+        "SAS","INC","LTD","LLC","CORP","CO","SA","SRO","ASN","LIMITED",
+        "COMPANY","ASIA","CLOUD","INTERNATIONAL","PROVIDER","ISLAND",
+        "PRIVATE","ONLINE","OF","AS","BV","HK"
+    };
+
     public ProxyCollector()
     {
         _config = CollectorConfig.Instance;
@@ -53,9 +61,11 @@ public class ProxyCollector
 
         // Test Lite untuk non-vless
         var liteTestResult = liteProfiles.Any() ? await RunLiteTest(liteProfiles) : new List<ProfileItem>();
+        LogToConsole($"Active proxies (Lite): {liteTestResult.Count}");
 
         // Test SingBoxWrapper untuk vless
         var vlessTestResult = vlessProfiles.Any() ? await RunSingboxTest(vlessProfiles) : new List<ProfileItem>();
+        LogToConsole($"Active proxies (Singbox): {vlessTestResult.Count}");
 
         // Gabungkan hasil
         var combinedResults = liteTestResult.Concat(vlessTestResult).ToList();
@@ -78,14 +88,19 @@ public class ProxyCollector
             var country = _resolver.GetCountry(profile.Address);
             countryMap[profile] = country;
 
+            // Normalisasi ISP
             var ispRaw = string.IsNullOrEmpty(country.Isp) ? "Unknown" : country.Isp;
             ispRaw = ispRaw.Replace(".", "").Replace(",", "").Trim();
 
-            var formalSuffixes = new[] { "SAS","INC","LTD","LLC","CORP","CO","SA","SRO","ASN","LIMITED","COMPANY","ASIA","CLOUD","INTERNATIONAL","PROVIDER","ISLAND","PRIVATE","ONLINE","OF","AS","BV","HK" };
             var ispParts = ispRaw.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries)
-                                 .Where(w => !formalSuffixes.Contains(w.ToUpperInvariant()))
+                                 .Where(w => !FormalSuffixes.Contains(w.ToUpperInvariant()))
                                  .ToArray();
-            var ispName = ispParts.Length >= 2 ? $"{ispParts[0]} {ispParts[1]}" : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
+
+            var ispName = ispParts.Length >= 2
+                ? $"{ispParts[0]} {ispParts[1]}"
+                : (ispParts.Length == 1 ? ispParts[0] : "Unknown");
+
+            // Hitung indeks unik per negara
             var idx = combinedResults.Count(p => countryMap.ContainsKey(p) && countryMap[p].CountryCode == country.CountryCode);
             profile.Name = $"{country.CountryCode} {idx} - {ispName}";
         }
