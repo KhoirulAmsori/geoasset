@@ -22,20 +22,20 @@ jobs:
   Build:
     runs-on: ubuntu-latest
     env:
-      MaxProxiesPerCountry: 3
-      MinActiveProxies: 1
-      MaxThreadCount: 96
-      Timeout: 5000
-      SingboxPath: sing-box
-      V2rayFormatResultPath: Asset/singlist.txt
       EnableDebug: ${{ github.event.inputs.debug || 'false' }}
-      LitePath: Asset/lite
-      LiteConfigPath: Asset/config.json
-      IncludedProtocols: "ss,trojan,vmess,vless"
-      IncludedCountry: "IN,JP,MY,NL,SG,TW,TH,VE,VN"
-      SourcesFile: Asset/sources.txt
-      GeoLiteCountryDbPath: Asset/GeoLite2-Country.mmdb
       GeoLiteAsnDbPath: Asset/GeoLite2-ASN.mmdb
+      GeoLiteCountryDbPath: Asset/GeoLite2-Country.mmdb
+      IncludedCountry: "IN,JP,MY,NL,SG,TW,TH,VE,VN"
+      IncludedProtocols: "ss,trojan,vmess,vless"
+      LiteConfigPath: Asset/config.json
+      LitePath: Asset/lite
+      MaxProxiesPerCountry: 3
+      MaxThreadCount: 128
+      MinActiveProxies: 100
+      SingboxPath: sing-box
+      SourcesFile: Asset/sources.txt
+      Timeout: 15000
+      V2rayFormatResultPath: Asset/singlist.txt
 
     steps:
       - name: Set variables
