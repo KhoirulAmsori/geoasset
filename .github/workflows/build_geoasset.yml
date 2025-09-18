@@ -105,7 +105,7 @@ jobs:
           grep -oP 'address="\K[0-9./]+' nice.rsc | grep '/' | \
           awk '
           BEGIN {
-            print "{\n  \"version\": 4,\n  \"rules\": [\n    {\n      \"ip_cidr\": ["
+            print "{\n  \"version\": 3,\n  \"rules\": [\n    {\n      \"ip_cidr\": ["
           }
           {
             ips[NR] = $0
