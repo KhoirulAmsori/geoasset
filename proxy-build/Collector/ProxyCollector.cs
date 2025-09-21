@@ -41,11 +41,16 @@ public class ProxyCollector
     {
         var url = profile.ToProfileUrl();
 
-        // Pisahkan bagian "protokol://..." dengan param
+        // Hapus fragment identifier (#...) terlebih dahulu
+        var fragmentIndex = url.IndexOf('#');
+        if (fragmentIndex != -1)
+        {
+            url = url.Substring(0, fragmentIndex);
+        }
+
         var parts = url.Split(new[] { "?" }, 2, StringSplitOptions.None);
         var basePart = parts[0]; // protokol://user@host:port
 
-        // Kalau ada query, buang parameter yang tidak penting
         if (parts.Length > 1)
         {
             var query = parts[1];
@@ -53,8 +58,10 @@ public class ProxyCollector
                 .Where(p => !p.StartsWith("encryption=", StringComparison.OrdinalIgnoreCase) &&
                             !p.StartsWith("security=", StringComparison.OrdinalIgnoreCase) &&
                             !p.StartsWith("host=", StringComparison.OrdinalIgnoreCase) &&
-                            !p.StartsWith("sni=", StringComparison.OrdinalIgnoreCase))
-                .OrderBy(p => p) // biar stabil
+                            !p.StartsWith("sni=", StringComparison.OrdinalIgnoreCase) &&
+                            !p.StartsWith("path=", StringComparison.OrdinalIgnoreCase) && // <-- Tambahkan ini
+                            !p.StartsWith("serviceName=", StringComparison.OrdinalIgnoreCase)) // <-- Tambahkan ini
+                .OrderBy(p => p)
                 .ToArray();
 
             if (cleanParams.Length > 0)
