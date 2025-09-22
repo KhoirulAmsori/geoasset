@@ -41,11 +41,12 @@ public class ProxyCollector
     {
         var url = profile.ToProfileUrl();
 
-        // 1) buang fragment (#...)
-        var hashIndex = url.IndexOf('#');
-        if (hashIndex >= 0) url = url.Substring(0, hashIndex);
+        // buang fragment (#...)
+        var fragmentIndex = url.IndexOf('#');
+        if (fragmentIndex != -1)
+            url = url.Substring(0, fragmentIndex);
 
-        // 2) vmess
+        // khusus vmess base64
         if (url.StartsWith("vmess://", StringComparison.OrdinalIgnoreCase))
         {
             try
@@ -55,101 +56,95 @@ public class ProxyCollector
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
 
-                string id = root.TryGetProperty("id", out var idProp) ? idProp.GetString() ?? "" : "";
-                string add = root.TryGetProperty("add", out var addProp) ? addProp.GetString() ?? "" : "";
-                string port = root.TryGetProperty("port", out var portProp) ? portProp.ToString() : "";
+                var id = root.TryGetProperty("id", out var idProp) ? idProp.GetString() ?? "" : "";
+                var add = root.TryGetProperty("add", out var addProp) ? addProp.GetString() ?? "" : "";
+                var port = root.TryGetProperty("port", out var portProp) ? portProp.ToString() : "";
 
-                string net = root.TryGetProperty("net", out var netProp) ? (netProp.GetString() ?? "") : "";
-                string host = root.TryGetProperty("host", out var hostProp) ? (hostProp.GetString() ?? "") : "";
-                string path = root.TryGetProperty("path", out var pathProp) ? (pathProp.GetString() ?? "") : "";
-                string tls = root.TryGetProperty("tls", out var tlsProp) ? (tlsProp.GetString() ?? "") : "";
-
-                path = NormalizePath(path);
-
-                var parts = new List<string> { "vmess", id, add, port };
-
-                if (!string.IsNullOrEmpty(net)) parts.Add("net=" + net.ToLowerInvariant());
-                if (!string.IsNullOrEmpty(host)) parts.Add("host=" + host.ToLowerInvariant());
-                if (!string.IsNullOrEmpty(path) && path != "/") parts.Add("path=" + path);
-                if (!string.IsNullOrEmpty(tls)) parts.Add("tls=" + tls.ToLowerInvariant());
-
-                return string.Join("|", parts);
+                return $"vmess|{id.ToLowerInvariant()}|{add.ToLowerInvariant()}|{port}";
             }
             catch
             {
-                return NormalizeGenericUrlKey(url);
+                return url; // fallback
             }
         }
 
-        // 3) selain vmess → pakai Uri
-        try
+        // parse selain vmess
+        var parts = url.Split(new[] { "?" }, 2, StringSplitOptions.None);
+        var basePart = parts[0];
+        var query = parts.Length > 1 ? parts[1] : "";
+
+        // pisah scheme://userinfo@host:port
+        var schemeSplit = basePart.Split(new[] { "://" }, 2, StringSplitOptions.None);
+        var scheme = schemeSplit[0].ToLowerInvariant();
+        var authority = schemeSplit.Length > 1 ? schemeSplit[1] : "";
+
+        string userInfo = "";
+        string hostPort = authority;
+
+        if (authority.Contains("@"))
         {
-            var uri = new Uri(url);
-
-            var scheme = uri.Scheme.ToLowerInvariant();
-            var userInfo = uri.UserInfo;
-            var host = uri.Host;
-            var port = uri.Port;
-            var q = ParseQueryString(uri.Query);
-
-            if (scheme == "vless")
-            {
-                var uuid = userInfo.Split(':').FirstOrDefault() ?? "";
-                var security = q.TryGetValue("security", out var secVal) ? secVal : q.TryGetValue("encryption", out var e) ? e : "";
-                var sni = q.TryGetValue("sni", out var s) ? s : "";
-                var type = q.TryGetValue("type", out var t) ? t : "";
-                var path = q.TryGetValue("path", out var p) ? NormalizePath(p) : "";
-
-                var parts = new List<string> { "vless", uuid, host, port.ToString() };
-
-                if (!string.IsNullOrEmpty(security)) parts.Add("security=" + security.ToLowerInvariant());
-                if (!string.IsNullOrEmpty(sni)) parts.Add("sni=" + sni.ToLowerInvariant());
-                if (!string.IsNullOrEmpty(type) && !type.Equals("tcp", StringComparison.OrdinalIgnoreCase)) parts.Add("type=" + type.ToLowerInvariant());
-                if (!string.IsNullOrEmpty(path) && path != "/") parts.Add("path=" + path);
-
-                return string.Join("|", parts);
-            }
-
-            if (scheme == "trojan")
-            {
-                var password = userInfo.Split(':').FirstOrDefault() ?? "";
-                var security = q.TryGetValue("security", out var secVal) ? secVal : "";
-                var sni = q.TryGetValue("sni", out var s) ? s : "";
-
-                var parts = new List<string> { "trojan", password, host, port.ToString() };
-                if (!string.IsNullOrEmpty(security)) parts.Add("security=" + security.ToLowerInvariant());
-                if (!string.IsNullOrEmpty(sni)) parts.Add("sni=" + sni.ToLowerInvariant());
-
-                return string.Join("|", parts);
-            }
-
-            if (scheme == "ss")
-            {
-                var ssKey = TryParseSsKey(url);
-                if (!string.IsNullOrEmpty(ssKey)) return ssKey;
-
-                var user = userInfo;
-                var parts = new List<string> { "ss", user, host, port.ToString() }.Where(s => !string.IsNullOrEmpty(s)).ToList();
-                return string.Join("|", parts);
-            }
-
-            return NormalizeGenericUrlKey(url);
+            var tmp = authority.Split('@');
+            userInfo = tmp[0];
+            hostPort = tmp[1];
         }
-        catch
+
+        string host = hostPort;
+        int port = -1;
+        if (hostPort.Contains(":"))
         {
-            return NormalizeGenericUrlKey(url);
+            var tmp = hostPort.Split(':');
+            host = tmp[0];
+            int.TryParse(tmp[1], out port);
         }
+
+        // parse query string
+        var q = query.Split('&', StringSplitOptions.RemoveEmptyEntries)
+                     .Select(p => p.Split('=', 2))
+                     .ToDictionary(
+                         kv => kv[0].ToLowerInvariant(),
+                         kv => kv.Length > 1 ? kv[1] : "",
+                         StringComparer.OrdinalIgnoreCase
+                     );
+
+        string uuid = userInfo.Contains(":") ? userInfo.Split(':')[0] : userInfo;
+
+        // normalisasi parameter
+        string security = q.TryGetValue("security", out var secVal) ? secVal : q.TryGetValue("encryption", out var enc) ? enc : "";
+        if (string.Equals(security, "none", StringComparison.OrdinalIgnoreCase))
+            security = "";
+
+        string type = q.TryGetValue("type", out var t) ? t : "";
+        if (string.Equals(type, "tcp", StringComparison.OrdinalIgnoreCase))
+            type = "";
+
+        string path = q.TryGetValue("path", out var p) ? p : "";
+        path = NormalizePath(path);
+        if (path == "/") path = "";
+
+        string sni = q.TryGetValue("sni", out var s) ? s : "";
+        string hostQ = q.TryGetValue("host", out var h) ? h : "";
+        string serviceName = q.TryGetValue("serviceName", out var sn) ? sn : "";
+
+        // rakit key
+        var keyParts = new List<string> { scheme, uuid.ToLowerInvariant(), host.ToLowerInvariant(), port.ToString() };
+        if (!string.IsNullOrEmpty(security)) keyParts.Add("security=" + security.ToLowerInvariant());
+        if (!string.IsNullOrEmpty(type)) keyParts.Add("type=" + type.ToLowerInvariant());
+        if (!string.IsNullOrEmpty(path)) keyParts.Add("path=" + path);
+        if (!string.IsNullOrEmpty(sni)) keyParts.Add("sni=" + sni.ToLowerInvariant());
+        if (!string.IsNullOrEmpty(hostQ)) keyParts.Add("host=" + hostQ.ToLowerInvariant());
+        if (!string.IsNullOrEmpty(serviceName)) keyParts.Add("serviceName=" + serviceName.ToLowerInvariant());
+
+        return string.Join("|", keyParts);
     }
 
-    // ===== Helper functions =====
-    private static string NormalizePath(string? raw)
+    private static string NormalizePath(string path)
     {
-        if (string.IsNullOrEmpty(raw)) return "/";
-        try { raw = Uri.UnescapeDataString(raw); } catch { }
-        raw = raw.Replace('\\', '/').Trim();
-        if (!raw.StartsWith("/")) raw = "/" + raw;
-        while (raw.Contains("//")) raw = raw.Replace("//", "/");
-        return raw == "" ? "/" : raw;
+        if (string.IsNullOrEmpty(path)) return "";
+        path = path.Trim();
+        if (path.StartsWith("%2f", StringComparison.OrdinalIgnoreCase)) path = "/";
+        if (!path.StartsWith("/")) path = "/" + path;
+        if (path == "//") path = "/";
+        return path;
     }
 
     private static Dictionary<string, string> ParseQueryString(string query)
