@@ -41,15 +41,36 @@ public class ProxyCollector
     {
         var url = profile.ToProfileUrl();
 
-        // Hapus fragment identifier (#...) terlebih dahulu
+        // buang fragment (#...)
         var fragmentIndex = url.IndexOf('#');
         if (fragmentIndex != -1)
-        {
             url = url.Substring(0, fragmentIndex);
+
+        if (url.StartsWith("vmess://", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var b64 = url.Substring("vmess://".Length);
+                var json = Encoding.UTF8.GetString(Convert.FromBase64String(b64));
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                var id = root.GetProperty("id").GetString() ?? "";
+                var add = root.GetProperty("add").GetString() ?? "";
+                var port = root.GetProperty("port").GetString() ?? "";
+
+                return $"vmess://{id}@{add}:{port}";
+            }
+            catch
+            {
+                // fallback kalau parsing gagal
+                return url;
+            }
         }
 
+        // default untuk selain vmess
         var parts = url.Split(new[] { "?" }, 2, StringSplitOptions.None);
-        var basePart = parts[0]; // protokol://user@host:port
+        var basePart = parts[0];
 
         if (parts.Length > 1)
         {
@@ -59,8 +80,8 @@ public class ProxyCollector
                             !p.StartsWith("security=", StringComparison.OrdinalIgnoreCase) &&
                             !p.StartsWith("host=", StringComparison.OrdinalIgnoreCase) &&
                             !p.StartsWith("sni=", StringComparison.OrdinalIgnoreCase) &&
-                            !p.StartsWith("path=", StringComparison.OrdinalIgnoreCase) && // <-- Tambahkan ini
-                            !p.StartsWith("serviceName=", StringComparison.OrdinalIgnoreCase)) // <-- Tambahkan ini
+                            !p.StartsWith("path=", StringComparison.OrdinalIgnoreCase) &&
+                            !p.StartsWith("serviceName=", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(p => p)
                 .ToArray();
 
