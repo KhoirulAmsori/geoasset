@@ -55,9 +55,9 @@ public class ProxyCollector
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
 
-                var id = root.GetProperty("id").GetString() ?? "";
-                var add = root.GetProperty("add").GetString() ?? "";
-                var port = root.GetProperty("port").GetString() ?? "";
+                var id = root.TryGetProperty("id", out var idProp) ? idProp.GetString() ?? "" : "";
+                var add = root.TryGetProperty("add", out var addProp) ? addProp.GetString() ?? "" : "";
+                var port = root.TryGetProperty("port", out var portProp) ? portProp.ToString() : "";
 
                 return $"vmess://{id}@{add}:{port}";
             }
