@@ -89,12 +89,12 @@ public class ProxyCollector
         }
 
         string host = hostPort;
-        int port = -1;
+        int portNum = -1;
         if (hostPort.Contains(":"))
         {
             var tmp = hostPort.Split(':');
             host = tmp[0];
-            int.TryParse(tmp[1], out port);
+            int.TryParse(tmp[1], out portNum);
         }
 
         // parse query string
@@ -126,7 +126,7 @@ public class ProxyCollector
         string serviceName = q.TryGetValue("serviceName", out var sn) ? sn : "";
 
         // rakit key
-        var keyParts = new List<string> { scheme, uuid.ToLowerInvariant(), host.ToLowerInvariant(), port.ToString() };
+        var keyParts = new List<string> { scheme, uuid.ToLowerInvariant(), host.ToLowerInvariant(), portNum.ToString() };
         if (!string.IsNullOrEmpty(security)) keyParts.Add("security=" + security.ToLowerInvariant());
         if (!string.IsNullOrEmpty(type)) keyParts.Add("type=" + type.ToLowerInvariant());
         if (!string.IsNullOrEmpty(path)) keyParts.Add("path=" + path);
