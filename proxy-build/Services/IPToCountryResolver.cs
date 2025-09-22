@@ -1,5 +1,5 @@
 ﻿using MaxMind.GeoIP2;
-// using MaxMind.GeoIP2.Responses;
+using MaxMind.GeoIP2.Exceptions;
 using System.Net;
 
 namespace ProxyCollector.Services;
@@ -12,39 +12,73 @@ public sealed class IPToCountryResolver : IDisposable
 
     public IPToCountryResolver(string geoLiteCountryDbPath, string geoLiteAsnDbPath)
     {
-        // Inisialisasi reader GeoLite2
         _countryReader = new DatabaseReader(geoLiteCountryDbPath);
         _asnReader = new DatabaseReader(geoLiteAsnDbPath);
     }
 
-    /// <summary>
-    /// Resolve IP atau hostname ke informasi negara dan ISP
-    /// </summary>
     public ProxyCountryInfo GetCountry(string address)
     {
         if (!IPAddress.TryParse(address, out var ip))
         {
             var ips = Dns.GetHostAddresses(address);
-            ip = ips[0];
+            ip = ips.FirstOrDefault() ?? throw new ArgumentException("Invalid address");
         }
 
         return GetCountry(ip);
     }
 
-    /// <summary>
-    /// Resolve IPAddress ke informasi negara dan ISP
-    /// </summary>
     public ProxyCountryInfo GetCountry(IPAddress ip)
     {
-        var countryResponse = _countryReader.Country(ip);
-        var asnResponse = _asnReader.Asn(ip);
-
-        return new ProxyCountryInfo
+        // Cek apakah IP termasuk reserved/private
+        if (IsPrivateOrReserved(ip))
         {
-            CountryName = countryResponse?.Country?.Name ?? "Unknown",
-            CountryCode = countryResponse?.Country?.IsoCode ?? "Unknown",
-            Isp = asnResponse?.AutonomousSystemOrganization ?? "Unknown"
-        };
+            return new ProxyCountryInfo();
+        }
+
+        try
+        {
+            var countryResponse = _countryReader.Country(ip);
+            var asnResponse = _asnReader.Asn(ip);
+
+            return new ProxyCountryInfo
+            {
+                CountryName = countryResponse?.Country?.Name ?? "Unknown",
+                CountryCode = countryResponse?.Country?.IsoCode ?? "Unknown",
+                Isp = asnResponse?.AutonomousSystemOrganization ?? "Unknown"
+            };
+        }
+        catch (AddressNotFoundException)
+        {
+            // IP tidak ada di database
+            return new ProxyCountryInfo();
+        }
+        catch (Exception)
+        {
+            // Error lain (misalnya file DB korup)
+            return new ProxyCountryInfo();
+        }
+    }
+
+    private static bool IsPrivateOrReserved(IPAddress ip)
+    {
+        if (IPAddress.IsLoopback(ip)) return true;
+
+        var bytes = ip.GetAddressBytes();
+
+        // IPv4 only (untuk sederhana, bisa diperluas ke IPv6 juga)
+        if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        {
+            // 10.0.0.0/8
+            if (bytes[0] == 10) return true;
+            // 172.16.0.0/12
+            if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) return true;
+            // 192.168.0.0/16
+            if (bytes[0] == 192 && bytes[1] == 168) return true;
+            // 100.64.0.0/10 (CGNAT)
+            if (bytes[0] == 100 && (bytes[1] >= 64 && bytes[1] <= 127)) return true;
+        }
+
+        return false;
     }
 
     public void Dispose()
@@ -55,9 +89,6 @@ public sealed class IPToCountryResolver : IDisposable
         _disposed = true;
     }
 
-    /// <summary>
-    /// Class inner yang menggantikan CountryInfo
-    /// </summary>
     public class ProxyCountryInfo
     {
         public string CountryCode { get; set; } = "Unknown";
