@@ -100,6 +100,50 @@ public class ProxyCollector
         }
     }
 
+    private static string TryParseSsKey(string url)
+    {
+        try
+        {
+            if (!url.StartsWith("ss://", StringComparison.OrdinalIgnoreCase)) return "";
+
+            var after = url.Substring("ss://".Length);
+
+            if (after.Contains("@"))
+            {
+                var parts = after.Split('@', 2);
+                var userinfo = parts[0];
+                var hostpart = parts.Length > 1 ? parts[1] : "";
+                var host = hostpart.Split(new[] { '/', '?' }, 2)[0];
+                return string.Join("|", new[] { "ss", userinfo, host }.Where(s => !string.IsNullOrEmpty(s)));
+            }
+
+            var stop = after.IndexOfAny(new[] { '/', '?', '#' });
+            var b64 = stop == -1 ? after : after.Substring(0, stop);
+            var padded = b64;
+            switch (padded.Length % 4)
+            {
+                case 2: padded += "=="; break;
+                case 3: padded += "="; break;
+            }
+            var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(padded));
+            if (decoded.Contains("@"))
+            {
+                var seg = decoded.Split('@', 2);
+                var userinfo = seg[0];
+                var hostpart = seg[1];
+                return string.Join("|", new[] { "ss", userinfo, hostpart }.Where(s => !string.IsNullOrEmpty(s)));
+            }
+            else
+            {
+                return "ss|" + decoded;
+            }
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
     private void LogToConsole(string log) =>
         Console.WriteLine($"{DateTime.Now:HH:mm:ss} - {log}");
 
