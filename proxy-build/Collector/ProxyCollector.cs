@@ -107,15 +107,20 @@ public class ProxyCollector
 
             var after = url.Substring("ss://".Length);
 
+            // bentuk ss://method:pass@host:port  (ada @)
             if (after.Contains("@"))
             {
                 var parts = after.Split('@', 2);
                 var userinfo = parts[0];
                 var hostpart = parts.Length > 1 ? parts[1] : "";
-                var host = hostpart.Split(new[] { '/', '?' }, 2)[0];
-                return string.Join("|", new[] { "ss", userinfo, host }.Where(s => !string.IsNullOrEmpty(s)));
+                // hostpart bisa "host:port" atau "host:port/..." - ambil segmen sebelum '/' atau '?'
+                var hostAndPort = hostpart.Split(new[] { '/', '?' }, 2)[0];
+                // pisah port jika ada, ambil host saja
+                var hostOnly = hostAndPort.Contains(":") ? hostAndPort.Split(':', 2)[0] : hostAndPort;
+                return string.Join("|", new[] { "ss", userinfo, hostOnly }.Where(s => !string.IsNullOrEmpty(s)));
             }
 
+            // bentuk ss://<base64>...
             var stop = after.IndexOfAny(new[] { '/', '?', '#' });
             var b64 = stop == -1 ? after : after.Substring(0, stop);
             var padded = b64;
@@ -124,16 +129,21 @@ public class ProxyCollector
                 case 2: padded += "=="; break;
                 case 3: padded += "="; break;
             }
+
             var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(padded));
+            // decoded biasanya "method:password" atau "method:password@host:port"
             if (decoded.Contains("@"))
             {
                 var seg = decoded.Split('@', 2);
                 var userinfo = seg[0];
                 var hostpart = seg[1];
-                return string.Join("|", new[] { "ss", userinfo, hostpart }.Where(s => !string.IsNullOrEmpty(s)));
+                var hostAndPort = hostpart.Split(new[] { '/', '?' }, 2)[0];
+                var hostOnly = hostAndPort.Contains(":") ? hostAndPort.Split(':', 2)[0] : hostAndPort;
+                return string.Join("|", new[] { "ss", userinfo, hostOnly }.Where(s => !string.IsNullOrEmpty(s)));
             }
             else
             {
+                // kalau hanya "method:password", return tanpa host
                 return "ss|" + decoded;
             }
         }
