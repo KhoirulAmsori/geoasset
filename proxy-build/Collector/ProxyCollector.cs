@@ -57,9 +57,10 @@ public class ProxyCollector
                 var root = doc.RootElement;
 
                 var add = root.TryGetProperty("add", out var addProp) ? addProp.GetString() ?? "" : "";
-                var port = root.TryGetProperty("port", out var portProp) ? portProp.ToString() : "";
+                // var port = root.TryGetProperty("port", out var portProp) ? portProp.ToString() : "";
 
-                return $"vmess|{add.ToLowerInvariant()}|{port}";
+                // return $"vmess|{add.ToLowerInvariant()}|{port}";
+                return $"vmess|{add.ToLowerInvariant()}";
             }
             catch
             {
@@ -87,9 +88,10 @@ public class ProxyCollector
             var uri = new Uri(url);
             var scheme = uri.Scheme.ToLowerInvariant();
             var host = uri.Host.ToLowerInvariant();
-            var portNum = uri.IsDefaultPort ? -1 : uri.Port;
+            // var portNum = uri.IsDefaultPort ? -1 : uri.Port;
 
-            return $"{scheme}|{host}|{portNum}";
+            // return $"{scheme}|{host}|{portNum}";
+            return $"{scheme}|{host}";
         }
         catch
         {
