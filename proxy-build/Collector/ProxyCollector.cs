@@ -46,7 +46,7 @@ public class ProxyCollector
         if (fragmentIndex != -1)
             url = url.Substring(0, fragmentIndex);
 
-        // khusus vmess base64
+        // khusus vmess base64 → tetap decode untuk ambil host+port
         if (url.StartsWith("vmess://", StringComparison.OrdinalIgnoreCase))
         {
             try
@@ -56,11 +56,10 @@ public class ProxyCollector
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
 
-                var id = root.TryGetProperty("id", out var idProp) ? idProp.GetString() ?? "" : "";
                 var add = root.TryGetProperty("add", out var addProp) ? addProp.GetString() ?? "" : "";
                 var port = root.TryGetProperty("port", out var portProp) ? portProp.ToString() : "";
 
-                return $"vmess|{id.ToLowerInvariant()}|{add.ToLowerInvariant()}|{port}";
+                return $"vmess|{add.ToLowerInvariant()}|{port}";
             }
             catch
             {
@@ -68,15 +67,21 @@ public class ProxyCollector
             }
         }
 
-        // khusus shadowsocks (ss://)
+        // khusus shadowsocks (ss://) → parse host
         if (url.StartsWith("ss://", StringComparison.OrdinalIgnoreCase))
         {
             var ssKey = TryParseSsKey(url);
             if (!string.IsNullOrEmpty(ssKey))
+            {
+                // format lama: ss|userinfo|host
+                var parts = ssKey.Split('|');
+                if (parts.Length >= 3)
+                    return $"ss|{parts[2]}"; // hanya host
                 return ssKey;
+            }
         }
 
-        // parse generic URL (vless, trojan, dll.)
+        // generic (vless, trojan, dll.)
         try
         {
             var uri = new Uri(url);
@@ -84,18 +89,10 @@ public class ProxyCollector
             var host = uri.Host.ToLowerInvariant();
             var portNum = uri.IsDefaultPort ? -1 : uri.Port;
 
-            var userInfo = uri.UserInfo ?? "";
-
-            // kalau userinfo ada ':', ambil bagian pertama (uuid/password)
-            var idPart = userInfo.Contains(":")
-                ? userInfo.Split(':', 2)[0]
-                : userInfo;
-
-            return $"{scheme}|{idPart.ToLowerInvariant()}|{host}|{portNum}";
+            return $"{scheme}|{host}|{portNum}";
         }
         catch
         {
-            // fallback terakhir
             return url;
         }
     }
