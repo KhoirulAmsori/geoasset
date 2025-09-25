@@ -15,7 +15,7 @@ using System;
 
 namespace ProxyCollector.Collector;
 
-public class ProxyCollector
+public class ProxyCollector : IDisposable
 {
     private readonly CollectorConfig _config;
     private readonly IPToCountryResolver _resolver;
@@ -31,9 +31,11 @@ public class ProxyCollector
     public ProxyCollector()
     {
         _config = CollectorConfig.Instance;
+        // atur max concurrent DNS (20 default, bisa disesuaikan via config kalau mau)
         _resolver = new IPToCountryResolver(
             _config.GeoLiteCountryDbPath,
-            _config.GeoLiteAsnDbPath
+            _config.GeoLiteAsnDbPath,
+            20
         );
     }
 
@@ -57,9 +59,7 @@ public class ProxyCollector
                 var root = doc.RootElement;
 
                 var add = root.TryGetProperty("add", out var addProp) ? addProp.GetString() ?? "" : "";
-                // var port = root.TryGetProperty("port", out var portProp) ? portProp.ToString() : "";
 
-                // return $"vmess|{add.ToLowerInvariant()}|{port}";
                 return $"vmess|{add.ToLowerInvariant()}";
             }
             catch
@@ -74,7 +74,6 @@ public class ProxyCollector
             var ssKey = TryParseSsKey(url);
             if (!string.IsNullOrEmpty(ssKey))
             {
-                // format lama: ss|userinfo|host
                 var parts = ssKey.Split('|');
                 if (parts.Length >= 3)
                     return $"ss|{parts[2]}"; // hanya host
@@ -88,9 +87,7 @@ public class ProxyCollector
             var uri = new Uri(url);
             var scheme = uri.Scheme.ToLowerInvariant();
             var host = uri.Host.ToLowerInvariant();
-            // var portNum = uri.IsDefaultPort ? -1 : uri.Port;
 
-            // return $"{scheme}|{host}|{portNum}";
             return $"{scheme}|{host}";
         }
         catch
@@ -107,20 +104,16 @@ public class ProxyCollector
 
             var after = url.Substring("ss://".Length);
 
-            // bentuk ss://method:pass@host:port  (ada @)
             if (after.Contains("@"))
             {
                 var parts = after.Split('@', 2);
                 var userinfo = parts[0];
                 var hostpart = parts.Length > 1 ? parts[1] : "";
-                // hostpart bisa "host:port" atau "host:port/..." - ambil segmen sebelum '/' atau '?'
                 var hostAndPort = hostpart.Split(new[] { '/', '?' }, 2)[0];
-                // pisah port jika ada, ambil host saja
                 var hostOnly = hostAndPort.Contains(":") ? hostAndPort.Split(':', 2)[0] : hostAndPort;
                 return string.Join("|", new[] { "ss", userinfo, hostOnly }.Where(s => !string.IsNullOrEmpty(s)));
             }
 
-            // bentuk ss://<base64>...
             var stop = after.IndexOfAny(new[] { '/', '?', '#' });
             var b64 = stop == -1 ? after : after.Substring(0, stop);
             var padded = b64;
@@ -131,7 +124,6 @@ public class ProxyCollector
             }
 
             var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(padded));
-            // decoded biasanya "method:password" atau "method:password@host:port"
             if (decoded.Contains("@"))
             {
                 var seg = decoded.Split('@', 2);
@@ -143,7 +135,6 @@ public class ProxyCollector
             }
             else
             {
-                // kalau hanya "method:password", return tanpa host
                 return "ss|" + decoded;
             }
         }
@@ -161,14 +152,12 @@ public class ProxyCollector
         var startTime = DateTime.Now;
         LogToConsole("Collector started.");
 
-        // Ambil semua profile dari sumber (sudah unik)
         var allProfiles = (await CollectProfilesFromConfigSources()).Distinct().ToList();
         var included = _config.IncludedProtocols.Length > 0
             ? string.Join(", ", _config.IncludedProtocols.Select(p => p.Replace("://", "").ToUpperInvariant()))
             : "all";
         LogToConsole($"Get unique profiles with protocols: {included}.");
 
-        // Pisahkan VLESS dan non-VLESS
         var vlessProfiles = allProfiles
             .Where(p => p.ToProfileUrl().StartsWith("vless://", StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -179,15 +168,12 @@ public class ProxyCollector
 
         LogToConsole("Compiling results...");
 
-        // Test Lite untuk non-vless
         var liteTestResult = liteProfiles.Any() ? await RunLiteTest(liteProfiles) : new List<ProfileItem>();
         LogToConsole($"Active proxies (Lite): {liteTestResult.Count}");
         
-        // Test SingBoxWrapper untuk vless
         var vlessTestResult = vlessProfiles.Any() ? await RunSingboxTest(vlessProfiles) : new List<ProfileItem>();
         LogToConsole($"Active proxies (Singbox): {vlessTestResult.Count}");
 
-        // Gabungkan hasil
         var combinedResults = liteTestResult.Concat(vlessTestResult).ToList();
         LogToConsole($"Total active proxies after tests: {combinedResults.Count}");
 
@@ -198,9 +184,9 @@ public class ProxyCollector
             return;
         }
 
-        // Resolusi negara & penamaan
         var countryMap = new Dictionary<ProfileItem, IPToCountryResolver.ProxyCountryInfo>();
         var countryCounters = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var processedProfiles = new List<ProfileItem>();
 
         foreach (var profile in combinedResults)
         {
@@ -208,16 +194,21 @@ public class ProxyCollector
                 continue;
 
             var country = _resolver.GetCountry(profile.Address);
+
+            if (string.Equals(country.CountryCode, "Unknown", StringComparison.OrdinalIgnoreCase))
+                continue;
+
             countryMap[profile] = country;
 
             var ispName = NormalizeIspName(country.Isp);
             AssignProxyName(profile, country, ispName, countryCounters);
+
+            processedProfiles.Add(profile);
         }
 
-        // --- hasil tanpa limit
-        var allGrouped = combinedResults
+        var allGrouped = processedProfiles
             .GroupBy(p => GetProxyKey(p))
-            .Select(g => g.First()) // ambil satu saja untuk tiap key
+            .Select(g => g.First())
             .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
             .OrderBy(g => g.Key)
             .SelectMany(g => g)
@@ -225,8 +216,7 @@ public class ProxyCollector
 
         await SaveProfileList("all_list.txt", allGrouped);
 
-        // --- hasil dengan limit per country
-        var limited = combinedResults
+        var limited = processedProfiles
             .GroupBy(p => GetProxyKey(p))
             .Select(g => g.First())
             .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
@@ -412,5 +402,10 @@ public class ProxyCollector
         }), default);
 
         return workingResults.Select(r => r.Profile).ToList();
+    }
+
+    public void Dispose()
+    {
+        _resolver?.Dispose();
     }
 }
