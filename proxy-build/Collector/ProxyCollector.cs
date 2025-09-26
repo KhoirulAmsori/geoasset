@@ -251,13 +251,21 @@ public class ProxyCollector : IDisposable
         Dictionary<ProfileItem, IPToCountryResolver.ProxyCountryInfo> countryMap)
     {
         return profiles
-            .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
+            .GroupBy(p =>
+            {
+                if (countryMap.TryGetValue(p, out var info) && info?.CountryCode != null)
+                    return info.CountryCode;
+                return "ZZ";
+            })
             .SelectMany(group =>
             {
                 int idx = 1;
                 return group.Select(p =>
                 {
-                    var cc = countryMap[p].CountryCode ?? "ZZ";
+                    var cc = countryMap.TryGetValue(p, out var info) && info?.CountryCode != null
+                        ? info.CountryCode
+                        : "ZZ";
+
                     var ispName = p.Name.Split(" - ", 2).Last();
                     p.Name = $"{cc} {idx} - {ispName}";
                     idx++;
