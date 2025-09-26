@@ -17,6 +17,10 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Setup git with token
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
       - name: Setup environment & download asset
         run: |
           export TZ="Asia/Jakarta"

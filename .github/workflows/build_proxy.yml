@@ -44,6 +44,10 @@ jobs:
           sudo locale-gen id_ID.UTF-8
           echo "BUILDTIME=$(LC_TIME=id_ID.UTF-8 date '+%a, %d/%m/%Y - %H:%M:%S')" >> $GITHUB_ENV
 
+      - name: Setup git with token
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
       - uses: actions/checkout@v5
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
