@@ -31,7 +31,6 @@ public class ProxyCollector : IDisposable
     public ProxyCollector()
     {
         _config = CollectorConfig.Instance;
-        // atur max concurrent DNS (20 default, bisa disesuaikan via config kalau mau)
         _resolver = new IPToCountryResolver(
             _config.GeoLiteCountryDbPath,
             _config.GeoLiteAsnDbPath,
@@ -43,12 +42,10 @@ public class ProxyCollector : IDisposable
     {
         var url = profile.ToProfileUrl();
 
-        // buang fragment (#...)
         var fragmentIndex = url.IndexOf('#');
         if (fragmentIndex != -1)
             url = url.Substring(0, fragmentIndex);
 
-        // khusus vmess base64 → tetap decode untuk ambil host+port
         if (url.StartsWith("vmess://", StringComparison.OrdinalIgnoreCase))
         {
             try
@@ -59,16 +56,14 @@ public class ProxyCollector : IDisposable
                 var root = doc.RootElement;
 
                 var add = root.TryGetProperty("add", out var addProp) ? addProp.GetString() ?? "" : "";
-
                 return $"vmess|{add.ToLowerInvariant()}";
             }
             catch
             {
-                return url; // fallback
+                return url;
             }
         }
 
-        // khusus shadowsocks (ss://) → parse host
         if (url.StartsWith("ss://", StringComparison.OrdinalIgnoreCase))
         {
             var ssKey = TryParseSsKey(url);
@@ -76,12 +71,11 @@ public class ProxyCollector : IDisposable
             {
                 var parts = ssKey.Split('|');
                 if (parts.Length >= 3)
-                    return $"ss|{parts[2]}"; // hanya host
+                    return $"ss|{parts[2]}";
                 return ssKey;
             }
         }
 
-        // generic (vless, trojan, dll.)
         try
         {
             var uri = new Uri(url);
@@ -185,7 +179,6 @@ public class ProxyCollector : IDisposable
         }
 
         var countryMap = new Dictionary<ProfileItem, IPToCountryResolver.ProxyCountryInfo>();
-        var countryCounters = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var processedProfiles = new List<ProfileItem>();
 
         foreach (var profile in combinedResults)
@@ -194,14 +187,13 @@ public class ProxyCollector : IDisposable
                 continue;
 
             var country = _resolver.GetCountry(profile.Address);
-
             if (string.Equals(country.CountryCode, "Unknown", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             countryMap[profile] = country;
 
             var ispName = NormalizeIspName(country.Isp);
-            AssignProxyName(profile, country, ispName, countryCounters);
+            AssignProxyName(profile, country, ispName);
 
             processedProfiles.Add(profile);
         }
@@ -209,23 +201,19 @@ public class ProxyCollector : IDisposable
         var allGrouped = processedProfiles
             .GroupBy(p => GetProxyKey(p))
             .Select(g => g.First())
-            .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
-            .OrderBy(g => g.Key)
-            .SelectMany(g => g)
             .ToList();
 
+        allGrouped = ReindexProfiles(allGrouped, countryMap);
         await SaveProfileList("all_list.txt", allGrouped);
 
         var limited = processedProfiles
+            .GroupBy(p => GetProxyKey(p))
+            .Select(g => g.First())
             .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
-            .OrderBy(g => g.Key)
-            .SelectMany(g =>
-                g.GroupBy(p => GetProxyKey(p))   // hapus duplikat dalam negara
-                .Select(g2 => g2.First())
-                .Take(_config.MaxProxiesPerCountry)
-            )
+            .SelectMany(g => g.Take(_config.MaxProxiesPerCountry))
             .ToList();
 
+        limited = ReindexProfiles(limited, countryMap);
         await SaveProfileList("list.txt", limited);
 
         var timeSpent = DateTime.Now - startTime;
@@ -252,17 +240,32 @@ public class ProxyCollector : IDisposable
 
     private static void AssignProxyName(ProfileItem profile,
         IPToCountryResolver.ProxyCountryInfo country,
-        string ispName,
-        Dictionary<string, int> counters)
+        string ispName)
     {
         var cc = country.CountryCode ?? "ZZ";
-        if (!counters.TryGetValue(cc, out var idx))
-            idx = 0;
+        profile.Name = $"{cc} - {ispName}";
+    }
 
-        idx++;
-        counters[cc] = idx;
-
-        profile.Name = $"{cc} {idx} - {ispName}";
+    private static List<ProfileItem> ReindexProfiles(
+        List<ProfileItem> profiles,
+        Dictionary<ProfileItem, IPToCountryResolver.ProxyCountryInfo> countryMap)
+    {
+        return profiles
+            .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
+            .SelectMany(group =>
+            {
+                int idx = 1;
+                return group.Select(p =>
+                {
+                    var cc = countryMap[p].CountryCode ?? "ZZ";
+                    var ispName = p.Name.Split(" - ", 2).Last();
+                    p.Name = $"{cc} {idx} - {ispName}";
+                    idx++;
+                    return p;
+                });
+            })
+            .OrderBy(p => p.Name)
+            .ToList();
     }
 
     private async Task SaveProfileList(string fileName, List<ProfileItem> profiles)
