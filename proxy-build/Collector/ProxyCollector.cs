@@ -217,11 +217,13 @@ public class ProxyCollector : IDisposable
         await SaveProfileList("all_list.txt", allGrouped);
 
         var limited = processedProfiles
-            .GroupBy(p => GetProxyKey(p))
-            .Select(g => g.First())
             .GroupBy(p => countryMap[p].CountryCode ?? "ZZ")
             .OrderBy(g => g.Key)
-            .SelectMany(g => g.Take(_config.MaxProxiesPerCountry))
+            .SelectMany(g =>
+                g.GroupBy(p => GetProxyKey(p))   // hapus duplikat dalam negara
+                .Select(g2 => g2.First())
+                .Take(_config.MaxProxiesPerCountry)
+            )
             .ToList();
 
         await SaveProfileList("list.txt", limited);
