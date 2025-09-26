@@ -266,7 +266,7 @@ public class ProxyCollector : IDisposable
                         ? info.CountryCode
                         : "ZZ";
 
-                    var ispName = p.Name.Split(" - ", 2).Last();
+                    var ispName = (p.Name ?? "Unknown").Split(" - ", 2).Last();
                     p.Name = $"{cc} {idx} - {ispName}";
                     idx++;
                     return p;
