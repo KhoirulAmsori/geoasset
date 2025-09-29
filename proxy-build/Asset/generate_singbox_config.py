@@ -347,7 +347,7 @@ class ConfigToSingbox:
                         {"ip_accept_any": True, "server": "hosts"}
                     ],
                     "strategy": "ipv4_only", "disable_cache": False, "disable_expire": False,
-                    "independent_cache": False, "reverse_mapping": True, "final": "quad9-udp"
+                    "independent_cache": False, "reverse_mapping": True, "final": "quad9-doh"
                 },
                 "inbounds": [
                     {"type": "direct", "tag": "dns-in", "listen": "192.168.10.1", "listen_port": 1053},
