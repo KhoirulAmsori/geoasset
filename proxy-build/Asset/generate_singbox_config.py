@@ -340,14 +340,14 @@ class ConfigToSingbox:
                 "dns": {
                     "servers": [
                         {"type": "hosts", "tag": "hosts"},
-                        {"type": "udp", "tag": "google-udp", "server": "8.8.8.8"},
-                        {"type": "h3", "tag": "google-doh3", "server": "dns.google", "domain_resolver": {"server": "google-udp", "strategy": "ipv4_only"}, "tls": {"enabled": True, "insecure": False, "server_name": "dns.google", "alpn": "h3"}}
+                        {"type": "udp", "tag": "quad9-udp", "server": "9.9.9.9"},
+                        {"type": "https", "tag": "quad9-doh", "server": "dns.quad9.net", "domain_resolver": {"server": "quad9-udp", "strategy": "ipv4_only"}}
                     ],
                     "rules": [
                         {"ip_accept_any": True, "server": "hosts"}
                     ],
                     "strategy": "ipv4_only", "disable_cache": False, "disable_expire": False,
-                    "independent_cache": False, "reverse_mapping": True, "final": "google-udp"
+                    "independent_cache": False, "reverse_mapping": True, "final": "quad9-udp"
                 },
                 "inbounds": [
                     {"type": "direct", "tag": "dns-in", "listen": "192.168.10.1", "listen_port": 1053},
@@ -392,7 +392,7 @@ class ConfigToSingbox:
                         {"type": "local", "tag": "raven_route-id", "format": "source", "path": "raven_route-id.json"},
                         {"type": "remote", "tag": "telegram", "format": "binary", "url": "https://raw.githubusercontent.com/KhoirulAmsori/geoasset/sing-box/geo/geoip/telegram.srs", "download_detour": "DIRECT"}
                     ],
-                    "default_domain_resolver": {"server": "google-udp", "strategy": "ipv4_only"},
+                    "default_domain_resolver": {"server": "quad9-udp", "strategy": "ipv4_only"},
                     "default_mark": 7894,
                     "auto_detect_interface": True,
                     "final": "ROUTE-SG"
