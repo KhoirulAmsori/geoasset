@@ -125,7 +125,7 @@ jobs:
 
           # Pasang binari sing-box dan konversi
           # curl -L --retry 5 --retry-delay 10 --max-time 300 -fsSL https://sing-box.app/install.sh | sh -s -- --beta
-          go install github.com/sagernet/sing-box@latest
+          go install github.com/sagernet/sing-box/cmd/sing-box@latest
           
           # Pastikan PATH sudah berisi GOPATH/bin
           export PATH="$(go env GOPATH)/bin:$PATH"
