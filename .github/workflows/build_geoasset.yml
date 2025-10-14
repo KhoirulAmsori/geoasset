@@ -105,7 +105,7 @@ jobs:
           mkdir -p sing-rule/geo/{geosite,geoip} sing-rule/asn
 
           # Unduh dan konversi RSC ke JSON
-          curl -s -o nice.rsc http://ixp.mikrotik.co.id/download/nice.rsc
+          curl -L --retry 5 --retry-delay 10 --max-time 300 -s -o nice.rsc http://ixp.mikrotik.co.id/download/nice.rsc
           grep -oP 'address="\K[0-9./]+' nice.rsc | grep '/' | \
           awk '
           BEGIN {
@@ -124,7 +124,8 @@ jobs:
           }' > ./sing-rule/geo/geosite/nice.json
 
           # Pasang binari sing-box dan konversi
-          curl -fsSL https://sing-box.app/install.sh | sh -s -- --beta
+          # curl -L --retry 5 --retry-delay 10 --max-time 300 -fsSL https://sing-box.app/install.sh | sh -s -- --beta
+          go install github.com/SagerNet/sing-box@latest
           sing-box rule-set compile --output ./sing-rule/geo/geosite/nice.srs ./sing-rule/geo/geosite/nice.json
           
           # Jalankan pembangunan geo dan asn
