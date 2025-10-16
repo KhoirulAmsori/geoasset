@@ -40,7 +40,7 @@ jobs:
 
       - name: Prepare local repo for 'asset' branch (create if missing)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.AUTH_PAT }}
         run: |
           rm -rf asset
           mkdir -p asset
