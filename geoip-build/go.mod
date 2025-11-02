@@ -1,9 +1,9 @@
 module github.com/Loyalsoldier/geoip
 
-go 1.23
+go 1.24
 
 require (
-	github.com/maxmind/mmdbwriter v1.0.0
+	github.com/maxmind/mmdbwriter v1.1.0
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/spf13/cobra v1.10.1
 	github.com/tailscale/hujson v0.0.0-20241010212012-29efb4a0184b
@@ -17,9 +17,10 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
+	github.com/oschwald/maxminddb-golang/v2 v2.0.0-beta.10 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 )
