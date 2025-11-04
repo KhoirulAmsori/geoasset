@@ -91,26 +91,25 @@
             "type": "selector",
             "tag": "MIXED",
             "outbounds": [
-                "IN 1 - Melbikomas UAB",
-                "IN 2 - BrainStorm Network",
-                "IN 3 - DIGITALOCEAN",
-                "JP 1 - Datacamp",
-                "JP 2 - BrainStorm Network",
-                "JP 3 - SAKURA Internet",
+                "IN 1 - Contabo",
+                "IN 2 - DIGITALOCEAN",
+                "IN 3 - BrainStorm Network",
+                "JP 1 - Alibaba US",
+                "JP 2 - VULTR",
+                "JP 3 - Datacamp",
                 "MY 1 - Gigabit Hosting",
-                "MY 2 - Kaopu",
-                "MY 3 - Alibaba US",
+                "MY 2 - Alibaba US",
                 "NL 1 - Greenhost",
-                "NL 2 - Greenhost",
-                "NL 3 - Servhost Group",
+                "NL 2 - Digital City",
+                "NL 3 - BlueVPS OU",
                 "SG 1 - CTG Server",
                 "SG 2 - DIGITALOCEAN",
                 "SG 3 - DIGITALOCEAN",
                 "TH 1 - Kaopu",
                 "TH 2 - 453 Ladplacout",
                 "TH 3 - 453 Ladplacout",
-                "TW 1 - Pittqiao Network",
-                "TW 2 - AKILE",
+                "TW 1 - AKILE",
+                "TW 2 - Kaopu",
                 "TW 3 - Scloud",
                 "VN 1 - VIETPN",
                 "VN 2 - VIETPN",
@@ -129,23 +128,15 @@
         },
         {
             "type": "shadowsocks",
-            "tag": "IN 1 - Melbikomas UAB",
-            "server": "103.111.114.29",
-            "server_port": 57456,
-            "method": "chacha20-ietf-poly1305",
-            "password": "360e21d21977dc11"
+            "tag": "IN 1 - Contabo",
+            "server": "82.180.146.173",
+            "server_port": 30607,
+            "method": "aes-128-gcm",
+            "password": "162629d7-cb17-43b1-82c9-f9c7ae6cba70"
         },
         {
             "type": "shadowsocks",
-            "tag": "IN 2 - BrainStorm Network",
-            "server": "103.97.203.227",
-            "server_port": 990,
-            "method": "chacha20-ietf-poly1305",
-            "password": "ARgvGZywA+gacgGV26Bvmu05+wZmRW/j+AdU+Z8Bt44="
-        },
-        {
-            "type": "shadowsocks",
-            "tag": "IN 3 - DIGITALOCEAN",
+            "tag": "IN 2 - DIGITALOCEAN",
             "server": "134.209.147.198",
             "server_port": 989,
             "method": "aes-256-cfb",
@@ -153,27 +144,44 @@
         },
         {
             "type": "shadowsocks",
-            "tag": "JP 1 - Datacamp",
-            "server": "149.22.87.240",
-            "server_port": 443,
-            "method": "aes-128-gcm",
-            "password": "shadowsocks"
-        },
-        {
-            "type": "shadowsocks",
-            "tag": "JP 2 - BrainStorm Network",
-            "server": "103.106.228.247",
+            "tag": "IN 3 - BrainStorm Network",
+            "server": "103.97.203.227",
             "server_port": 990,
             "method": "chacha20-ietf-poly1305",
             "password": "ARgvGZywA+gacgGV26Bvmu05+wZmRW/j+AdU+Z8Bt44="
         },
         {
+            "type": "vmess",
+            "tag": "JP 1 - Alibaba US",
+            "server": "8.211.164.215",
+            "server_port": 20522,
+            "uuid": "73193cce-7ca1-4b08-93ff-4ee8b0147374",
+            "security": "auto",
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "8.211.164.215"
+            },
+            "transport": {
+                "type": "ws",
+                "path": "/telegram_@sswia"
+            }
+        },
+        {
             "type": "shadowsocks",
-            "tag": "JP 3 - SAKURA Internet",
-            "server": "153.121.51.214",
-            "server_port": 10087,
+            "tag": "JP 2 - VULTR",
+            "server": "202.182.98.223",
+            "server_port": 9443,
             "method": "aes-128-gcm",
-            "password": "10086"
+            "password": "lINaALnHIiH4cSj8pJn6TQ=="
+        },
+        {
+            "type": "shadowsocks",
+            "tag": "JP 3 - Datacamp",
+            "server": "149.22.87.240",
+            "server_port": 443,
+            "method": "aes-128-gcm",
+            "password": "shadowsocks"
         },
         {
             "type": "shadowsocks",
@@ -185,32 +193,15 @@
         },
         {
             "type": "vmess",
-            "tag": "MY 2 - Kaopu",
-            "server": "38.54.98.150",
-            "server_port": 62656,
-            "uuid": "b771d99f-ef69-4b5c-8398-665bf851a661",
+            "tag": "MY 2 - Alibaba US",
+            "server": "47.250.95.53",
+            "server_port": 49096,
+            "uuid": "2709990b-6eaf-4a81-a130-ae30bc579dc4",
             "security": "auto",
             "tls": {
                 "enabled": false,
                 "insecure": true,
-                "server_name": "38.54.98.150"
-            },
-            "transport": {
-                "type": "ws",
-                "path": "/arki?ed=2048"
-            }
-        },
-        {
-            "type": "vmess",
-            "tag": "MY 3 - Alibaba US",
-            "server": "47.250.45.234",
-            "server_port": 8613,
-            "uuid": "80039b4d-bac0-4f89-82c7-54fad3b0a1ea",
-            "security": "auto",
-            "tls": {
-                "enabled": false,
-                "insecure": true,
-                "server_name": "47.250.45.234"
+                "server_name": "47.250.95.53"
             },
             "transport": {
                 "type": "ws",
@@ -220,38 +211,26 @@
         {
             "type": "shadowsocks",
             "tag": "NL 1 - Greenhost",
-            "server": "193.29.139.188",
+            "server": "193.29.139.240",
             "server_port": 8080,
             "method": "chacha20-ietf-poly1305",
             "password": "oZIoA69Q8yhcQV8ka3Pa3A"
         },
         {
             "type": "shadowsocks",
-            "tag": "NL 2 - Greenhost",
-            "server": "193.29.139.141",
-            "server_port": 8080,
+            "tag": "NL 2 - Digital City",
+            "server": "194.135.46.13",
+            "server_port": 1419,
             "method": "chacha20-ietf-poly1305",
-            "password": "oZIoA69Q8yhcQV8ka3Pa3A"
+            "password": "EacZIMFwmMCR6dWqN5Ah0c"
         },
         {
-            "type": "vmess",
-            "tag": "NL 3 - Servhost Group",
-            "server": "89.169.13.60",
-            "server_port": 28838,
-            "uuid": "b9d3c414-89cc-455d-b717-10c7ca1665a1",
-            "security": "auto",
-            "tls": {
-                "enabled": false,
-                "insecure": true,
-                "server_name": "google.com"
-            },
-            "transport": {
-                "type": "ws",
-                "path": "/",
-                "headers": {
-                    "Host": "google.com"
-                }
-            }
+            "type": "shadowsocks",
+            "tag": "NL 3 - BlueVPS OU",
+            "server": "213.109.147.242",
+            "server_port": 62685,
+            "method": "chacha20-ietf-poly1305",
+            "password": "VpKABcOpNNA0l5G2AVOmw8"
         },
         {
             "type": "shadowsocks",
@@ -259,12 +238,12 @@
             "server": "134.122.174.192",
             "server_port": 12222,
             "method": "chacha20-ietf-poly1305",
-            "password": "5662368d-15f5-4283-88da-9116767478ac"
+            "password": "9e40f091-038e-454a-9382-5ff8b5122a8e"
         },
         {
             "type": "shadowsocks",
             "tag": "SG 2 - DIGITALOCEAN",
-            "server": "68.183.235.122",
+            "server": "68.183.227.4",
             "server_port": 8080,
             "method": "rc4-md5",
             "password": "14fFPrbezE3HDZzsMOr6"
@@ -272,7 +251,7 @@
         {
             "type": "shadowsocks",
             "tag": "SG 3 - DIGITALOCEAN",
-            "server": "68.183.227.4",
+            "server": "68.183.235.122",
             "server_port": 8080,
             "method": "rc4-md5",
             "password": "14fFPrbezE3HDZzsMOr6"
@@ -288,39 +267,22 @@
         {
             "type": "shadowsocks",
             "tag": "TH 2 - 453 Ladplacout",
-            "server": "119.59.127.129",
-            "server_port": 990,
-            "method": "chacha20-ietf-poly1305",
-            "password": "ARgvGZywA+gacgGV26Bvmu05+wZmRW/j+AdU+Z8Bt44="
-        },
-        {
-            "type": "shadowsocks",
-            "tag": "TH 3 - 453 Ladplacout",
             "server": "119.59.98.58",
             "server_port": 990,
             "method": "chacha20-ietf-poly1305",
             "password": "f8f7aCzcPKbsF8p3"
         },
         {
-            "type": "vmess",
-            "tag": "TW 1 - Pittqiao Network",
-            "server": "103.127.218.91",
-            "server_port": 54693,
-            "uuid": "1cef03ad-6343-408c-8121-cbd1fda2ee9d",
-            "security": "auto",
-            "tls": {
-                "enabled": false,
-                "insecure": true,
-                "server_name": "103.127.218.91"
-            },
-            "transport": {
-                "type": "ws",
-                "path": "/1cef03ad"
-            }
+            "type": "shadowsocks",
+            "tag": "TH 3 - 453 Ladplacout",
+            "server": "119.59.127.129",
+            "server_port": 990,
+            "method": "chacha20-ietf-poly1305",
+            "password": "ARgvGZywA+gacgGV26Bvmu05+wZmRW/j+AdU+Z8Bt44="
         },
         {
             "type": "vmess",
-            "tag": "TW 2 - AKILE",
+            "tag": "TW 1 - AKILE",
             "server": "83.147.13.228",
             "server_port": 8080,
             "uuid": "26d77d7a-d4ea-40cd-8da5-54a9c84e7362",
@@ -332,8 +294,19 @@
             },
             "transport": {
                 "type": "ws",
-                "path": "/ec-McAuth/index"
+                "path": "/ec-McAuth/index",
+                "headers": {
+                    "Host": "83.147.13.228"
+                }
             }
+        },
+        {
+            "type": "shadowsocks",
+            "tag": "TW 2 - Kaopu",
+            "server": "154.223.20.79",
+            "server_port": 989,
+            "method": "aes-256-cfb",
+            "password": "f8f7aCzcPKbsF8p3"
         },
         {
             "type": "vmess",
@@ -352,7 +325,7 @@
         {
             "type": "shadowsocks",
             "tag": "VN 1 - VIETPN",
-            "server": "103.186.154.35",
+            "server": "103.186.154.37",
             "server_port": 38388,
             "method": "aes-256-cfb",
             "password": "Xn8jKdmDM00IeO%#$#fJAMtsEAEUOpH/YWYtYqDFnT0SV"
@@ -360,7 +333,7 @@
         {
             "type": "shadowsocks",
             "tag": "VN 2 - VIETPN",
-            "server": "103.186.155.138",
+            "server": "103.186.155.10",
             "server_port": 38388,
             "method": "aes-256-cfb",
             "password": "Xn8jKdmDM00IeO%#$#fJAMtsEAEUOpH/YWYtYqDFnT0SV"
@@ -368,7 +341,7 @@
         {
             "type": "shadowsocks",
             "tag": "VN 3 - VIETPN",
-            "server": "103.186.154.58",
+            "server": "103.186.155.23",
             "server_port": 38388,
             "method": "aes-256-cfb",
             "password": "Xn8jKdmDM00IeO%#$#fJAMtsEAEUOpH/YWYtYqDFnT0SV"
