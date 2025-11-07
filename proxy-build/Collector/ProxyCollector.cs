@@ -20,7 +20,6 @@ public class ProxyCollector : IDisposable
     private readonly CollectorConfig _config;
     private readonly IPToCountryResolver _resolver;
 
-    // Ganti ke HashSet untuk O(1) lookup
     private static readonly HashSet<string> FormalSuffixes = new(StringComparer.OrdinalIgnoreCase)
     {
         "SAS","INC","LTD","LLC","CORP","CO","SA","SRO","ASN","LIMITED",
@@ -162,10 +161,16 @@ public class ProxyCollector : IDisposable
 
         LogToConsole("Compiling results...");
 
-        var liteTestResult = liteProfiles.Any() ? await RunLiteTest(liteProfiles) : new List<ProfileItem>();
+        var liteTestResult = liteProfiles.Any()
+            ? await RunLiteTest(liteProfiles)
+            : new List<ProfileItem>();
+
         LogToConsole($"Active proxies (Lite): {liteTestResult.Count}");
-        
-        var vlessTestResult = vlessProfiles.Any() ? await RunSingboxTest(vlessProfiles) : new List<ProfileItem>();
+
+        var vlessTestResult = vlessProfiles.Any()
+            ? await RunSingboxTest(vlessProfiles)
+            : new List<ProfileItem>();
+
         LogToConsole($"Active proxies (Singbox): {vlessTestResult.Count}");
 
         var combinedResults = liteTestResult.Concat(vlessTestResult).ToList();
@@ -250,29 +255,36 @@ public class ProxyCollector : IDisposable
         List<ProfileItem> profiles,
         Dictionary<ProfileItem, IPToCountryResolver.ProxyCountryInfo> countryMap)
     {
-        return profiles
+        var grouped = profiles
             .GroupBy(p =>
             {
                 if (countryMap.TryGetValue(p, out var info) && info?.CountryCode != null)
                     return info.CountryCode;
                 return "ZZ";
             })
-            .SelectMany(group =>
-            {
-                int idx = 1;
-                return group.Select(p =>
-                {
-                    var cc = countryMap.TryGetValue(p, out var info) && info?.CountryCode != null
-                        ? info.CountryCode
-                        : "ZZ";
+            .OrderBy(g => g.Key)
+            .ToList();
 
-                    var ispName = (p.Name ?? "Unknown").Split(" - ", 2).Last();
-                    p.Name = $"{cc} {idx} - {ispName}";
-                    idx++;
-                    return p;
-                });
-            })
-            .OrderBy(p => p.Name)
+        var finalList = new List<(string cc, int idx, ProfileItem p)>();
+
+        foreach (var group in grouped)
+        {
+            int idx = 1;
+
+            foreach (var p in group)
+            {
+                var ispName = (p.Name ?? "Unknown").Split(" - ", 2).Last();
+                p.Name = $"{group.Key} {idx} - {ispName}";
+
+                finalList.Add((group.Key, idx, p));
+                idx++;
+            }
+        }
+
+        return finalList
+            .OrderBy(t => t.cc)
+            .ThenBy(t => t.idx)
+            .Select(t => t.p)
             .ToList();
     }
 
