@@ -5,7 +5,7 @@ go 1.24
 require (
 	github.com/maxmind/mmdbwriter v1.1.0
 	github.com/oschwald/maxminddb-golang v1.13.1
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/tailscale/hujson v0.0.0-20241010212012-29efb4a0184b
 	github.com/tidwall/gjson v1.18.0
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
