@@ -291,7 +291,16 @@ public class ProxyCollector : IDisposable
     private async Task SaveProfileList(string fileName, List<ProfileItem> profiles)
     {
         var path = Path.Combine(Directory.GetCurrentDirectory(), fileName);
-        await File.WriteAllLinesAsync(path, profiles.Select(p => p.ToProfileUrl()));
+        var lines = new List<string>();
+
+        if (string.Equals(fileName, "all_list.txt", StringComparison.OrdinalIgnoreCase))
+        {
+            lines.Add($"# Build date (Asia/Jakarta): {GetJakartaBuildTime()}");
+        }
+
+        lines.AddRange(profiles.Select(p => p.ToProfileUrl()));
+
+        await File.WriteAllLinesAsync(path, lines);
         LogToConsole($"Saved {fileName} ({profiles.Count} proxies)");
     }
 
@@ -432,5 +441,12 @@ public class ProxyCollector : IDisposable
     public void Dispose()
     {
         _resolver?.Dispose();
+    }
+
+    private static string GetJakartaBuildTime()
+    {
+        var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+        var jakartaTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        return jakartaTime.ToString("dd-MM-yyyy HH:mm:ss");
     }
 }
