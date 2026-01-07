@@ -2,14 +2,16 @@ name: Build Proxy List
 
 on:
   schedule:
-    - cron: "0 */6 * * *"
-#  push:
-#    branches:
-#    - dev
+    - cron: "0 0 * * *"
   workflow_dispatch:
     inputs:
       debug:
         description: "Enable Debuging?"
+        required: false
+        default: "false"
+        type: boolean
+      backup_only:
+        description: "Backup current all_list.txt only (no build)"
         required: false
         default: "false"
         type: boolean
@@ -23,19 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       EnableDebug: ${{ github.event.inputs.debug || 'false' }}
-      GeoLiteAsnDbPath: Asset/GeoLite2-ASN.mmdb
-      GeoLiteCountryDbPath: Asset/GeoLite2-Country.mmdb
-      IncludedCountry: "IN,JP,MY,NL,SG,TW,TH,VE,VN"
-      IncludedProtocols: "ss,trojan,vmess,vless"
-      LiteConfigPath: Asset/config.json
-      LitePath: Asset/lite
-      MaxProxiesPerCountry: 3
-      MaxThreadCount: 128
-      MinActiveProxies: 100
-      SingboxPath: sing-box
-      SourcesFile: Asset/sources.txt
-      Timeout: 15000
-      V2rayFormatResultPath: Asset/singlist.txt
 
     steps:
       - name: Set variables
@@ -48,13 +37,19 @@ jobs:
         run: |
           git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
+      # === BUILD STEPS (SKIPPED WHEN backup_only=true) ===
+
       - uses: actions/checkout@v6
+        if: ${{ github.event.inputs.backup_only != 'true' }}
+
       - name: Setup .NET
+        if: ${{ github.event.inputs.backup_only != 'true' }}
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
 
       - name: Checkout main branch
+        if: ${{ github.event.inputs.backup_only != 'true' }}
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
@@ -62,33 +57,33 @@ jobs:
           path: source
 
       - name: Install sing-box
+        if: ${{ github.event.inputs.backup_only != 'true' }}
         run: |
           sudo dpkg -i source/proxy-build/Asset/*.deb
           sudo apt-get install -f
 
       - name: Build proxy list
+        if: ${{ github.event.inputs.backup_only != 'true' }}
         run: |
           cd source/proxy-build
-          
-          # get mmdb file
           git clone --depth 1 -b asset https://github.com/${{ github.repository }} GEO
-
-          for file in GEO/GEO/*.tar.gz; do tar -xzf "$file" --wildcards --transform='s:.*/::' -C Asset '*.mmdb'; done
-
+          for file in GEO/GEO/*.tar.gz; do
+            tar -xzf "$file" --wildcards --transform='s:.*/::' -C Asset '*.mmdb'
+          done
           dotnet restore
           dotnet run --configuration Release --project .
 
       - name: Build sing-box configuration
-        if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
+        if: ${{ github.event.inputs.backup_only != 'true' && !hashFiles('source/proxy-build/skip_push.flag') }}
         run: |
           cd source/proxy-build/Asset
           pip install geoip2 -q
           python generate_singbox_config.py
-          
           cd ../..
 
-      - name: Prepare local repo for 'asset' branch (create if missing)
-        if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
+      # === ASSET REPO (ALWAYS) ===
+
+      - name: Prepare local repo for 'asset' branch
         env:
           GH_TOKEN: ${{ secrets.AUTH_PAT }}
         run: |
@@ -107,16 +102,25 @@ jobs:
           fi
           cd ..
 
+      - name: Backup current all_list.txt
+        run: |
+          BACKUP_DATE=$(TZ=Asia/Jakarta date '+%d%m%y')
+          if [ -f asset/Proxy/all_list.txt ]; then
+            mkdir -p asset/Backup
+            cp asset/Proxy/all_list.txt asset/Backup/${BACKUP_DATE}_all_list.txt
+          else
+            echo "No existing all_list.txt to backup"
+          fi
+
       - name: Copy build results to asset/Proxy
-        if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
+        if: ${{ github.event.inputs.backup_only != 'true' && !hashFiles('source/proxy-build/skip_push.flag') }}
         run: |
           mkdir -p asset/Proxy
           cp source/proxy-build/{list.txt,all_list.txt,raven.json} asset/Proxy/
 
-      - name: Commit & push Proxy
-        if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
+      - name: Commit & push asset
         run: |
           cd asset
-          git add Proxy
-          git commit -m "Update proxy list on ${{ env.BUILDTIME }}" || echo "No changes to commit"
+          git add Proxy Backup
+          git commit -m "Update proxy list on ${{ env.BUILDTIME }}" || echo "No changes"
           git push -u origin asset
