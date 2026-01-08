@@ -118,9 +118,9 @@ jobs:
       - name: Backup current all_list.txt
         run: |
           BACKUP_DATE=$(TZ=Asia/Jakarta date '+%d%m%y')
-          if [ -f asset/Proxy/all_list.txt ]; then
+          if [ -f source/proxy-build/all_list.txt ]; then
             mkdir -p asset/Backup
-            cp asset/Proxy/all_list.txt asset/Backup/${BACKUP_DATE}_all_list.txt
+            source/proxy-build/all_list.txt asset/Backup/${BACKUP_DATE}_all_list.txt
           else
             echo "No existing all_list.txt to backup"
           fi
