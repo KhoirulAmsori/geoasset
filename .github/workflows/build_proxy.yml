@@ -10,11 +10,6 @@ on:
         required: false
         default: "false"
         type: boolean
-      backup_only:
-        description: "Backup current all_list.txt only (no build)"
-        required: false
-        default: "false"
-        type: boolean
   repository_dispatch:
 
 permissions:
@@ -50,19 +45,14 @@ jobs:
         run: |
           git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
-      # === BUILD STEPS (SKIPPED WHEN backup_only=true) ===
-
       - uses: actions/checkout@v6
-        if: ${{ github.event.inputs.backup_only != 'true' }}
 
       - name: Setup .NET
-        if: ${{ github.event.inputs.backup_only != 'true' }}
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
 
       - name: Checkout main branch
-        if: ${{ github.event.inputs.backup_only != 'true' }}
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
@@ -70,13 +60,11 @@ jobs:
           path: source
 
       - name: Install sing-box
-        if: ${{ github.event.inputs.backup_only != 'true' }}
         run: |
           sudo dpkg -i source/proxy-build/Asset/*.deb
           sudo apt-get install -f
 
       - name: Build proxy list
-        if: ${{ github.event.inputs.backup_only != 'true' }}
         run: |
           cd source/proxy-build
           git clone --depth 1 -b asset https://github.com/${{ github.repository }} GEO
@@ -87,14 +75,12 @@ jobs:
           dotnet run --configuration Release --project .
 
       - name: Build sing-box configuration
-        if: ${{ github.event.inputs.backup_only != 'true' && !hashFiles('source/proxy-build/skip_push.flag') }}
+        if: !hashFiles('source/proxy-build/skip_push.flag') }}
         run: |
           cd source/proxy-build/Asset
           pip install geoip2 -q
           python generate_singbox_config.py
           cd ../..
-
-      # === ASSET REPO (ALWAYS) ===
 
       - name: Prepare local repo for 'asset' branch
         env:
@@ -115,19 +101,17 @@ jobs:
           fi
           cd ..
 
-      - name: Backup current all_list.txt
+      - name: Backup and copy build results
+        if: !hashFiles('source/proxy-build/skip_push.flag') }}
         run: |
           BACKUP_DATE=$(TZ=Asia/Jakarta date '+%d%m%y')
           if [ -f source/proxy-build/all_list.txt ]; then
             mkdir -p asset/Backup
-            source/proxy-build/all_list.txt asset/Backup/${BACKUP_DATE}_all_list.txt
+            cp source/proxy-build/all_list.txt asset/Backup/${BACKUP_DATE}_all_list.txt
           else
             echo "No existing all_list.txt to backup"
           fi
 
-      - name: Copy build results to asset/Proxy
-        if: ${{ github.event.inputs.backup_only != 'true' && !hashFiles('source/proxy-build/skip_push.flag') }}
-        run: |
           mkdir -p asset/Proxy
           cp source/proxy-build/{list.txt,all_list.txt,raven.json} asset/Proxy/
 

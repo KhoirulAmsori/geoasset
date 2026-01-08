@@ -295,7 +295,7 @@ public class ProxyCollector : IDisposable
 
         if (string.Equals(fileName, "all_list.txt", StringComparison.OrdinalIgnoreCase))
         {
-            lines.Add($"# Build date (Asia/Jakarta): {GetJakartaBuildTime()}");
+            lines.Add($"# Build date: {GetJakartaBuildTime()}");
         }
 
         lines.AddRange(profiles.Select(p => p.ToProfileUrl()));
