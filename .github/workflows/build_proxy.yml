@@ -75,7 +75,7 @@ jobs:
           dotnet run --configuration Release --project .
 
       - name: Build sing-box configuration
-        if: !hashFiles('source/proxy-build/skip_push.flag') }}
+        if: !hashFiles('source/proxy-build/skip_push.flag')
         run: |
           cd source/proxy-build/Asset
           pip install geoip2 -q
@@ -102,7 +102,7 @@ jobs:
           cd ..
 
       - name: Backup and copy build results
-        if: !hashFiles('source/proxy-build/skip_push.flag') }}
+        if: !hashFiles('source/proxy-build/skip_push.flag')
         run: |
           BACKUP_DATE=$(TZ=Asia/Jakarta date '+%d%m%y')
           if [ -f source/proxy-build/all_list.txt ]; then
