@@ -3,6 +3,9 @@ name: Build Proxy List
 on:
   schedule:
     - cron: "0 0 * * *"
+#  push:
+#    branches:
+#    - dev
   workflow_dispatch:
     inputs:
       debug:
@@ -46,7 +49,6 @@ jobs:
           git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
       - uses: actions/checkout@v6
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
@@ -83,6 +85,7 @@ jobs:
           cd ../..
 
       - name: Prepare local repo for 'asset' branch
+        if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
         env:
           GH_TOKEN: ${{ secrets.AUTH_PAT }}
         run: |
@@ -116,6 +119,7 @@ jobs:
           cp source/proxy-build/{list.txt,all_list.txt,raven.json} asset/Proxy/
 
       - name: Commit & push asset
+        if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
         run: |
           cd asset
           git add Proxy Backup
