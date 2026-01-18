@@ -108,9 +108,14 @@ jobs:
         if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
         run: |
           BACKUP_DATE=$(TZ=Asia/Jakarta date '+%d%m%y')
+          BACKUP_DIR=asset/Backup
+
           if [ -f source/proxy-build/all_list.txt ]; then
-            mkdir -p asset/Backup
-            cp source/proxy-build/all_list.txt asset/Backup/${BACKUP_DATE}_all_list.txt
+            mkdir -p $BACKUP_DIR
+            cp source/proxy-build/all_list.txt $BACKUP_DIR/${BACKUP_DATE}_all_list.txt
+
+            # Simpan hanya 10 backup terbaru
+            ls -1t $BACKUP_DIR/*_all_list.txt | tail -n +11 | xargs -r rm --
           else
             echo "No existing all_list.txt to backup"
           fi
