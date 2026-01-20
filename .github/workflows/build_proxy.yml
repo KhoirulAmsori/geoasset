@@ -115,7 +115,7 @@ jobs:
             cp source/proxy-build/all_list.txt $BACKUP_DIR/${BACKUP_DATE}_all_list.txt
 
             # Simpan hanya 5 backup terbaru
-            ls -1 *_all_list.txt | sort | head -n -5 | xargs rm -f
+            ls -1 $BACKUP_DIR/*_all_list.txt | sort | head -n -5 | xargs -r rm -f
           else
             echo "No existing all_list.txt to backup"
           fi
