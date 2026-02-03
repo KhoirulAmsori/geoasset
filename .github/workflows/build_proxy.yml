@@ -107,7 +107,7 @@ jobs:
       - name: Backup and copy build results
         if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
         run: |
-          BACKUP_DATE=$(TZ=Asia/Jakarta date '+%d%m%y')
+          BACKUP_DATE=$(TZ=Asia/Jakarta date '+%Y%m%d')
           BACKUP_DIR=asset/Backup
 
           if [ -f source/proxy-build/all_list.txt ]; then
@@ -115,7 +115,7 @@ jobs:
             cp source/proxy-build/all_list.txt $BACKUP_DIR/${BACKUP_DATE}_all_list.txt
 
             # Simpan hanya 5 backup terbaru
-            ls -1 $BACKUP_DIR/*_all_list.txt | sort | head -n -5 | xargs -r rm -f
+            ls -1t $BACKUP_DIR/*_all_list.txt | tail -n +6 | xargs -r rm -f
           else
             echo "No existing all_list.txt to backup"
           fi
