@@ -42,7 +42,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.24"   # versi Go seragam
+          go-version: "1.25"   # versi Go seragam
           cache-dependency-path: |
             ./geoip-build/go.sum
             ./geosite-build/go.sum
