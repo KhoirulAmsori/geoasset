@@ -162,7 +162,7 @@ public class ProxyCollector : IDisposable
         LogToConsole("Compiling results...");
 
         var liteTestResult = liteProfiles.Any()
-            ? await RunSingboxTest(liteProfiles)
+            ? await RunLiteTest(liteProfiles)
             : new List<ProfileItem>();
 
         LogToConsole($"Active proxies (Lite): {liteTestResult.Count}");
@@ -426,7 +426,7 @@ public class ProxyCollector : IDisposable
             _config.MaxThreadCount,
             _config.Timeout,
             1024,
-            "https://www.youtube.com/generate_204"
+            "http://www.youtube.com/generate_204"
         );
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
