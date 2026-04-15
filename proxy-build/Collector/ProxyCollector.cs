@@ -162,7 +162,7 @@ public class ProxyCollector : IDisposable
         LogToConsole("Compiling results...");
 
         var liteTestResult = liteProfiles.Any()
-            ? await RunLiteTest(liteProfiles)
+            ? await RunSingboxTest(liteProfiles)
             : new List<ProfileItem>();
 
         LogToConsole($"Active proxies (Lite): {liteTestResult.Count}");
