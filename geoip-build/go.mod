@@ -7,7 +7,7 @@ require (
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/spf13/cobra v1.10.2
 	github.com/tailscale/hujson v0.0.0-20241010212012-29efb4a0184b
-	github.com/tidwall/gjson v1.18.0
+	github.com/tidwall/gjson v1.19.0
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v2 v2.4.0
