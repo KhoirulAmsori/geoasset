@@ -91,28 +91,25 @@
             "type": "selector",
             "tag": "MIXED",
             "outbounds": [
-                "JP 1 - Google",
-                "IN 1 - The Constant",
-                "IN 2 - Oracle Corporation",
+                "IN 1 - Oracle Corporation",
+                "IN 2 - The Constant",
                 "IN 3 - Akamai Connected",
+                "JP 1 - Google",
                 "JP 2 - Datacamp",
                 "JP 3 - Datacamp",
-                "JP 4 - Datacamp",
                 "MY 1 - LIGHT NODE",
-                "MY 2 - Alibaba (US)",
+                "MY 2 - Microsoft Corporation",
                 "MY 3 - Alibaba (US)",
-                "NL 1 - NForce Entertainment",
-                "NL 2 - Psychz Networks",
-                "NL 3 - Psychz Networks",
-                "SG 1 - Oracle Corporation",
+                "NL 1 - Greenhost",
+                "NL 2 - Greenhost",
+                "NL 3 - Greenhost",
+                "SG 1 - Amazoncom",
                 "SG 2 - Amazoncom",
                 "SG 3 - Datacamp",
                 "TH 1 - National Telecom",
-                "TH 2 - National Telecom",
-                "TH 3 - CSNE",
-                "TW 1 - Data Communication",
+                "TW 1 - Hostkey",
                 "TW 2 - Data Communication",
-                "TW 3 - Scloud",
+                "TW 3 - Hostkey",
                 "VN 1 - LIGHT NODE"
             ]
         },
@@ -128,35 +125,7 @@
         },
         {
             "type": "vmess",
-            "tag": "JP 1 - Google",
-            "server": "v8.hdacd.com",
-            "server_port": 30808,
-            "uuid": "cbb3f877-d1fb-344c-87a9-d153bffd5484",
-            "security": "auto",
-            "tls": {
-                "enabled": false,
-                "insecure": true,
-                "server_name": "v8.hdacd.com"
-            },
-            "transport": {}
-        },
-        {
-            "type": "trojan",
-            "tag": "IN 1 - The Constant",
-            "server": "65.20.90.225",
-            "server_port": 443,
-            "password": "Tu1fZjElnkRg0ECRj0sI0u54PY8ptUmATg",
-            "tls": {
-                "enabled": true,
-                "server_name": "www.sandbox-cloud.click",
-                "alpn": [],
-                "insecure": true
-            },
-            "transport": {}
-        },
-        {
-            "type": "vmess",
-            "tag": "IN 2 - Oracle Corporation",
+            "tag": "IN 1 - Oracle Corporation",
             "server": "152.67.8.205",
             "server_port": 80,
             "uuid": "9db4c708-aef8-4359-821b-38e47990be0d",
@@ -172,6 +141,20 @@
             }
         },
         {
+            "type": "trojan",
+            "tag": "IN 2 - The Constant",
+            "server": "65.20.90.225",
+            "server_port": 443,
+            "password": "Tu1fZjElnkRg0ECRj0sI0u54PY8ptUmATg",
+            "tls": {
+                "enabled": true,
+                "server_name": "www.sandbox-cloud.click",
+                "alpn": [],
+                "insecure": true
+            },
+            "transport": {}
+        },
+        {
             "type": "vmess",
             "tag": "IN 3 - Akamai Connected",
             "server": "172.232.103.186",
@@ -182,6 +165,20 @@
                 "enabled": false,
                 "insecure": true,
                 "server_name": "172.232.103.186"
+            },
+            "transport": {}
+        },
+        {
+            "type": "vmess",
+            "tag": "JP 1 - Google",
+            "server": "34.146.142.212",
+            "server_port": 30808,
+            "uuid": "cbb3f877-d1fb-344c-87a9-d153bffd5484",
+            "security": "auto",
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "34.146.142.212"
             },
             "transport": {}
         },
@@ -202,14 +199,6 @@
             "password": "shadowsocks"
         },
         {
-            "type": "shadowsocks",
-            "tag": "JP 4 - Datacamp",
-            "server": "149.22.87.204",
-            "server_port": 443,
-            "method": "aes-128-gcm",
-            "password": "shadowsocks"
-        },
-        {
             "type": "trojan",
             "tag": "MY 1 - LIGHT NODE",
             "server": "130.94.68.100",
@@ -225,118 +214,95 @@
         },
         {
             "type": "vmess",
-            "tag": "MY 2 - Alibaba (US)",
-            "server": "47.250.45.234",
-            "server_port": 8613,
-            "uuid": "80039b4d-bac0-4f89-82c7-54fad3b0a1ea",
+            "tag": "MY 2 - Microsoft Corporation",
+            "server": "172.197.161.174",
+            "server_port": 30808,
+            "uuid": "cbb3f877-d1fb-344c-87a9-d153bffd5484",
             "security": "auto",
             "tls": {
                 "enabled": false,
                 "insecure": true,
-                "server_name": "47.250.45.234"
+                "server_name": "172.197.161.174"
             },
-            "transport": {
-                "type": "ws",
-                "path": "/arki?ed=2048"
-            }
+            "transport": {}
         },
         {
             "type": "vmess",
             "tag": "MY 3 - Alibaba (US)",
-            "server": "47.250.153.136",
-            "server_port": 26181,
-            "uuid": "7249c3be-85ad-46fb-ab98-c4a07f4a724d",
+            "server": "47.250.149.51",
+            "server_port": 50018,
+            "uuid": "9665280c-a3d1-4aab-ef9f-a3a497337d91",
             "security": "auto",
             "tls": {
                 "enabled": false,
                 "insecure": true,
-                "server_name": "47.250.153.136"
+                "server_name": "47.250.149.51"
             },
             "transport": {
                 "type": "ws",
-                "path": "/",
+                "path": "/9665280c",
                 "headers": {
-                    "Host": "47.250.153.136"
+                    "Host": "47.250.149.51"
                 }
             }
         },
         {
             "type": "shadowsocks",
-            "tag": "NL 1 - NForce Entertainment",
-            "server": "109.201.152.181",
-            "server_port": 443,
-            "method": "aes-128-cfb",
-            "password": "shadowsocks"
-        },
-        {
-            "type": "shadowsocks",
-            "tag": "NL 2 - Psychz Networks",
-            "server": "108.181.126.122",
-            "server_port": 8388,
+            "tag": "NL 1 - Greenhost",
+            "server": "193.29.139.151",
+            "server_port": 8080,
             "method": "chacha20-ietf-poly1305",
-            "password": "CJmTCCx7Ltud"
+            "password": "oZIoA69Q8yhcQV8ka3Pa3A"
         },
         {
             "type": "shadowsocks",
-            "tag": "NL 3 - Psychz Networks",
-            "server": "108.181.58.239",
-            "server_port": 8388,
+            "tag": "NL 2 - Greenhost",
+            "server": "193.29.139.204",
+            "server_port": 8080,
             "method": "chacha20-ietf-poly1305",
-            "password": "CJmTCCx7Ltud"
+            "password": "oZIoA69Q8yhcQV8ka3Pa3A"
         },
         {
             "type": "shadowsocks",
-            "tag": "SG 1 - Oracle Corporation",
-            "server": "168.138.175.92",
-            "server_port": 9888,
-            "method": "aes-128-gcm",
-            "password": "JVSuuib4ydvY8m7u6jElTYbeRO8ygJ4Hi8Iq733BqAkF"
+            "tag": "NL 3 - Greenhost",
+            "server": "193.29.139.144",
+            "server_port": 8080,
+            "method": "chacha20-ietf-poly1305",
+            "password": "oZIoA69Q8yhcQV8ka3Pa3A"
         },
         {
             "type": "shadowsocks",
-            "tag": "SG 2 - Amazoncom",
+            "tag": "SG 1 - Amazoncom",
             "server": "ss.036.node-for-bigairport.win",
             "server_port": 19887,
             "method": "aes-256-gcm",
             "password": "6c4bd474-ac23-47fc-8742-c8f990357836"
         },
         {
+            "type": "shadowsocks",
+            "tag": "SG 2 - Amazoncom",
+            "server": "bgroup.node3.s.nodelist-airport.com",
+            "server_port": 50001,
+            "method": "aes-256-gcm",
+            "password": "504cb0be-b285-4ec5-9561-bc289aea0d46"
+        },
+        {
             "type": "vmess",
             "tag": "SG 3 - Datacamp",
-            "server": "149.88.23.202",
+            "server": "149.88.23.207",
             "server_port": 18000,
             "uuid": "f8c8dc3d-0d37-46b0-8b34-a7232882fcfe",
             "security": "auto",
             "tls": {
                 "enabled": false,
                 "insecure": true,
-                "server_name": "149.88.23.202"
+                "server_name": "149.88.23.207"
             },
             "transport": {}
         },
         {
             "type": "vmess",
             "tag": "TH 1 - National Telecom",
-            "server": "th1.vpnjantit.com",
-            "server_port": 10000,
-            "uuid": "1020f486-5e30-11f1-9b9b-bb0e43c242bb",
-            "security": "auto",
-            "tls": {
-                "enabled": false,
-                "insecure": true,
-                "server_name": "th1.vpnjantit.com"
-            },
-            "transport": {
-                "type": "ws",
-                "path": "/vpnjantit",
-                "headers": {
-                    "Host": "th1.vpnjantit.com"
-                }
-            }
-        },
-        {
-            "type": "vmess",
-            "tag": "TH 2 - National Telecom",
             "server": "185.78.165.153",
             "server_port": 10000,
             "uuid": "1020f486-5e30-11f1-9b9b-bb0e43c242bb",
@@ -356,48 +322,34 @@
         },
         {
             "type": "shadowsocks",
-            "tag": "TH 3 - CSNE",
-            "server": "102.129.229.85",
-            "server_port": 31700,
+            "tag": "TW 1 - Hostkey",
+            "server": "download.riferoser.icu",
+            "server_port": 56594,
             "method": "chacha20-ietf-poly1305",
-            "password": "d7zh2lMrXNH5+8+8pKzlxiCU9NN022ih+uAyxj5d4qo="
-        },
-        {
-            "type": "shadowsocks",
-            "tag": "TW 1 - Data Communication",
-            "server": "36.230.8.15",
-            "server_port": 50099,
-            "method": "chacha20-ietf-poly1305",
-            "password": "7e731ec3-f8e1-43f6-92cf-3978d14705c4"
+            "password": "2zQoJHz22Zbvh37yxZWJ6JzFtLhttZCLop8WFfpcJ4166JAenuKTvDuUnebBnz8PGPoXLWsEm1nkzbTnJaiTsSx9wXZkyL3i"
         },
         {
             "type": "shadowsocks",
             "tag": "TW 2 - Data Communication",
-            "server": "61.231.18.14",
+            "server": "36.228.154.213",
             "server_port": 50099,
             "method": "chacha20-ietf-poly1305",
             "password": "7e731ec3-f8e1-43f6-92cf-3978d14705c4"
         },
         {
-            "type": "vmess",
-            "tag": "TW 3 - Scloud",
-            "server": "165.154.195.38",
-            "server_port": 35034,
-            "uuid": "959a8caf-4cea-43d0-a548-3628e7ddfafc",
-            "security": "auto",
-            "tls": {
-                "enabled": false,
-                "insecure": true,
-                "server_name": "165.154.195.38"
-            },
-            "transport": {}
+            "type": "shadowsocks",
+            "tag": "TW 3 - Hostkey",
+            "server": "46.249.109.128",
+            "server_port": 56594,
+            "method": "chacha20-ietf-poly1305",
+            "password": "q2jToxsx4vTevqrFiLGuwRx96SXM3C96id1MWpnSECHq3MaTWnEV76aN5PYEigRfqf7rxAcuAMWUzYNxrYRG6QhMcYw5QnqL"
         },
         {
             "type": "trojan",
             "tag": "VN 1 - LIGHT NODE",
             "server": "130.94.3.146",
             "server_port": 443,
-            "password": "DX4wKmVl.CNIjwO5CYf7_qg%2Bf1eMN4yt_F",
+            "password": "DX4wKmVl.CNIjwO5CYf7_qg+f1eMN4yt_F",
             "tls": {
                 "enabled": true,
                 "server_name": "www.event-snapshot.click",
