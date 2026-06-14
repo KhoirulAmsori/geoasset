@@ -17,9 +17,13 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup git with token
+      # Tweaks global untuk meningkatkan ketahanan Git terhadap network timeout (Exit Code 28)
+      - name: Setup git with token & network tweaks
         run: |
           git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          git config --global http.postBuffer 524288000
+          git config --global http.lowSpeedLimit 0
+          git config --global http.lowSpeedTime 999999
 
       - name: Setup environment & download asset
         run: |
@@ -34,7 +38,7 @@ jobs:
           mkdir -p Publish
           
           # Kloning repo ke geoip-build/asset
-          git clone --depth 1 -b asset https://github.com/${{ github.repository }} geoip-build/asset
+          for i in {1..3}; do git clone --depth 1 -b asset https://github.com/${{ github.repository }} geoip-build/asset && break || sleep 15; done
 
       - name: Prepare Go cache folder
         run: mkdir -p /tmp/go-build/pkg/mod
@@ -81,7 +85,7 @@ jobs:
       - name: Build GEOSITE
         run: |
           # Kloning ke domain-list-community
-          git clone --depth 1 https://github.com/v2fly/domain-list-community
+          for i in {1..3}; do git clone --depth 1 https://github.com/v2fly/domain-list-community && break || sleep 15; done
           
           cd geosite-build
           
@@ -99,7 +103,7 @@ jobs:
       - name: Build Sing-Box assets
         run: |
           # Kloning meta-rules-converter
-          git clone --depth 1 https://github.com/MetaCubeX/meta-rules-converter
+          for i in {1..3}; do git clone --depth 1 https://github.com/MetaCubeX/meta-rules-converter && break || sleep 15; done
 
           # Folder untuk branch sing-box
           mkdir -p sing-rule/geo/{geosite,geoip} sing-rule/asn
