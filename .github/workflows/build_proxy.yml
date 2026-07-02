@@ -30,11 +30,11 @@ jobs:
       LiteConfigPath: Asset/config.json
       LitePath: Asset/lite
       MaxProxiesPerCountry: 3
-      MaxThreadCount: 64
-      MinActiveProxies: 100
+      MaxThreadCount: 32
+      MinActiveProxies: 10
       SingboxPath: sing-box
       SourcesFile: Asset/sources.txt
-      Timeout: 15000
+      Timeout: 5000
       V2rayFormatResultPath: Asset/singlist.txt
 
     steps:

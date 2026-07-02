@@ -426,7 +426,7 @@ public class ProxyCollector : IDisposable
             _config.MaxThreadCount,
             _config.Timeout,
             1024,
-            "https://cp.cloudflare.com/generate_204"
+            "https://www.youtube.com/generate_204"
         );
 
         var workingResults = new ConcurrentBag<UrlTestResult>();
