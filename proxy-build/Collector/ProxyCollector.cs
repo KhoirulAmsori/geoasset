@@ -162,13 +162,13 @@ public class ProxyCollector : IDisposable
         LogToConsole("Compiling results...");
 
         var liteTestResult = liteProfiles.Any()
-            ? await RunSingboxTest(liteProfiles)
+            ? await RunLiteTest(liteProfiles)
             : new List<ProfileItem>();
 
         LogToConsole($"Active proxies (NON-VLESS): {liteTestResult.Count}");
 
         var vlessTestResult = vlessProfiles.Any()
-            ? await RunSingboxTest(vlessProfiles)
+            ? await RunLiteTest(vlessProfiles)
             : new List<ProfileItem>();
 
         LogToConsole($"Active proxies (VLESS): {vlessTestResult.Count}");
