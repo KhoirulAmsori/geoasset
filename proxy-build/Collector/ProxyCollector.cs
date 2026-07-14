@@ -149,36 +149,18 @@ public class ProxyCollector : IDisposable
         var included = _config.IncludedProtocols.Length > 0
             ? string.Join(", ", _config.IncludedProtocols.Select(p => p.Replace("://", "").ToUpperInvariant()))
             : "all";
-        LogToConsole($"Get unique profiles with protocols: {included}.");
+        LogToConsole($"Collected {allProfiles.Count} unique profiles with protocols: {included}.");
+        LogToConsole("Testing results...");
 
-        var vlessProfiles = allProfiles
-            .Where(p => p.ToProfileUrl().StartsWith("vless://", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        var liteProfiles = allProfiles.Except(vlessProfiles).ToList();
-
-        LogToConsole($"NON-VLESS: {liteProfiles.Count}, VLESS: {vlessProfiles.Count}");
-
-        LogToConsole("Compiling results...");
-
-        var liteTestResult = liteProfiles.Any()
-            ? await RunLiteTest(liteProfiles)
+        var liteTestResult = allProfiles.Any()
+            ? await RunLiteTest(allProfiles)
             : new List<ProfileItem>();
 
-        LogToConsole($"Active proxies (NON-VLESS): {liteTestResult.Count}");
+        LogToConsole($"Active proxies: {liteTestResult.Count}");
 
-        var vlessTestResult = liteProfiles.Any()
-            ? await RunSingboxTest(liteProfiles)
-            : new List<ProfileItem>();
-
-        LogToConsole($"Active proxies (VLESS): {vlessTestResult.Count}");
-
-        var combinedResults = liteTestResult.Concat(vlessTestResult).ToList();
-        LogToConsole($"Total active proxies after tests: {combinedResults.Count}");
-
-        if (combinedResults.Count < _config.MinActiveProxies)
+        if (liteTestResult.Count < _config.MinActiveProxies)
         {
-            LogToConsole($"Active proxies ({combinedResults.Count}) less than required ({_config.MinActiveProxies}). Skipping push.");
+            LogToConsole($"Active proxies ({liteTestResult.Count}) less than required ({_config.MinActiveProxies}). Skipping push.");
             await File.WriteAllTextAsync("skip_push.flag", "not enough proxies");
             return;
         }
@@ -186,7 +168,7 @@ public class ProxyCollector : IDisposable
         var countryMap = new Dictionary<ProfileItem, IPToCountryResolver.ProxyCountryInfo>();
         var processedProfiles = new List<ProfileItem>();
 
-        foreach (var profile in combinedResults)
+        foreach (var profile in liteTestResult)
         {
             if (string.IsNullOrEmpty(profile.Address))
                 continue;
