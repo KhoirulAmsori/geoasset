@@ -91,15 +91,16 @@
             "type": "selector",
             "tag": "MIXED",
             "outbounds": [
-                "IN 1 - Akamai Connected",
+                "IN 1 - Melbikomas UAB",
                 "IN 2 - Melbikomas UAB",
                 "IN 3 - Melbikomas UAB",
-                "JP 1 - G Core",
-                "JP 2 - Oracle Corporation",
-                "JP 3 - G Core",
+                "JP 1 - Datacamp",
+                "JP 2 - G Core",
+                "JP 3 - The Constant",
                 "MY 1 - Alibaba (US)",
+                "MY 2 - Alibaba (US)",
                 "NL 1 - G Core",
-                "NL 2 - G Core",
+                "NL 2 - NForce Entertainment",
                 "NL 3 - G Core",
                 "SG 1 - G Core",
                 "SG 2 - G Core",
@@ -122,16 +123,16 @@
         },
         {
             "type": "shadowsocks",
-            "tag": "IN 1 - Akamai Connected",
-            "server": "172.105.39.124",
-            "server_port": 7002,
-            "method": "aes-256-gcm",
-            "password": "RexnBgU7EV5ADxG"
+            "tag": "IN 1 - Melbikomas UAB",
+            "server": "103.111.114.55",
+            "server_port": 28061,
+            "method": "chacha20-ietf-poly1305",
+            "password": "WOir3lXBhMHDcLFPQdEZXPu37_pTQDCXfm"
         },
         {
             "type": "shadowsocks",
             "tag": "IN 2 - Melbikomas UAB",
-            "server": "103.111.114.71",
+            "server": "103.111.114.80",
             "server_port": 28061,
             "method": "chacha20-ietf-poly1305",
             "password": "WOir3lXBhMHDcLFPQdEZXPu37_pTQDCXfm"
@@ -139,14 +140,22 @@
         {
             "type": "shadowsocks",
             "tag": "IN 3 - Melbikomas UAB",
-            "server": "103.111.114.61",
+            "server": "103.111.114.82",
             "server_port": 28061,
             "method": "chacha20-ietf-poly1305",
             "password": "WOir3lXBhMHDcLFPQdEZXPu37_pTQDCXfm"
         },
         {
+            "type": "shadowsocks",
+            "tag": "JP 1 - Datacamp",
+            "server": "149.22.87.241",
+            "server_port": 443,
+            "method": "aes-128-gcm",
+            "password": "shadowsocks"
+        },
+        {
             "type": "trojan",
-            "tag": "JP 1 - G Core",
+            "tag": "JP 2 - G Core",
             "server": "sweeping-parakeet.rooster465.autos",
             "server_port": 443,
             "password": "IQ68037294",
@@ -160,41 +169,41 @@
         },
         {
             "type": "vmess",
-            "tag": "JP 2 - Oracle Corporation",
-            "server": "161.33.139.138",
-            "server_port": 58905,
-            "uuid": "1610f8dc-0661-4032-ac6a-a7250603f608",
+            "tag": "JP 3 - The Constant",
+            "server": "45.76.202.45",
+            "server_port": 4010,
+            "uuid": "071a8a71-c656-4fb6-a908-4e42eb72243d",
             "security": "auto",
             "tls": {
                 "enabled": false,
                 "insecure": true,
-                "server_name": "161.33.139.138"
+                "server_name": "45.76.202.45"
             },
             "transport": {
                 "type": "ws",
-                "path": "/1610f8dc-0661-4032-ac6a-a7250603f608-vm",
-                "headers": {
-                    "Host": "161.33.139.138"
-                }
+                "path": "/liksuzcp"
             }
-        },
-        {
-            "type": "trojan",
-            "tag": "JP 3 - G Core",
-            "server": "95.85.94.112",
-            "server_port": 443,
-            "password": "IQ68037294",
-            "tls": {
-                "enabled": true,
-                "server_name": "sweeping-parakeet.rooster465.autos",
-                "alpn": [],
-                "insecure": true
-            },
-            "transport": {}
         },
         {
             "type": "vmess",
             "tag": "MY 1 - Alibaba (US)",
+            "server": "47.250.45.234",
+            "server_port": 8613,
+            "uuid": "80039b4d-bac0-4f89-82c7-54fad3b0a1ea",
+            "security": "auto",
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "47.250.45.234"
+            },
+            "transport": {
+                "type": "ws",
+                "path": "/arki?ed=2048"
+            }
+        },
+        {
+            "type": "vmess",
+            "tag": "MY 2 - Alibaba (US)",
             "server": "47.250.135.244",
             "server_port": 10000,
             "uuid": "aedc66b8-99d7-4a21-8310-61870e7f870d",
@@ -209,40 +218,34 @@
         {
             "type": "trojan",
             "tag": "NL 1 - G Core",
-            "server": "thorough-falcon.rooster465.autos",
-            "server_port": 443,
-            "password": "PD07395842",
-            "tls": {
-                "enabled": true,
-                "server_name": "thorough-falcon.rooster465.autos",
-                "alpn": [],
-                "insecure": true
-            },
-            "transport": {}
-        },
-        {
-            "type": "trojan",
-            "tag": "NL 2 - G Core",
-            "server": "game-firefly.rooster465.autos",
-            "server_port": 443,
-            "password": "KV63147582",
-            "tls": {
-                "enabled": true,
-                "server_name": "game-firefly.rooster465.autos",
-                "alpn": [],
-                "insecure": true
-            },
-            "transport": {}
-        },
-        {
-            "type": "trojan",
-            "tag": "NL 3 - G Core",
-            "server": "whole-woodcock.rooster465.autos",
+            "server": "89.39.70.49",
             "server_port": 443,
             "password": "IQ68037294",
             "tls": {
                 "enabled": true,
-                "server_name": "whole-woodcock.rooster465.autos",
+                "server_name": "eager-louse.rooster465.autos",
+                "alpn": [],
+                "insecure": true
+            },
+            "transport": {}
+        },
+        {
+            "type": "shadowsocks",
+            "tag": "NL 2 - NForce Entertainment",
+            "server": "109.201.152.181",
+            "server_port": 443,
+            "method": "aes-128-cfb",
+            "password": "shadowsocks"
+        },
+        {
+            "type": "trojan",
+            "tag": "NL 3 - G Core",
+            "server": "casual-bullfrog.rooster465.autos",
+            "server_port": 443,
+            "password": "IQ68037294",
+            "tls": {
+                "enabled": true,
+                "server_name": "casual-bullfrog.rooster465.autos",
                 "alpn": [],
                 "insecure": true
             },
@@ -251,12 +254,12 @@
         {
             "type": "trojan",
             "tag": "SG 1 - G Core",
-            "server": "91.243.81.114",
+            "server": "resolved-gelding.rooster465.autos",
             "server_port": 443,
-            "password": "IQ68037294",
+            "password": "FC60532879",
             "tls": {
                 "enabled": true,
-                "server_name": "happy-mutt.rooster465.autos",
+                "server_name": "resolved-gelding.rooster465.autos",
                 "alpn": [],
                 "insecure": true
             },
@@ -265,12 +268,12 @@
         {
             "type": "trojan",
             "tag": "SG 2 - G Core",
-            "server": "full-mackerel.rooster465.autos",
+            "server": "45.135.228.21",
             "server_port": 443,
             "password": "IQ68037294",
             "tls": {
                 "enabled": true,
-                "server_name": "full-mackerel.rooster465.autos",
+                "server_name": "humane-hawk.rooster465.autos",
                 "alpn": [],
                 "insecure": true
             },
@@ -279,12 +282,12 @@
         {
             "type": "trojan",
             "tag": "SG 3 - G Core",
-            "server": "45.135.228.211",
+            "server": "81.28.13.68",
             "server_port": 443,
             "password": "IQ68037294",
             "tls": {
                 "enabled": true,
-                "server_name": "endless-kiwi.rooster465.autos",
+                "server_name": "pet-albacore.rooster465.autos",
                 "alpn": [],
                 "insecure": true
             },
@@ -309,15 +312,15 @@
         {
             "type": "shadowsocks",
             "tag": "TW 2 - Data Communication",
-            "server": "R3MRCG001287H3P.cybervena.com",
+            "server": "r3mrcg00129437x.cybervena.com",
             "server_port": 50099,
             "method": "chacha20-ietf-poly1305",
-            "password": "b1ae0fce-9340-4f2e-882d-fdb2218e2e2b"
+            "password": "7e731ec3-f8e1-43f6-92cf-3978d14705c4"
         },
         {
             "type": "shadowsocks",
             "tag": "TW 3 - Data Communication",
-            "server": "r3mrcg001287h3p.cybervena.com",
+            "server": "36.224.162.159",
             "server_port": 50099,
             "method": "chacha20-ietf-poly1305",
             "password": "7e731ec3-f8e1-43f6-92cf-3978d14705c4"
