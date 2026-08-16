@@ -93,13 +93,12 @@
             "outbounds": [
                 "IN 1 - Oracle Corporation",
                 "IN 2 - QTIME BUSINESSES",
-                "JP 1 - Datacamp",
-                "JP 2 - Amazoncom",
+                "JP 1 - Oracle Corporation",
+                "JP 2 - The Constant",
                 "JP 3 - Amazoncom",
                 "MY 1 - Alibaba (US)",
-                "MY 2 - Alibaba (US)",
-                "NL 1 - BlueVPS OU",
-                "NL 2 - Greenhost",
+                "NL 1 - Greenhost",
+                "NL 2 - G Core",
                 "NL 3 - Greenhost",
                 "SG 1 - Amazoncom",
                 "SG 2 - Amazoncom",
@@ -144,36 +143,39 @@
             "password": "EBDRo9THx4CqiFU7h5gfov76oNwzZURAh0ZwbWjBKddtUhvz"
         },
         {
-            "type": "shadowsocks",
-            "tag": "JP 1 - Datacamp",
-            "server": "149.22.87.241",
-            "server_port": 443,
-            "method": "aes-128-gcm",
-            "password": "shadowsocks"
+            "type": "vmess",
+            "tag": "JP 1 - Oracle Corporation",
+            "server": "168.138.43.75",
+            "server_port": 80,
+            "uuid": "11c3627f-31e8-4695-dfbd-34076e2f1f5d",
+            "security": "auto",
+            "tls": {
+                "enabled": false,
+                "insecure": true,
+                "server_name": "168.138.43.75"
+            },
+            "transport": {
+                "type": "ws",
+                "path": "/cctv13.m3u8"
+            }
         },
         {
-            "type": "trojan",
-            "tag": "JP 2 - Amazoncom",
-            "server": "13.114.122.131",
-            "server_port": 443,
-            "password": "AE62539071",
-            "tls": {
-                "enabled": true,
-                "server_name": "whole-grub.rooster465.autos",
-                "alpn": [],
-                "insecure": true
-            },
-            "transport": {}
+            "type": "shadowsocks",
+            "tag": "JP 2 - The Constant",
+            "server": "45.32.16.53",
+            "server_port": 8388,
+            "method": "chacha20-ietf-poly1305",
+            "password": "uTBjZhDmOMwBVAJI"
         },
         {
             "type": "trojan",
             "tag": "JP 3 - Amazoncom",
-            "server": "frank-frog.rooster465.autos",
+            "server": "13.114.100.100",
             "server_port": 443,
-            "password": "AE62539071",
+            "password": "FH72359861",
             "tls": {
                 "enabled": true,
-                "server_name": "frank-frog.rooster465.autos",
+                "server_name": "pleased-sawfly.rooster465.autos",
                 "alpn": [],
                 "insecure": true
             },
@@ -183,8 +185,8 @@
             "type": "vmess",
             "tag": "MY 1 - Alibaba (US)",
             "server": "47.250.45.234",
-            "server_port": 8613,
-            "uuid": "80039b4d-bac0-4f89-82c7-54fad3b0a1ea",
+            "server_port": 43063,
+            "uuid": "c77f48f5-4be3-4461-b52b-49998e7b897b",
             "security": "auto",
             "tls": {
                 "enabled": false,
@@ -197,52 +199,44 @@
             }
         },
         {
-            "type": "vmess",
-            "tag": "MY 2 - Alibaba (US)",
-            "server": "47.250.135.244",
-            "server_port": 10000,
-            "uuid": "aedc66b8-99d7-4a21-8310-61870e7f870d",
-            "security": "auto",
+            "type": "shadowsocks",
+            "tag": "NL 1 - Greenhost",
+            "server": "193.29.139.132",
+            "server_port": 8080,
+            "method": "chacha20-ietf-poly1305",
+            "password": "k1dBOmOB4oqi7Ump37a1bQ"
+        },
+        {
+            "type": "trojan",
+            "tag": "NL 2 - G Core",
+            "server": "whole-woodcock.rooster465.autos",
+            "server_port": 443,
+            "password": "FH72359861",
             "tls": {
-                "enabled": false,
-                "insecure": true,
-                "server_name": "47.250.135.244"
+                "enabled": true,
+                "server_name": "whole-woodcock.rooster465.autos",
+                "alpn": [],
+                "insecure": true
             },
             "transport": {}
         },
         {
             "type": "shadowsocks",
-            "tag": "NL 1 - BlueVPS OU",
-            "server": "213.109.147.242",
-            "server_port": 62685,
-            "method": "chacha20-ietf-poly1305",
-            "password": "VpKABcOpNNA0l5G2AVOmw8"
-        },
-        {
-            "type": "shadowsocks",
-            "tag": "NL 2 - Greenhost",
-            "server": "193.29.139.230",
-            "server_port": 443,
-            "method": "chacha20-ietf-poly1305",
-            "password": "oZIoA69Q8yhcQV8ka3Pa3A"
-        },
-        {
-            "type": "shadowsocks",
             "tag": "NL 3 - Greenhost",
-            "server": "193.29.139.225",
-            "server_port": 443,
+            "server": "193.29.139.212",
+            "server_port": 8080,
             "method": "chacha20-ietf-poly1305",
-            "password": "oZIoA69Q8yhcQV8ka3Pa3A"
+            "password": "QCXDxuDlTTMD7jtgHUjIoj"
         },
         {
             "type": "trojan",
             "tag": "SG 1 - Amazoncom",
-            "server": "47.131.225.150",
+            "server": "54.169.117.161",
             "server_port": 443,
             "password": "AE62539071",
             "tls": {
                 "enabled": true,
-                "server_name": "sacred-anemone.rooster465.autos",
+                "server_name": "simple-rodent.rooster465.autos",
                 "alpn": [],
                 "insecure": true
             },
@@ -251,12 +245,12 @@
         {
             "type": "trojan",
             "tag": "SG 2 - Amazoncom",
-            "server": "47.131.229.80",
+            "server": "13.212.44.180",
             "server_port": 443,
             "password": "AE62539071",
             "tls": {
                 "enabled": true,
-                "server_name": "elegant-marten.rooster465.autos",
+                "server_name": "smooth-hornet.rooster465.autos",
                 "alpn": [],
                 "insecure": true
             },
@@ -265,12 +259,12 @@
         {
             "type": "trojan",
             "tag": "SG 3 - Amazoncom",
-            "server": "47.129.7.255",
+            "server": "54.169.241.164",
             "server_port": 443,
-            "password": "FH72359861",
+            "password": "AE62539071",
             "tls": {
                 "enabled": true,
-                "server_name": "stable-racer.rooster465.autos",
+                "server_name": "rested-osprey.rooster465.autos",
                 "alpn": [],
                 "insecure": true
             },
