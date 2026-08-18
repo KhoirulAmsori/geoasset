@@ -27,6 +27,15 @@
       }
     },
     {
+      "type": "json",
+      "action": "add",
+      "args": {
+        "name": "cloudfront",
+        "uri": "https://ip-ranges.amazonaws.com/ip-ranges.json",
+        "jsonPath": ["prefixes.#(service==\"CLOUDFRONT\")#.ip_prefix"]
+      }
+    },
+    {
       "type": "maxmindGeoLite2ASNCSV",
       "action": "add",
       "args": {
@@ -103,6 +112,7 @@
           "id",
           "cn",
           "private",
+          "cloudfront",
           "facebook",
           "google",
           "twitter",
