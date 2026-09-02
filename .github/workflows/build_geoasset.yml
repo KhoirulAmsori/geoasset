@@ -94,6 +94,8 @@ jobs:
 
           exclude=$(paste -sd'|' exclude_list.txt)
           curl -sSL $OISD_NSFW_SMALL | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' | grep -vE "$exclude" > ../domain-list-community/data/oisd-nsfw-small
+          curl -sSL https://raw.githubusercontent.com/pengelana/blocklist/refs/heads/master/src/blacklist/crux_judol.txt > ../domain-list-community/data/raven_judol
+          curl -sSL https://raw.githubusercontent.com/pengelana/blocklist/refs/heads/master/src/blacklist/judol_t.txt >> ../domain-list-community/data/raven_judol
           cp raven_nsfw ../domain-list-community/data/raven_nsfw
 
           # Jalankan pembangunan
