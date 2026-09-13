@@ -25,17 +25,13 @@ jobs:
       EnableDebug: ${{ github.event.inputs.debug || 'false' }}
       GeoLiteAsnDbPath: Asset/GeoLite2-ASN.mmdb
       GeoLiteCountryDbPath: Asset/GeoLite2-Country.mmdb
-      IncludedCountry: "IN,JP,MY,NL,SG,TW,TH,VE,VN"
-      IncludedProtocols: "ss,trojan,vmess"
-      LiteConfigPath: Asset/config.json
-      LitePath: Asset/lite
-      MaxProxiesPerCountry: 3
       MaxThreadCount: 96
+      Timeout: 8000
       MinActiveProxies: 10
-      SingboxPath: sing-box
       SourcesFile: Asset/sources.txt
-      Timeout: 5000
-      V2rayFormatResultPath: Asset/singlist.txt
+      TestUrl: "https://www.youtube.com/generate_204"
+      ExpectedStatus: "200-204"
+      ConcurrentDNS: 32
 
     steps:
       - name: Set variables
@@ -48,12 +44,6 @@ jobs:
         run: |
           git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
-      - uses: actions/checkout@v7
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: 8.0.x
-
       - name: Checkout main branch
         uses: actions/checkout@v7
         with:
@@ -61,10 +51,22 @@ jobs:
           ref: ${{ github.ref_name }}
           path: source
 
-      - name: Install sing-box
-        run: |
-          sudo dpkg -i source/proxy-build/Asset/*.deb
-          sudo apt-get install -f
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+          cache: true
+
+      - name: Prepare Go cache folder
+        run: mkdir -p /tmp/go-proxy-build/pkg/mod
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.27"
+          cache-dependency-path: ./proxy-build/go.sum
+        env:
+          GOPATH: /tmp/go-proxy-build
 
       - name: Build proxy list
         run: |
@@ -73,16 +75,12 @@ jobs:
           for file in GEO/GEO/*.tar.gz; do
             tar -xzf "$file" --wildcards --transform='s:.*/::' -C Asset '*.mmdb'
           done
-          dotnet restore
-          dotnet run --configuration Release --project .
 
-      - name: Build sing-box configuration
-        if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
-        run: |
-          cd source/proxy-build/Asset
-          pip install geoip2 -q
-          python generate_singbox_config.py
-          cd ../..
+          # Run Go Build
+          go build -v -o nodechecker .
+
+          # Run checker
+          ./nodechecker
 
       - name: Prepare local repo for 'asset' branch
         if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
