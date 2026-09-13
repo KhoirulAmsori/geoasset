@@ -22,7 +22,6 @@ type Config struct {
 	IncludedCountries    map[string]bool
 	ExcludedCountries    map[string]bool
 	EnableDebug          bool
-	CollectionAdjustment int
 }
 
 func DefaultConfig() Config {
@@ -41,7 +40,6 @@ func DefaultConfig() Config {
 		IncludedCountries:    envSet("IncludedCountry"),
 		ExcludedCountries:    envSet("ExcludedCountry"),
 		EnableDebug:          envBool("EnableDebug", false),
-		CollectionAdjustment: envInt("CollectionAdjustment", 0),
 	}
 	return cfg
 }
