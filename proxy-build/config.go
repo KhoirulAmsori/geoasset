@@ -14,6 +14,7 @@ type Config struct {
 	MaxThreadCount       int
 	Timeout              time.Duration
 	MinActiveProxies     int
+	MaxProxiesPerCountry int
 	TestURL              string
 	ExpectedStatus       string
 	RetryCount           int
@@ -32,6 +33,7 @@ func DefaultConfig() Config {
 		MaxThreadCount:       envInt("MaxThreadCount", 512),
 		Timeout:              time.Duration(envInt("Timeout", 8000)) * time.Millisecond,
 		MinActiveProxies:     envInt("MinActiveProxies", 10),
+		MaxProxiesPerCountry: envInt("MaxProxiesPerCountry", 0),
 		TestURL:              envOr("TestUrl", "https://www.youtube.com/generate_204"),
 		ExpectedStatus:       envOr("ExpectedStatus", "200-204"),
 		RetryCount:           envInt("RetryCount", 3),

@@ -21,6 +21,7 @@ import (
 	"github.com/metacubex/mihomo/common/utils"
 	"github.com/metacubex/mihomo/component/dialer"
 	"github.com/metacubex/mihomo/constant"
+	mihomoLog "github.com/metacubex/mihomo/log"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -28,6 +29,7 @@ var cfg Config
 
 func main() {
 	cfg = DefaultConfig()
+	mihomoLog.SetLevel(mihomoLog.SILENT)
 
 	if err := run(); err != nil {
 		log.Fatalf("failed: %v", err)
@@ -53,6 +55,9 @@ func run() error {
 	entries := parseToEntriesParallel(src, resolver)
 	logPrintf("parsed %d reachable proxies", len(entries))
 
+	entries = dedupeByIP(entries)
+	logPrintf("after dedup by ip+scheme: %d", len(entries))
+
 	entries = filterCountries(entries)
 	if len(entries) == 0 {
 		return fmt.Errorf("no proxy remains after country filter")
@@ -61,6 +66,11 @@ func run() error {
 
 	ok := testAll(entries)
 	ok = reindex(ok)
+
+	if cfg.MaxProxiesPerCountry > 0 {
+		ok = limitPerCountry(ok, cfg.MaxProxiesPerCountry)
+	}
+
 	logPrintf("active proxies: %d", len(ok))
 
 	if len(ok) < cfg.MinActiveProxies {

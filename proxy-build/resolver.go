@@ -22,6 +22,7 @@ type CountryInfo struct {
 	CountryName string
 	Isp         string
 	Address     string
+	ResolvedIP  string
 }
 
 func OpenCountryResolver(countryDB, asnDB string, concurrentDNS int) (*CountryResolver, error) {
@@ -119,6 +120,7 @@ func (r *CountryResolver) resolveSlow(address string) CountryInfo {
 		CountryName: cn,
 		Isp:         isp,
 		Address:     domain,
+		ResolvedIP:  ip.String(),
 	}
 }
 

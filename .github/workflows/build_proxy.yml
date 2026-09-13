@@ -28,6 +28,7 @@ jobs:
       MaxThreadCount: 512
       Timeout: 3000
       MinActiveProxies: 10
+      MaxProxiesPerCountry: 0
       RetryCount: 3
       SourcesFile: Asset/sources.txt
       TestUrl: "https://www.youtube.com/generate_204"

@@ -41,6 +41,38 @@ func parseSubContent(content []byte) ([]string, error) {
 	return out, sc.Err()
 }
 
+func dedupeByIP(entries []ProxyEntry) []ProxyEntry {
+	seen := map[string]bool{}
+	var out []ProxyEntry
+	for _, e := range entries {
+		ip := strings.TrimSpace(e.CountryInfo.ResolvedIP)
+		if ip == "" {
+			ip = strings.TrimSpace(e.Address)
+		}
+		key := strings.ToLower(e.Scheme) + "|" + strings.ToLower(ip)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, e)
+	}
+	return out
+}
+
+func limitPerCountry(entries []ProxyEntry, max int) []ProxyEntry {
+	idx := map[string]int{}
+	var out []ProxyEntry
+	for _, e := range entries {
+		cc := e.CountryInfo.CountryCode
+		if idx[cc] >= max {
+			continue
+		}
+		idx[cc]++
+		out = append(out, e)
+	}
+	return out
+}
+
 func (e *ProxyEntry) Key() string {
 	switch strings.ToLower(e.Scheme) {
 	case "vmess":
