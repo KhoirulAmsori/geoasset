@@ -25,8 +25,8 @@ jobs:
       EnableDebug: ${{ github.event.inputs.debug || 'false' }}
       GeoLiteAsnDbPath: Asset/GeoLite2-ASN.mmdb
       GeoLiteCountryDbPath: Asset/GeoLite2-Country.mmdb
-      MaxThreadCount: 96
-      Timeout: 8000
+      MaxThreadCount: 512
+      Timeout: 3000
       MinActiveProxies: 10
       SourcesFile: Asset/sources.txt
       TestUrl: "https://www.youtube.com/generate_204"
