@@ -16,6 +16,7 @@ type Config struct {
 	MinActiveProxies     int
 	TestURL              string
 	ExpectedStatus       string
+	RetryCount           int
 	ConcurrentDNS        int
 	IncludedCountries    map[string]bool
 	ExcludedCountries    map[string]bool
@@ -28,12 +29,13 @@ func DefaultConfig() Config {
 		SourcesFile:          envOr("SourcesFile", "Asset/sources.txt"),
 		GeoIPCountryDB:       envOr("GeoLiteCountryDbPath", "Asset/GeoLite2-Country.mmdb"),
 		GeoIPASNDB:           envOr("GeoLiteAsnDbPath", "Asset/GeoLite2-ASN.mmdb"),
-		MaxThreadCount:       envInt("MaxThreadCount", 64),
+		MaxThreadCount:       envInt("MaxThreadCount", 512),
 		Timeout:              time.Duration(envInt("Timeout", 8000)) * time.Millisecond,
 		MinActiveProxies:     envInt("MinActiveProxies", 10),
 		TestURL:              envOr("TestUrl", "https://www.youtube.com/generate_204"),
 		ExpectedStatus:       envOr("ExpectedStatus", "200-204"),
-		ConcurrentDNS:        envInt("ConcurrentDNS", 32),
+		RetryCount:           envInt("RetryCount", 3),
+		ConcurrentDNS:        envInt("ConcurrentDNS", 128),
 		IncludedCountries:    envSet("IncludedCountry"),
 		ExcludedCountries:    envSet("ExcludedCountry"),
 		EnableDebug:          envBool("EnableDebug", false),

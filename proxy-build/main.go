@@ -50,7 +50,7 @@ func run() error {
 	}
 	defer resolver.Close()
 
-	entries := parseToEntries(src, resolver)
+	entries := parseToEntriesParallel(src, resolver)
 	logPrintf("parsed %d reachable proxies", len(entries))
 
 	entries = filterCountries(entries)
@@ -72,9 +72,6 @@ func run() error {
 	}
 
 	if err := writeProxyList("list.txt", ok, true); err != nil {
-		return err
-	}
-	if err := writeProxyList("all_list.txt", ok, true); err != nil {
 		return err
 	}
 
@@ -182,41 +179,70 @@ func fetchOne(client *http.Client, src string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-func parseToEntries(raw []string, res *CountryResolver) []ProxyEntry {
-	var out []ProxyEntry
-	for _, line := range raw {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-
-		u, err := url.Parse(line)
-		if err != nil {
-			continue
-		}
-		scheme := strings.ToLower(u.Scheme)
-		if scheme == "" {
-			continue
-		}
-
-		address := extractAddress(scheme, line)
-		if address == "" {
-			continue
-		}
-
-		if isPrivateAddress(address) {
-			continue
-		}
-
-		e := ProxyEntry{
-			URL:          line,
-			Scheme:       scheme,
-			Address:      address,
-			OriginalName: entryNameFromURL(u),
-		}
-		e.CountryInfo = res.Resolve(dedupeKey(scheme, address), address)
-		out = append(out, e)
+func parseToEntriesParallel(raw []string, res *CountryResolver) []ProxyEntry {
+	workers := cfg.MaxThreadCount
+	if workers < 4 {
+		workers = 4
 	}
+	if workers > 1024 {
+		workers = 1024
+	}
+
+	var (
+		out  []ProxyEntry
+		lock sync.Mutex
+		wg   sync.WaitGroup
+		jobs = make(chan string)
+	)
+
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for line := range jobs {
+				line = strings.TrimSpace(line)
+				if line == "" {
+					continue
+				}
+
+				u, err := url.Parse(line)
+				if err != nil {
+					continue
+				}
+				scheme := strings.ToLower(u.Scheme)
+				if scheme == "" {
+					continue
+				}
+
+				address := extractAddress(scheme, line)
+				if address == "" {
+					continue
+				}
+
+				if isPrivateAddress(address) {
+					continue
+				}
+
+				e := ProxyEntry{
+					URL:          line,
+					Scheme:       scheme,
+					Address:      address,
+					OriginalName: entryNameFromURL(u),
+				}
+				e.CountryInfo = res.Resolve(dedupeKey(scheme, address), address)
+
+				lock.Lock()
+				out = append(out, e)
+				lock.Unlock()
+			}
+		}()
+	}
+
+	for _, line := range raw {
+		jobs <- line
+	}
+	close(jobs)
+	wg.Wait()
 	return out
 }
 
@@ -316,14 +342,16 @@ func testOne(ctx context.Context, proxy constant.Proxy) bool {
 		expected = parsed
 	}
 
-	nctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
-	defer cancel()
-
-	delay, err := proxy.URLTest(nctx, cfg.TestURL, expected)
-	if err != nil {
-		return false
+	for attempt := 0; attempt <= cfg.RetryCount; attempt++ {
+		nctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
+		delay, err := proxy.URLTest(nctx, cfg.TestURL, expected)
+		cancel()
+		if err != nil {
+			continue
+		}
+		return delay > 0
 	}
-	return delay > 0
+	return false
 }
 
 func isPrivateAddress(address string) bool {

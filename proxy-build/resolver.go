@@ -68,7 +68,7 @@ func (r *CountryResolver) Resolve(entryKey, address string) CountryInfo {
 	func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
-		if len(r.entryCache) < 200000 {
+		if len(r.entryCache) < 1000000 {
 			r.entryCache[entryKey] = info
 		}
 	}()
@@ -132,7 +132,7 @@ func (r *CountryResolver) cachedIP(domain string) (netip.Addr, bool) {
 func (r *CountryResolver) storeIP(domain string, a netip.Addr) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if len(r.ipCache) >= 100000 {
+	if len(r.ipCache) >= 500000 {
 		return
 	}
 	r.ipCache[domain] = a
