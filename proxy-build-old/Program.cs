@@ -1,1 +1,0 @@
-﻿await new ProxyCollector.Collector.ProxyCollector().StartAsync();
