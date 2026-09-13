@@ -51,12 +51,6 @@ jobs:
           ref: ${{ github.ref_name }}
           path: source
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.27"
-          cache: true
-
       - name: Prepare Go cache folder
         run: mkdir -p /tmp/go-proxy-build/pkg/mod
 
