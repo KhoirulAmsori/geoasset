@@ -52,7 +52,7 @@ jobs:
           path: source
 
       - name: Prepare Go cache folder
-        run: mkdir -p /tmp/go-proxy-build/pkg/mod
+        run: mkdir -p /tmp/go-build/pkg/mod
 
       - name: Setup Go
         uses: actions/setup-go@v7
@@ -60,7 +60,7 @@ jobs:
           go-version: "1.27"
           cache-dependency-path: ./proxy-build/go.sum
         env:
-          GOPATH: /tmp/go-proxy-build
+          GOPATH: /tmp/go-build
 
       - name: Build proxy list
         run: |
