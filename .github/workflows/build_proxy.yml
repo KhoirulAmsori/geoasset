@@ -113,7 +113,7 @@ jobs:
           fi
 
           mkdir -p asset/Proxy
-          cp source/proxy-build/{list.txt,all_list.txt,raven.json} asset/Proxy/
+          cp source/proxy-build/{list.txt,all_list.txt} asset/Proxy/
 
       - name: Commit & push asset
         if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
