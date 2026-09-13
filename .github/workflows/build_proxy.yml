@@ -102,18 +102,18 @@ jobs:
           BACKUP_DATE=$(TZ=Asia/Jakarta date '+%Y%m%d')
           BACKUP_DIR=asset/Backup
 
-          if [ -f source/proxy-build/all_list.txt ]; then
+          if [ -f source/proxy-build/list.txt ]; then
             mkdir -p $BACKUP_DIR
-            cp source/proxy-build/all_list.txt $BACKUP_DIR/${BACKUP_DATE}_all_list.txt
+            cp source/proxy-build/list.txt $BACKUP_DIR/${BACKUP_DATE}_list.txt
 
             # Simpan hanya 30 backup terbaru
-            ls -1t $BACKUP_DIR/*_all_list.txt | tail -n +31 | xargs -r rm -f
+            ls -1t $BACKUP_DIR/*_list.txt | tail -n +31 | xargs -r rm -f
           else
-            echo "No existing all_list.txt to backup"
+            echo "No existing list.txt to backup"
           fi
 
           mkdir -p asset/Proxy
-          cp source/proxy-build/{list.txt,all_list.txt} asset/Proxy/
+          cp source/proxy-build/list.txt asset/Proxy/
 
       - name: Commit & push asset
         if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
