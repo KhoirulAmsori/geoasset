@@ -29,7 +29,7 @@ jobs:
       Timeout: 3000
       MinActiveProxies: 10
       MaxProxiesPerCountry: 0
-      RetryCount: 3
+      RetryCount: 5
       SourcesFile: Asset/sources.txt
       TestUrl: "https://www.youtube.com/generate_204"
       ExpectedStatus: "200-204"
