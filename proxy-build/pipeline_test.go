@@ -205,6 +205,12 @@ func TestMergeRotatedEmptyOldNameUsesCandidate(t *testing.T) {
 	}
 }
 
+func TestExtractAddressToleratesPercentInName(t *testing.T) {
+	if got := extractAddress("vless", "vless://u@1.2.3.4:443#US 1 - 100% Off"); got != "1.2.3.4" {
+		t.Fatalf("candidate with %% in name must still parse, got %q", got)
+	}
+}
+
 func TestParsePrevListKeepsRawPercentName(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "list.txt")
@@ -237,13 +243,8 @@ func TestFilterPrevCountries(t *testing.T) {
 		{Identity: "c", Name: "", CC: ""},
 	}
 	got := filterPrevCountries(prev)
-	if len(got) != 2 {
-		t.Fatalf("expected 2, got %d", len(got))
-	}
-	for _, p := range got {
-		if p.CC == "RU" {
-			t.Fatalf("excluded country kept: %+v", p)
-		}
+	if len(got) != 1 || got[0].CC != "US" {
+		t.Fatalf("expected only US, got %+v", got)
 	}
 }
 
@@ -264,12 +265,21 @@ func TestFilterPrevCountriesIncludedWhitelist(t *testing.T) {
 	}
 }
 
-func TestFilterPrevCountriesNoFiltersKeepsAll(t *testing.T) {
+func TestFilterPrevCountriesParityWithCandidates(t *testing.T) {
 	cfg.ExcludedCountries = nil
 	cfg.IncludedCountries = nil
-	prev := []PrevEntry{{Identity: "a", Name: "", CC: ""}}
-	if got := filterPrevCountries(prev); len(got) != 1 {
-		t.Fatalf("no filters must keep all, got %d", len(got))
+	prev := []PrevEntry{
+		{Identity: "a", Name: "US 1 - Y", CC: "US"},
+		{Identity: "b", Name: "", CC: ""},
+		{Identity: "c", Name: "ZZ 1 - X", CC: "ZZ"},
+	}
+	cands := []ProxyEntry{
+		{URL: "vless://u@1.2.3.4:443", CountryInfo: CountryInfo{CountryCode: "US"}},
+		{URL: "vless://u@2.2.2.2:443", CountryInfo: CountryInfo{CountryCode: ""}},
+		{URL: "vless://u@3.3.3.3:443", CountryInfo: CountryInfo{CountryCode: "ZZ"}},
+	}
+	if got := len(filterPrevCountries(prev)); got != len(filterCountries(cands)) {
+		t.Fatalf("filter parity broken: prev=%d cand=%d", got, len(filterCountries(cands)))
 	}
 }
 

@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -232,11 +231,7 @@ func parseToEntriesParallel(raw []string, res *CountryResolver) []ProxyEntry {
 					continue
 				}
 
-				u, err := url.Parse(line)
-				if err != nil {
-					continue
-				}
-				scheme := strings.ToLower(u.Scheme)
+				scheme := strings.ToLower(schemeFromURL(line))
 				if scheme == "" {
 					continue
 				}
@@ -272,22 +267,25 @@ func parseToEntriesParallel(raw []string, res *CountryResolver) []ProxyEntry {
 	return out
 }
 
+func countryAllowed(cc string) bool {
+	if cc == "" || cc == "ZZ" || cc == "Unknown" {
+		return false
+	}
+	if len(cfg.ExcludedCountries) > 0 && cfg.ExcludedCountries[cc] {
+		return false
+	}
+	if len(cfg.IncludedCountries) > 0 && !cfg.IncludedCountries[cc] {
+		return false
+	}
+	return true
+}
+
 func filterCountries(entries []ProxyEntry) []ProxyEntry {
 	var out []ProxyEntry
 	for _, e := range entries {
-		cc := e.CountryInfo.CountryCode
-		skip := false
-		if cc == "" || cc == "ZZ" || cc == "Unknown" {
-			skip = true
-		} else if len(cfg.ExcludedCountries) > 0 && cfg.ExcludedCountries[cc] {
-			skip = true
-		} else if len(cfg.IncludedCountries) > 0 && !cfg.IncludedCountries[cc] {
-			skip = true
+		if countryAllowed(e.CountryInfo.CountryCode) {
+			out = append(out, e)
 		}
-		if skip {
-			continue
-		}
-		out = append(out, e)
 	}
 	return out
 }

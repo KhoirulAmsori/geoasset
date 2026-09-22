@@ -259,20 +259,9 @@ func parsePrevList(path string) ([]PrevEntry, error) {
 func filterPrevCountries(prev []PrevEntry) []PrevEntry {
 	var out []PrevEntry
 	for _, p := range prev {
-		cc := p.CC
-		if cc == "" || cc == "ZZ" || cc == "Unknown" {
-			if len(cfg.IncludedCountries) == 0 {
-				out = append(out, p)
-			}
-			continue
+		if countryAllowed(p.CC) {
+			out = append(out, p)
 		}
-		if len(cfg.ExcludedCountries) > 0 && cfg.ExcludedCountries[cc] {
-			continue
-		}
-		if len(cfg.IncludedCountries) > 0 && !cfg.IncludedCountries[cc] {
-			continue
-		}
-		out = append(out, p)
 	}
 	return out
 }
@@ -446,6 +435,14 @@ func limitPerCountry(entries []ProxyEntry, max int) []ProxyEntry {
 	return out
 }
 
+func parseProxyURL(line string) (*url.URL, error) {
+	raw := line
+	if i := strings.IndexByte(raw, '#'); i != -1 {
+		raw = raw[:i]
+	}
+	return url.Parse(raw)
+}
+
 func extractAddress(scheme, line string) string {
 	switch strings.ToLower(scheme) {
 	case "vmess":
@@ -494,7 +491,7 @@ func extractAddress(scheme, line string) string {
 		}
 		return ""
 	default:
-		u, err := url.Parse(line)
+		u, err := parseProxyURL(line)
 		if err != nil {
 			return ""
 		}
