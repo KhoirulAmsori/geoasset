@@ -252,6 +252,161 @@ func parsePrevList(path string) ([]PrevEntry, error) {
 	return out, nil
 }
 
+func buildTestSet(candidates []ProxyEntry, prev []PrevEntry) []ProxyEntry {
+	seen := map[string]bool{}
+	var out []ProxyEntry
+	for _, c := range candidates {
+		id := c.Identity()
+		if id == "" {
+			continue
+		}
+		key := id + "|" + c.URL
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, ProxyEntry{URL: c.URL})
+	}
+	for _, p := range prev {
+		key := p.Identity + "|" + p.URL
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, ProxyEntry{URL: p.URL})
+	}
+	return out
+}
+
+type mergedEntry struct {
+	url      string
+	name     string
+	cc       string
+	num      int
+	hasNum   bool
+	needsSet bool
+	isp      string
+}
+
+func mergeOutput(prev []PrevEntry, candidates []ProxyEntry, alive map[string]bool) []ProxyEntry {
+	prevByIdentity := map[string][]PrevEntry{}
+	for _, p := range prev {
+		prevByIdentity[p.Identity] = append(prevByIdentity[p.Identity], p)
+	}
+	for id := range prevByIdentity {
+		ps := prevByIdentity[id]
+		sort.SliceStable(ps, func(i, j int) bool { return ps[i].URL < ps[j].URL })
+	}
+
+	candByIdentity := map[string][]ProxyEntry{}
+	for _, c := range candidates {
+		id := c.Identity()
+		if id == "" {
+			continue
+		}
+		candByIdentity[id] = append(candByIdentity[id], c)
+	}
+	for id := range candByIdentity {
+		cs := candByIdentity[id]
+		sort.SliceStable(cs, func(i, j int) bool { return cs[i].URL < cs[j].URL })
+	}
+
+	idSet := map[string]bool{}
+	for id := range prevByIdentity {
+		idSet[id] = true
+	}
+	for id := range candByIdentity {
+		idSet[id] = true
+	}
+	ids := make([]string, 0, len(idSet))
+	for id := range idSet {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+
+	var chosen []mergedEntry
+	for _, id := range ids {
+		prevs := prevByIdentity[id]
+
+		picked := false
+		for _, p := range prevs {
+			if alive[p.URL] {
+				cc, num, ok := nameParts(p.Name)
+				chosen = append(chosen, mergedEntry{url: p.URL, name: p.Name, cc: cc, num: num, hasNum: ok})
+				picked = true
+				break
+			}
+		}
+		if picked {
+			continue
+		}
+
+		for _, c := range candByIdentity[id] {
+			if !alive[c.URL] {
+				continue
+			}
+			m := mergedEntry{url: c.URL, needsSet: true}
+			if len(prevs) > 0 {
+				m.name = prevs[0].Name
+				cc, num, ok := nameParts(m.name)
+				m.cc, m.num, m.hasNum = cc, num, ok
+			} else {
+				m.cc = c.CountryInfo.CountryCode
+				m.isp = c.CountryInfo.Isp
+			}
+			chosen = append(chosen, m)
+			break
+		}
+	}
+
+	used := map[string]map[int]bool{}
+	for _, m := range chosen {
+		if m.hasNum {
+			if used[m.cc] == nil {
+				used[m.cc] = map[int]bool{}
+			}
+			used[m.cc][m.num] = true
+		}
+	}
+	for i := range chosen {
+		if !chosen[i].needsSet || chosen[i].name != "" {
+			continue
+		}
+		if used[chosen[i].cc] == nil {
+			used[chosen[i].cc] = map[int]bool{}
+		}
+		n := 1
+		for used[chosen[i].cc][n] {
+			n++
+		}
+		used[chosen[i].cc][n] = true
+		chosen[i].num = n
+		chosen[i].hasNum = true
+		chosen[i].name = fmt.Sprintf("%s %d - %s", chosen[i].cc, n, NormalizeISP(chosen[i].isp))
+	}
+
+	sort.SliceStable(chosen, func(i, j int) bool {
+		if chosen[i].cc != chosen[j].cc {
+			return chosen[i].cc < chosen[j].cc
+		}
+		if chosen[i].num != chosen[j].num {
+			return chosen[i].num < chosen[j].num
+		}
+		return chosen[i].url < chosen[j].url
+	})
+
+	out := make([]ProxyEntry, 0, len(chosen))
+	for _, m := range chosen {
+		e := ProxyEntry{URL: m.url}
+		if m.needsSet {
+			e.URL = setName(m.url, schemeFromURL(m.url), "", m.name)
+		}
+		e.CountryInfo.CountryCode = m.cc
+		out = append(out, e)
+	}
+	return out
+}
+
 func limitPerCountry(entries []ProxyEntry, max int) []ProxyEntry {
 	idx := map[string]int{}
 	var out []ProxyEntry

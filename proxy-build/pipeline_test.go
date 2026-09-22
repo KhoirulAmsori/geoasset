@@ -135,3 +135,101 @@ func TestParsePrevListMissingFile(t *testing.T) {
 		t.Fatalf("expected nil,nil got %v,%v", got, err)
 	}
 }
+
+func TestBuildTestSetDedup(t *testing.T) {
+	cand := []ProxyEntry{{Scheme: "vless", URL: "vless://u@1.2.3.4:443"}}
+	prevDiff := []PrevEntry{{Identity: "vless|1.2.3.4|443", URL: "vless://old@1.2.3.4:443"}}
+	if got := buildTestSet(cand, prevDiff); len(got) != 2 {
+		t.Fatalf("expected 2, got %d", len(got))
+	}
+	prevSame := []PrevEntry{{Identity: "vless|1.2.3.4|443", URL: "vless://u@1.2.3.4:443"}}
+	if got := buildTestSet(cand, prevSame); len(got) != 1 {
+		t.Fatalf("expected 1, got %d", len(got))
+	}
+}
+
+func TestMergeCarryForwardOldAlive(t *testing.T) {
+	p := PrevEntry{Identity: "vless|1.2.3.4|443", URL: "vless://u@1.2.3.4:443#US 1 - Foo", Name: "US 1 - Foo", CC: "US"}
+	got := mergeOutput([]PrevEntry{p}, nil, map[string]bool{p.URL: true})
+	if len(got) != 1 || got[0].URL != p.URL {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestMergeRotatedCredentialKeepsName(t *testing.T) {
+	p := PrevEntry{Identity: "vless|1.2.3.4|443", URL: "vless://old@1.2.3.4:443#US 1 - Foo", Name: "US 1 - Foo", CC: "US"}
+	c := ProxyEntry{Scheme: "vless", URL: "vless://new@1.2.3.4:443", CountryInfo: CountryInfo{CountryCode: "US", Isp: "Foo"}}
+	got := mergeOutput([]PrevEntry{p}, []ProxyEntry{c}, map[string]bool{c.URL: true})
+	if len(got) != 1 || got[0].URL != "vless://new@1.2.3.4:443#US 1 - Foo" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestMergeOrphanDeadDropped(t *testing.T) {
+	p := PrevEntry{Identity: "vless|1.2.3.4|443", URL: "vless://u@1.2.3.4:443#US 1 - Foo", Name: "US 1 - Foo", CC: "US"}
+	got := mergeOutput([]PrevEntry{p}, nil, map[string]bool{})
+	if len(got) != 0 {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestMergeMalformedNameCarriedAsIs(t *testing.T) {
+	p := PrevEntry{Identity: "vless|1.2.3.4|443", URL: "vless://u@1.2.3.4:443#weird", Name: "weird", CC: ""}
+	got := mergeOutput([]PrevEntry{p}, nil, map[string]bool{p.URL: true})
+	if len(got) != 1 || got[0].URL != p.URL {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestMergeRotatedMalformedNamePreserved(t *testing.T) {
+	p := PrevEntry{Identity: "vless|1.2.3.4|443", URL: "vless://old@1.2.3.4:443#weird", Name: "weird", CC: ""}
+	c := ProxyEntry{Scheme: "vless", URL: "vless://new@1.2.3.4:443", CountryInfo: CountryInfo{CountryCode: "US", Isp: "Foo"}}
+	got := mergeOutput([]PrevEntry{p}, []ProxyEntry{c}, map[string]bool{c.URL: true})
+	if len(got) != 1 || got[0].URL != "vless://new@1.2.3.4:443#weird" {
+		t.Fatalf("malformed old name must be preserved as-is, got %+v", got)
+	}
+}
+
+func TestMergeNumberReuseSmallestFree(t *testing.T) {
+	p := PrevEntry{Identity: "vless|9.9.9.9|443", URL: "vless://u@9.9.9.9:443#US 2 - B", Name: "US 2 - B", CC: "US"}
+	c := ProxyEntry{Scheme: "vless", URL: "vless://u@1.1.1.1:443", CountryInfo: CountryInfo{CountryCode: "US", Isp: "Foo"}}
+	got := mergeOutput([]PrevEntry{p}, []ProxyEntry{c}, map[string]bool{p.URL: true, c.URL: true})
+	if len(got) != 2 {
+		t.Fatalf("expected 2, got %d", len(got))
+	}
+	if got[0].URL != "vless://u@1.1.1.1:443#US 1 - Foo" {
+		t.Fatalf("new node not numbered 1: %q", got[0].URL)
+	}
+	if got[1].URL != p.URL {
+		t.Fatalf("carried not preserved: %q", got[1].URL)
+	}
+}
+
+func TestMergeNoPrevNumbersSequentially(t *testing.T) {
+	c1 := ProxyEntry{Scheme: "vless", URL: "vless://a@1.1.1.1:443", CountryInfo: CountryInfo{CountryCode: "US", Isp: "Foo"}}
+	c2 := ProxyEntry{Scheme: "vless", URL: "vless://b@2.2.2.2:443", CountryInfo: CountryInfo{CountryCode: "US", Isp: "Bar"}}
+	alive := map[string]bool{c1.URL: true, c2.URL: true}
+	got := mergeOutput(nil, []ProxyEntry{c1, c2}, alive)
+	if len(got) != 2 {
+		t.Fatalf("expected 2, got %d", len(got))
+	}
+	if got[0].URL != "vless://a@1.1.1.1:443#US 1 - Foo" || got[1].URL != "vless://b@2.2.2.2:443#US 2 - Bar" {
+		t.Fatalf("got %q %q", got[0].URL, got[1].URL)
+	}
+}
+
+func TestMergeDeterministic(t *testing.T) {
+	c1 := ProxyEntry{Scheme: "vless", URL: "vless://a@1.1.1.1:443", CountryInfo: CountryInfo{CountryCode: "US", Isp: "Foo"}}
+	c2 := ProxyEntry{Scheme: "vless", URL: "vless://b@2.2.2.2:443", CountryInfo: CountryInfo{CountryCode: "US", Isp: "Bar"}}
+	alive := map[string]bool{c1.URL: true, c2.URL: true}
+	g1 := mergeOutput(nil, []ProxyEntry{c1, c2}, alive)
+	g2 := mergeOutput(nil, []ProxyEntry{c2, c1}, alive)
+	if len(g1) != len(g2) {
+		t.Fatal("length differs")
+	}
+	for i := range g1 {
+		if g1[i].URL != g2[i].URL {
+			t.Fatalf("nondeterministic at %d: %q vs %q", i, g1[i].URL, g2[i].URL)
+		}
+	}
+}
