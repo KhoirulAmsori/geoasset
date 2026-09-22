@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/base64"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -84,5 +86,52 @@ func TestDedupeByIdentityDropsUnparseable(t *testing.T) {
 	got := dedupeByIdentity([]ProxyEntry{{Scheme: "vless", URL: "garbage"}})
 	if len(got) != 0 {
 		t.Fatalf("expected drop, got %d", len(got))
+	}
+}
+
+func TestNameParts(t *testing.T) {
+	cc, num, ok := nameParts("US 12 - Foo Bar")
+	if !ok || cc != "US" || num != 12 {
+		t.Fatalf("got %q %d %v", cc, num, ok)
+	}
+	if _, _, ok := nameParts("US - Foo"); ok {
+		t.Fatal("malformed name should not parse")
+	}
+	if _, _, ok := nameParts(""); ok {
+		t.Fatal("empty name should not parse")
+	}
+}
+
+func TestParsePrevList(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "list.txt")
+	vm := vmessURL(t, `{"add":"1.2.3.4","port":"443","ps":"US 1 - Foo"}`)
+	content := "# Build date: x\n" +
+		"vless://u@5.6.7.8:8443#DE 3 - Bar\n" +
+		vm + "\n" +
+		"garbage-line\n" +
+		"\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := parsePrevList(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("expected 2, got %d", len(got))
+	}
+	if got[0].Identity != "vless|5.6.7.8|8443" || got[0].Name != "DE 3 - Bar" || got[0].CC != "DE" {
+		t.Fatalf("bad first: %+v", got[0])
+	}
+	if got[1].Identity != "vmess|1.2.3.4|443" || got[1].Name != "US 1 - Foo" || got[1].CC != "US" {
+		t.Fatalf("bad second: %+v", got[1])
+	}
+}
+
+func TestParsePrevListMissingFile(t *testing.T) {
+	got, err := parsePrevList(filepath.Join(t.TempDir(), "nope.txt"))
+	if err != nil || got != nil {
+		t.Fatalf("expected nil,nil got %v,%v", got, err)
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -146,6 +147,109 @@ func dedupeByIdentity(entries []ProxyEntry) []ProxyEntry {
 		out = append(out, e)
 	}
 	return out
+}
+
+type PrevEntry struct {
+	Identity string
+	URL      string
+	Name     string
+	CC       string
+}
+
+func nameParts(name string) (string, int, bool) {
+	left := name
+	if i := strings.Index(name, " - "); i != -1 {
+		left = name[:i]
+	}
+	fields := strings.Fields(left)
+	if len(fields) != 2 {
+		return "", 0, false
+	}
+	n, err := strconv.Atoi(fields[1])
+	if err != nil {
+		return "", 0, false
+	}
+	return fields[0], n, true
+}
+
+func vmessName(line string) string {
+	payload := strings.TrimPrefix(line, "vmess://")
+	b, err := base64.StdEncoding.DecodeString(payload)
+	if err != nil {
+		b, err = base64.RawStdEncoding.DecodeString(payload)
+	}
+	if err != nil {
+		return ""
+	}
+	var m map[string]any
+	if json.Unmarshal(b, &m) != nil {
+		return ""
+	}
+	name, _ := m["ps"].(string)
+	return name
+}
+
+func parsePrevLine(line string) (PrevEntry, bool) {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "#") {
+		return PrevEntry{}, false
+	}
+	u, err := url.Parse(line)
+	if err != nil || u.Scheme == "" {
+		return PrevEntry{}, false
+	}
+	scheme := strings.ToLower(u.Scheme)
+	host, port := extractHostPort(scheme, line)
+	if host == "" {
+		return PrevEntry{}, false
+	}
+	name := ""
+	if scheme == "vmess" {
+		name = vmessName(line)
+	} else if u.Fragment != "" {
+		if dec, err := url.PathUnescape(u.Fragment); err == nil {
+			name = dec
+		} else {
+			name = u.Fragment
+		}
+	}
+	cc, _, _ := nameParts(name)
+	return PrevEntry{
+		Identity: identityKey(scheme, host, port),
+		URL:      line,
+		Name:     name,
+		CC:       cc,
+	}, true
+}
+
+func parsePrevList(path string) ([]PrevEntry, error) {
+	if strings.TrimSpace(path) == "" {
+		return nil, nil
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			logPrintf("previous list %s not found, skipping carry-forward", path)
+			return nil, nil
+		}
+		return nil, err
+	}
+	defer file.Close()
+
+	var out []PrevEntry
+	sc := bufio.NewScanner(file)
+	sc.Buffer(make([]byte, 1024*1024), 1024*1024)
+	for sc.Scan() {
+		e, ok := parsePrevLine(sc.Text())
+		if !ok {
+			continue
+		}
+		out = append(out, e)
+	}
+	if err := sc.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func limitPerCountry(entries []ProxyEntry, max int) []ProxyEntry {
