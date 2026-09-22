@@ -335,27 +335,25 @@ func testEntry(ctx context.Context, entry ProxyEntry) bool {
 		if err != nil {
 			continue
 		}
-		if testOne(ctx, p) {
+		testProxy(ctx, p)
+		alive := p.AliveForTestUrl(cfg.TestURL)
+		_ = p.Close()
+		if alive {
 			passed = true
 		}
-		_ = p.Close()
 	}
 	return passed
 }
 
-func testOne(ctx context.Context, proxy constant.Proxy) bool {
+func testProxy(ctx context.Context, proxy constant.Proxy) {
 	for attempt := 0; attempt <= cfg.RetryCount; attempt++ {
 		nctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
-		delay, err := proxy.URLTest(nctx, cfg.TestURL, cfg.ExpectedRanges)
+		_, err := proxy.URLTest(nctx, cfg.TestURL, cfg.ExpectedRanges)
 		cancel()
-		if err == nil {
-			return delay > 0
-		}
-		if ctx.Err() != nil {
-			return false
+		if err == nil || ctx.Err() != nil {
+			return
 		}
 	}
-	return false
 }
 
 func isPrivateAddress(address string) bool {

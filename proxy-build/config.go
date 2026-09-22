@@ -44,6 +44,9 @@ func DefaultConfig() Config {
 		ExcludedCountries:    envSet("ExcludedCountry"),
 		EnableDebug:          envBool("EnableDebug", false),
 	}
+	if cfg.RetryCount < 0 {
+		cfg.RetryCount = 0
+	}
 	if parsed, err := utils.NewUnsignedRanges[uint16](cfg.ExpectedStatus); err == nil {
 		cfg.ExpectedRanges = parsed
 	}
