@@ -725,7 +725,7 @@ func mergeOutput(prev []PrevEntry, candidates []ProxyEntry, alive map[string]boo
 		}
 	}
 	for i := range chosen {
-		if !chosen[i].needsSet || chosen[i].hasNum {
+		if !chosen[i].needsSet || chosen[i].name != "" {
 			continue
 		}
 		if used[chosen[i].cc] == nil {
@@ -921,3 +921,18 @@ Setelah rilis, jalankan dua kali di CI:
 2. Run kedua: sebagian besar baris identik; log `previous list entries: <n>` > 0.
 
 Metrik: jumlah baris `list.txt` dan jumlah baris yang berubah antar dua run.
+
+---
+
+## Errata (setelah review)
+
+- **Task 3 renumber guard:** plan menyebut `chosen[i].hasNum`, implementasi memakai
+  `chosen[i].name != ""`. Ini disengaja: spec §2 ("URL baru, pertahankan nama lama")
+  mengharuskan nama lama dipertahankan apa adanya, termasuk nama yang tidak
+  terparse. `hasNum` akan menimpa nama lama yang malformed dengan
+  `<cc> N - Unknown`. Jangan "koreksi" kembali ke `hasNum`.
+- **Task 4 filter negara:** baris lama juga melewati filter negara yang sama
+  dengan kandidat (fungsi bersama `countryAllowed`), termasuk membuang CC kosong/`ZZ`.
+- **Parser `%`:** `parsePrevLine` tidak memakai `url.Parse` sebagai gerbang
+  validitas, dan `extractAddress`/`parseProxyURL` memotong fragment `#` sebelum
+  `url.Parse`, agar nama ber-`%` literal (output program sendiri) bisa dibaca kembali.
