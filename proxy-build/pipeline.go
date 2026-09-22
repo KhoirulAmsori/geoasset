@@ -5,8 +5,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -40,19 +42,107 @@ func parseSubContent(content []byte) ([]string, error) {
 	return out, sc.Err()
 }
 
-func dedupeByIP(entries []ProxyEntry) []ProxyEntry {
+func schemeFromURL(raw string) string {
+	if i := strings.Index(raw, "://"); i != -1 {
+		return raw[:i]
+	}
+	return ""
+}
+
+func identityKey(scheme, host, port string) string {
+	return strings.ToLower(scheme) + "|" + strings.ToLower(host) + "|" + strings.ToLower(port)
+}
+
+func extractHostPort(scheme, line string) (string, string) {
+	switch strings.ToLower(scheme) {
+	case "vmess":
+		payload := strings.TrimPrefix(line, "vmess://")
+		b, err := base64.StdEncoding.DecodeString(payload)
+		if err != nil {
+			b, err = base64.RawStdEncoding.DecodeString(payload)
+		}
+		if err != nil {
+			return "", ""
+		}
+		var m map[string]any
+		if json.Unmarshal(b, &m) != nil {
+			return "", ""
+		}
+		host, _ := m["add"].(string)
+		port := ""
+		switch v := m["port"].(type) {
+		case string:
+			port = v
+		case float64:
+			port = strconv.Itoa(int(v))
+		}
+		return host, port
+	case "ss":
+		return ssHostPort(line)
+	default:
+		u, err := url.Parse(line)
+		if err != nil {
+			return "", ""
+		}
+		return u.Hostname(), u.Port()
+	}
+}
+
+func ssHostPort(line string) (string, string) {
+	payload := line
+	if i := strings.IndexAny(payload, "?#"); i != -1 {
+		payload = payload[:i]
+	}
+	payload = strings.TrimPrefix(payload, "ss://")
+
+	split := func(hostport string) (string, string) {
+		if i := strings.IndexAny(hostport, "/#?"); i != -1 {
+			hostport = hostport[:i]
+		}
+		if h, p, err := net.SplitHostPort(hostport); err == nil {
+			return h, p
+		}
+		return hostport, ""
+	}
+
+	if strings.Contains(payload, "@") {
+		return split(strings.SplitN(payload, "@", 2)[1])
+	}
+	if b, err := base64.StdEncoding.DecodeString(payload); err == nil {
+		decoded := string(b)
+		if at := strings.IndexByte(decoded, '@'); at != -1 {
+			return split(decoded[at+1:])
+		}
+	}
+	return "", ""
+}
+
+func (e *ProxyEntry) Identity() string {
+	host, port := extractHostPort(e.Scheme, e.URL)
+	if host == "" {
+		return ""
+	}
+	return identityKey(e.Scheme, host, port)
+}
+
+func dedupeByIdentity(entries []ProxyEntry) []ProxyEntry {
+	sorted := make([]ProxyEntry, len(entries))
+	copy(sorted, entries)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		ii, ij := sorted[i].Identity(), sorted[j].Identity()
+		if ii != ij {
+			return ii < ij
+		}
+		return sorted[i].URL < sorted[j].URL
+	})
 	seen := map[string]bool{}
 	var out []ProxyEntry
-	for _, e := range entries {
-		ip := strings.TrimSpace(e.CountryInfo.ResolvedIP)
-		if ip == "" {
-			ip = strings.TrimSpace(e.Address)
-		}
-		key := strings.ToLower(e.Scheme) + "|" + strings.ToLower(ip)
-		if seen[key] {
+	for _, e := range sorted {
+		id := e.Identity()
+		if id == "" || seen[id] {
 			continue
 		}
-		seen[key] = true
+		seen[id] = true
 		out = append(out, e)
 	}
 	return out

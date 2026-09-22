@@ -56,8 +56,8 @@ func run() error {
 	entries := parseToEntriesParallel(src, resolver)
 	logPrintf("parsed %d reachable proxies", len(entries))
 
-	entries = dedupeByIP(entries)
-	logPrintf("after dedup by ip+scheme: %d", len(entries))
+	entries = dedupeByIdentity(entries)
+	logPrintf("after dedup by identity: %d", len(entries))
 
 	entries = filterCountries(entries)
 	if len(entries) == 0 {
