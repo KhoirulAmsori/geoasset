@@ -22,6 +22,7 @@ type Config struct {
 	ExpectedRanges       utils.IntRanges[uint16]
 	RetryCount           int
 	ConcurrentDNS        int
+	PreviousListFile     string
 	IncludedCountries    map[string]bool
 	ExcludedCountries    map[string]bool
 	EnableDebug          bool
@@ -40,6 +41,7 @@ func DefaultConfig() Config {
 		ExpectedStatus:       envOr("ExpectedStatus", "200-204"),
 		RetryCount:           envInt("RetryCount", 3),
 		ConcurrentDNS:        envInt("ConcurrentDNS", 128),
+		PreviousListFile:     envOr("PreviousListFile", ""),
 		IncludedCountries:    envSet("IncludedCountry"),
 		ExcludedCountries:    envSet("ExcludedCountry"),
 		EnableDebug:          envBool("EnableDebug", false),

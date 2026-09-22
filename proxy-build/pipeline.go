@@ -538,29 +538,6 @@ func writeLines(path string, lines []string) error {
 	return osWriteFile(path, []byte(sb.String()))
 }
 
-func reindex(entries []ProxyEntry) []ProxyEntry {
-	idx := map[string]int{}
-	sort.SliceStable(entries, func(i, j int) bool {
-		ci, cj := entries[i].CountryInfo.CountryCode, entries[j].CountryInfo.CountryCode
-		if ci == cj {
-			return entries[i].Address < entries[j].Address
-		}
-		return ci < cj
-	})
-	out := make([]ProxyEntry, 0, len(entries))
-	for _, e := range entries {
-		cc := e.CountryInfo.CountryCode
-		if _, ok := idx[cc]; !ok {
-			idx[cc] = 1
-		}
-		name := fmt.Sprintf("%s %d - %s", cc, idx[cc], NormalizeISP(e.CountryInfo.Isp))
-		e.URL = setName(e.URL, e.Scheme, e.Address, name)
-		idx[cc]++
-		out = append(out, e)
-	}
-	return out
-}
-
 func setName(urlStr, scheme, address, name string) string {
 	switch strings.ToLower(scheme) {
 	case "vmess":

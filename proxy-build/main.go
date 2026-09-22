@@ -59,14 +59,28 @@ func run() error {
 	entries = dedupeByIdentity(entries)
 	logPrintf("after dedup by identity: %d", len(entries))
 
+	prev, err := parsePrevList(cfg.PreviousListFile)
+	if err != nil {
+		return fmt.Errorf("read previous list: %w", err)
+	}
+	logPrintf("previous list entries: %d", len(prev))
+
 	entries = filterCountries(entries)
-	if len(entries) == 0 {
+	if len(entries) == 0 && len(prev) == 0 {
 		return fmt.Errorf("no proxy remains after country filter")
 	}
 	logPrintf("after country filter: %d", len(entries))
 
-	ok := testAll(entries)
-	ok = reindex(ok)
+	testSet := buildTestSet(entries, prev)
+	logPrintf("testing %d urls", len(testSet))
+	passed := testAll(testSet)
+
+	aliveURLs := make(map[string]bool, len(passed))
+	for _, p := range passed {
+		aliveURLs[p.URL] = true
+	}
+
+	ok := mergeOutput(prev, entries, aliveURLs)
 
 	if cfg.MaxProxiesPerCountry > 0 {
 		ok = limitPerCountry(ok, cfg.MaxProxiesPerCountry)
