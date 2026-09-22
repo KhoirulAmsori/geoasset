@@ -108,6 +108,13 @@ sehingga host sama dengan port berbeda tidak memicu DNS ulang.
 ## 7. Penanganan Error dan Edge Case
 
 - `PreviousListFile` tidak ada / baris tak terparse → warning, run tetap jalan.
+- Baris lama juga melewati filter negara yang sama dengan kandidat (node yatim
+  dari negara yang di-exclude tidak dibawa).
+- Nama lama kosong saat kredensial berputar → pakai CC/ISP dari kandidat
+  (bukan menghasilkan `# 1 - Unknown`).
+- Nama mengandung `%` literal → parser tidak memakai `url.Parse` sebagai gerbang
+  validitas dan hanya percent-decode sekali, sehingga baris output sendiri selalu
+  bisa dibaca kembali.
 - Identitas kandidat tak terbaca → buang kandidat itu saja.
 - Satu identitas punya beberapa URL hidup → pakai baris lama bila hidup; jika
   tidak, pilih URL kandidat yang hidup dengan urutan eksplisit: kandidat
