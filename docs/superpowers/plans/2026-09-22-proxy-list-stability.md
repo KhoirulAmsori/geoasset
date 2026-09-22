@@ -312,6 +312,9 @@ git commit -m "feat(proxy-build): identitas node scheme|host|port + dedup by ide
 - [ ] **Step 1: Tulis tes parser yang gagal**
 
 Tambahkan ke `proxy-build/pipeline_test.go` (gabungkan ke blok import yang sudah ada dari Task 1 — tambahkan `os` dan `path/filepath`):
+
+```go
+func TestNameParts(t *testing.T) {
 	cc, num, ok := nameParts("US 12 - Foo Bar")
 	if !ok || cc != "US" || num != 12 {
 		t.Fatalf("got %q %d %v", cc, num, ok)
