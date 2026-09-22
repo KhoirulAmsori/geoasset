@@ -297,22 +297,20 @@ func testBatch(entries []ProxyEntry) []ProxyEntry {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	proxies, sourceIdx := buildProxies(entries)
-
 	var mu sync.Mutex
 	passedSet := map[int]bool{}
 	var passed []ProxyEntry
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, cfg.MaxThreadCount)
 
-	for i, proxy := range proxies {
-		origIdx := sourceIdx[i]
+	for i := range entries {
+		origIdx := i
 		wg.Add(1)
 		sem <- struct{}{}
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
-			if testOne(ctx, proxy) {
+			if testEntry(ctx, entries[origIdx]) {
 				mu.Lock()
 				if !passedSet[origIdx] {
 					passedSet[origIdx] = true
@@ -320,31 +318,29 @@ func testBatch(entries []ProxyEntry) []ProxyEntry {
 				}
 				mu.Unlock()
 			}
-			_ = proxy.Close()
 		}()
 	}
 	wg.Wait()
 	return passed
 }
 
-func buildProxies(entries []ProxyEntry) ([]constant.Proxy, []int) {
-	var proxies []constant.Proxy
-	var sourceIdx []int
-	for i, entry := range entries {
-		mapping, err := convert.ConvertsV2Ray([]byte(entry.URL))
-		if err != nil || len(mapping) == 0 {
+func testEntry(ctx context.Context, entry ProxyEntry) bool {
+	mapping, err := convert.ConvertsV2Ray([]byte(entry.URL))
+	if err != nil || len(mapping) == 0 {
+		return false
+	}
+	passed := false
+	for _, m := range mapping {
+		p, err := adapter.ParseProxy(m, adapter.WithDialerForAPI(dialer.NewDialer(dialer.WithPreferIPv4())))
+		if err != nil {
 			continue
 		}
-		for _, m := range mapping {
-			p, err := adapter.ParseProxy(m, adapter.WithDialerForAPI(dialer.NewDialer(dialer.WithPreferIPv4())))
-			if err != nil {
-				continue
-			}
-			proxies = append(proxies, p)
-			sourceIdx = append(sourceIdx, i)
+		if testOne(ctx, p) {
+			passed = true
 		}
+		_ = p.Close()
 	}
-	return proxies, sourceIdx
+	return passed
 }
 
 func testOne(ctx context.Context, proxy constant.Proxy) bool {
