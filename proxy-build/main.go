@@ -63,6 +63,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("read previous list: %w", err)
 	}
+	prev = filterPrevCountries(prev)
 	logPrintf("previous list entries: %d", len(prev))
 
 	entries = filterCountries(entries)

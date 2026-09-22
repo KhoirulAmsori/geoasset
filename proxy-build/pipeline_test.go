@@ -190,6 +190,89 @@ func TestMergeRotatedMalformedNamePreserved(t *testing.T) {
 	}
 }
 
+func TestMergeRotatedEmptyOldNameUsesCandidate(t *testing.T) {
+	p := PrevEntry{Identity: "vless|1.2.3.4|443", URL: "vless://old@1.2.3.4:443", Name: "", CC: ""}
+	c := ProxyEntry{Scheme: "vless", URL: "vless://new@1.2.3.4:443", CountryInfo: CountryInfo{CountryCode: "US", Isp: "Foo"}}
+	got := mergeOutput([]PrevEntry{p}, []ProxyEntry{c}, map[string]bool{c.URL: true})
+	if len(got) != 1 {
+		t.Fatalf("expected 1, got %d", len(got))
+	}
+	if got[0].URL != "vless://new@1.2.3.4:443#US 1 - Foo" {
+		t.Fatalf("empty old name must fall back to candidate country, got %q", got[0].URL)
+	}
+	if got[0].CountryInfo.CountryCode != "US" {
+		t.Fatalf("cc must be US, got %q", got[0].CountryInfo.CountryCode)
+	}
+}
+
+func TestParsePrevListKeepsRawPercentName(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "list.txt")
+	content := "vless://u@1.2.3.4:443#US 1 - 100% Off\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := parsePrevList(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1, got %d", len(got))
+	}
+	if got[0].Name != "US 1 - 100% Off" {
+		t.Fatalf("raw name must be kept, got %q", got[0].Name)
+	}
+}
+
+func TestFilterPrevCountries(t *testing.T) {
+	cfg.ExcludedCountries = map[string]bool{"RU": true}
+	cfg.IncludedCountries = nil
+	defer func() {
+		cfg.ExcludedCountries = nil
+		cfg.IncludedCountries = nil
+	}()
+	prev := []PrevEntry{
+		{Identity: "a", Name: "RU 1 - X", CC: "RU"},
+		{Identity: "b", Name: "US 1 - Y", CC: "US"},
+		{Identity: "c", Name: "", CC: ""},
+	}
+	got := filterPrevCountries(prev)
+	if len(got) != 2 {
+		t.Fatalf("expected 2, got %d", len(got))
+	}
+	for _, p := range got {
+		if p.CC == "RU" {
+			t.Fatalf("excluded country kept: %+v", p)
+		}
+	}
+}
+
+func TestFilterPrevCountriesIncludedWhitelist(t *testing.T) {
+	cfg.ExcludedCountries = nil
+	cfg.IncludedCountries = map[string]bool{"US": true}
+	defer func() {
+		cfg.ExcludedCountries = nil
+		cfg.IncludedCountries = nil
+	}()
+	prev := []PrevEntry{
+		{Identity: "a", Name: "DE 1 - X", CC: "DE"},
+		{Identity: "b", Name: "US 1 - Y", CC: "US"},
+	}
+	got := filterPrevCountries(prev)
+	if len(got) != 1 || got[0].CC != "US" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestFilterPrevCountriesNoFiltersKeepsAll(t *testing.T) {
+	cfg.ExcludedCountries = nil
+	cfg.IncludedCountries = nil
+	prev := []PrevEntry{{Identity: "a", Name: "", CC: ""}}
+	if got := filterPrevCountries(prev); len(got) != 1 {
+		t.Fatalf("no filters must keep all, got %d", len(got))
+	}
+}
+
 func TestMergeNumberReuseSmallestFree(t *testing.T) {
 	p := PrevEntry{Identity: "vless|9.9.9.9|443", URL: "vless://u@9.9.9.9:443#US 2 - B", Name: "US 2 - B", CC: "US"}
 	c := ProxyEntry{Scheme: "vless", URL: "vless://u@1.1.1.1:443", CountryInfo: CountryInfo{CountryCode: "US", Isp: "Foo"}}

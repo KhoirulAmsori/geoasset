@@ -81,7 +81,11 @@ func extractHostPort(scheme, line string) (string, string) {
 	case "ss":
 		return ssHostPort(line)
 	default:
-		u, err := url.Parse(line)
+		raw := line
+		if i := strings.IndexByte(raw, '#'); i != -1 {
+			raw = raw[:i]
+		}
+		u, err := url.Parse(raw)
 		if err != nil {
 			return "", ""
 		}
@@ -194,11 +198,10 @@ func parsePrevLine(line string) (PrevEntry, bool) {
 	if line == "" || strings.HasPrefix(line, "#") {
 		return PrevEntry{}, false
 	}
-	u, err := url.Parse(line)
-	if err != nil || u.Scheme == "" {
+	scheme := strings.ToLower(schemeFromURL(line))
+	if scheme == "" {
 		return PrevEntry{}, false
 	}
-	scheme := strings.ToLower(u.Scheme)
 	host, port := extractHostPort(scheme, line)
 	if host == "" {
 		return PrevEntry{}, false
@@ -206,11 +209,12 @@ func parsePrevLine(line string) (PrevEntry, bool) {
 	name := ""
 	if scheme == "vmess" {
 		name = vmessName(line)
-	} else if u.Fragment != "" {
-		if dec, err := url.PathUnescape(u.Fragment); err == nil {
+	} else if i := strings.IndexByte(line, '#'); i != -1 {
+		raw := line[i+1:]
+		if dec, err := url.PathUnescape(raw); err == nil {
 			name = dec
 		} else {
-			name = u.Fragment
+			name = raw
 		}
 	}
 	cc, _, _ := nameParts(name)
@@ -250,6 +254,27 @@ func parsePrevList(path string) ([]PrevEntry, error) {
 		return nil, err
 	}
 	return out, nil
+}
+
+func filterPrevCountries(prev []PrevEntry) []PrevEntry {
+	var out []PrevEntry
+	for _, p := range prev {
+		cc := p.CC
+		if cc == "" || cc == "ZZ" || cc == "Unknown" {
+			if len(cfg.IncludedCountries) == 0 {
+				out = append(out, p)
+			}
+			continue
+		}
+		if len(cfg.ExcludedCountries) > 0 && cfg.ExcludedCountries[cc] {
+			continue
+		}
+		if len(cfg.IncludedCountries) > 0 && !cfg.IncludedCountries[cc] {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
 }
 
 func buildTestSet(candidates []ProxyEntry, prev []PrevEntry) []ProxyEntry {
@@ -346,7 +371,7 @@ func mergeOutput(prev []PrevEntry, candidates []ProxyEntry, alive map[string]boo
 				continue
 			}
 			m := mergedEntry{url: c.URL, needsSet: true}
-			if len(prevs) > 0 {
+			if len(prevs) > 0 && prevs[0].Name != "" {
 				m.name = prevs[0].Name
 				cc, num, ok := nameParts(m.name)
 				m.cc, m.num, m.hasNum = cc, num, ok
