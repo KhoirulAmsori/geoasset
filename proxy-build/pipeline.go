@@ -12,11 +12,10 @@ import (
 )
 
 type ProxyEntry struct {
-	URL          string
-	Scheme       string
-	Address      string
-	OriginalName string
-	CountryInfo  CountryInfo
+	URL         string
+	Scheme      string
+	Address     string
+	CountryInfo CountryInfo
 }
 
 func parseSubContent(content []byte) ([]string, error) {
@@ -71,26 +70,6 @@ func limitPerCountry(entries []ProxyEntry, max int) []ProxyEntry {
 		out = append(out, e)
 	}
 	return out
-}
-
-func (e *ProxyEntry) Key() string {
-	switch strings.ToLower(e.Scheme) {
-	case "vmess":
-		return "vmess|" + strings.ToLower(e.Address)
-	case "ss", "vless", "trojan", "hysteria2", "hy2", "tuic", "hysteria", "wireguard", "anytls", "tailscale", "ssh", "socks5", "http", "ssr", "snell":
-		return strings.ToLower(e.Scheme) + "|" + strings.ToLower(e.Address)
-	default:
-		return e.URL
-	}
-}
-
-func entryNameFromURL(u *url.URL) string {
-	if u.Fragment != "" {
-		if dec, err := url.PathUnescape(u.Fragment); err == nil {
-			u.Fragment = dec
-		}
-	}
-	return u.Fragment
 }
 
 func extractAddress(scheme, line string) string {
@@ -210,41 +189,6 @@ func writeLines(path string, lines []string) error {
 	return osWriteFile(path, []byte(sb.String()))
 }
 
-func parseUint16(s string) (uint16, error) {
-	var n uint16
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return 0, fmt.Errorf("invalid")
-		}
-		n = n*10 + uint16(c-'0')
-	}
-	return n, nil
-}
-
-func dedupeSort(entries []ProxyEntry) []ProxyEntry {
-	seen := map[string]*ProxyEntry{}
-	var order []string
-	for i := range entries {
-		k := entries[i].Key()
-		if _, ok := seen[k]; ok {
-			continue
-		}
-		seen[k] = &entries[i]
-		order = append(order, k)
-	}
-	out := make([]ProxyEntry, 0, len(order))
-	for _, k := range order {
-		out = append(out, *seen[k])
-	}
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].CountryInfo.CountryCode == out[j].CountryInfo.CountryCode {
-			return out[i].Address < out[j].Address
-		}
-		return out[i].CountryInfo.CountryCode < out[j].CountryInfo.CountryCode
-	})
-	return out
-}
-
 func reindex(entries []ProxyEntry) []ProxyEntry {
 	idx := map[string]int{}
 	sort.SliceStable(entries, func(i, j int) bool {
@@ -317,13 +261,4 @@ func setSSName(raw, name string) string {
 		return "ss://" + hostPart + "@" + rest + "#" + name
 	}
 	return raw
-}
-
-func (e *ProxyEntry) buildByMapping(m map[string]any) {
-	display, _ := m["type"].(string)
-	tp, _ := m["server"].(string)
-	netStr, _ := m["name"].(string)
-	e.Scheme = display
-	e.Address = tp
-	e.OriginalName = netStr
 }

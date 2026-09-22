@@ -18,7 +18,6 @@ import (
 
 	"github.com/metacubex/mihomo/adapter"
 	"github.com/metacubex/mihomo/common/convert"
-	"github.com/metacubex/mihomo/common/utils"
 	"github.com/metacubex/mihomo/component/dialer"
 	"github.com/metacubex/mihomo/constant"
 	mihomoLog "github.com/metacubex/mihomo/log"
@@ -26,6 +25,8 @@ import (
 )
 
 var cfg Config
+
+const maxSourceBytes = 32 << 20
 
 func main() {
 	cfg = DefaultConfig()
@@ -152,17 +153,18 @@ func fetchSources(path string, concurrency int) ([]string, error) {
 	return out, nil
 }
 
+var inlineProxyPrefixes = []string{
+	"vmess://", "vless://", "ss://", "trojan://", "hysteria2://", "hy2://",
+	"hysteria://", "tuic://", "wireguard://", "anytls://", "ssr://", "socks5://",
+}
+
 func isInlineProxyLine(line string) bool {
+	if strings.HasPrefix(line, "http://") || strings.HasPrefix(line, "https://") {
+		return false
+	}
 	lower := strings.ToLower(line)
-	for _, prefix := range []string{
-		"vmess://", "vless://", "ss://", "trojan://", "hysteria2://", "hy2://",
-		"hysteria://", "tuic://", "wireguard://", "anytls://", "ssr://", "socks5://",
-		"http://", "https://",
-	} {
+	for _, prefix := range inlineProxyPrefixes {
 		if strings.HasPrefix(lower, prefix) {
-			if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") {
-				continue
-			}
 			return true
 		}
 	}
@@ -186,7 +188,7 @@ func fetchOne(client *http.Client, src string) ([]byte, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("status %s", resp.Status)
 	}
-	return io.ReadAll(resp.Body)
+	return io.ReadAll(io.LimitReader(resp.Body, maxSourceBytes))
 }
 
 func parseToEntriesParallel(raw []string, res *CountryResolver) []ProxyEntry {
@@ -234,10 +236,9 @@ func parseToEntriesParallel(raw []string, res *CountryResolver) []ProxyEntry {
 				}
 
 				e := ProxyEntry{
-					URL:          line,
-					Scheme:       scheme,
-					Address:      address,
-					OriginalName: entryNameFromURL(u),
+					URL:     line,
+					Scheme:  scheme,
+					Address: address,
 				}
 				e.CountryInfo = res.Resolve(dedupeKey(scheme, address), address)
 
@@ -347,19 +348,16 @@ func buildProxies(entries []ProxyEntry) ([]constant.Proxy, []int) {
 }
 
 func testOne(ctx context.Context, proxy constant.Proxy) bool {
-	var expected utils.IntRanges[uint16]
-	if parsed, err := utils.NewUnsignedRanges[uint16](cfg.ExpectedStatus); err == nil {
-		expected = parsed
-	}
-
 	for attempt := 0; attempt <= cfg.RetryCount; attempt++ {
 		nctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
-		delay, err := proxy.URLTest(nctx, cfg.TestURL, expected)
+		delay, err := proxy.URLTest(nctx, cfg.TestURL, cfg.ExpectedRanges)
 		cancel()
-		if err != nil {
-			continue
+		if err == nil {
+			return delay > 0
 		}
-		return delay > 0
+		if ctx.Err() != nil {
+			return false
+		}
 	}
 	return false
 }

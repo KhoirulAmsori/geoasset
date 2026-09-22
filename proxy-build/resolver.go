@@ -171,10 +171,3 @@ func isPrivateOrReserved(ip netip.Addr) bool {
 	}
 	return false
 }
-
-func splitHost(address string) string {
-	if h, _, err := net.SplitHostPort(address); err == nil {
-		return h
-	}
-	return address
-}

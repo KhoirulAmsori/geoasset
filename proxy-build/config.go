@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/metacubex/mihomo/common/utils"
 )
 
 type Config struct {
@@ -17,6 +19,7 @@ type Config struct {
 	MaxProxiesPerCountry int
 	TestURL              string
 	ExpectedStatus       string
+	ExpectedRanges       utils.IntRanges[uint16]
 	RetryCount           int
 	ConcurrentDNS        int
 	IncludedCountries    map[string]bool
@@ -40,6 +43,9 @@ func DefaultConfig() Config {
 		IncludedCountries:    envSet("IncludedCountry"),
 		ExcludedCountries:    envSet("ExcludedCountry"),
 		EnableDebug:          envBool("EnableDebug", false),
+	}
+	if parsed, err := utils.NewUnsignedRanges[uint16](cfg.ExpectedStatus); err == nil {
+		cfg.ExpectedRanges = parsed
 	}
 	return cfg
 }
