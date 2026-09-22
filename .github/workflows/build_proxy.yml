@@ -31,6 +31,7 @@ jobs:
       MaxProxiesPerCountry: 0
       RetryCount: 5
       SourcesFile: Asset/sources.txt
+      PreviousListFile: GEO/Proxy/list.txt
       TestUrl: "https://www.youtube.com/generate_204"
       ExpectedStatus: "200-204"
       ConcurrentDNS: 32
