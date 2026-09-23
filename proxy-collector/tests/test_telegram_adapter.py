@@ -139,10 +139,27 @@ def test_discovery_backfills_new_channel_same_run():
     assert "new_channel" in res.discovered
 
 
+def test_discovery_only_from_config_messages():
+    def fetch(channel, before):
+        if channel == "seed_ch":
+            return page(
+                (10, "vless://a@1.1.1.1:443#A join @real_chan"),
+                (11, "chatter mentioning @junk_chan with no config"),
+            )
+        return page((1, "vless://n@9.9.9.9:443#N"))
+
+    adapter = TelegramAdapter(
+        ["seed_ch"], {"seed_ch": ChannelState(last_id=9)}, fetch, make_cfg()
+    )
+    res = adapter.fetch()
+    assert "real_chan" in res.state_updates
+    assert "junk_chan" not in res.state_updates
+
+
 def test_discovery_respects_max_new_channels():
     def fetch(channel, before):
         if channel == "seed_ch":
-            return page((10, "join @chan_one @chan_two @chan_three"))
+            return page((10, "vless://a@1.1.1.1:443#A join @chan_one @chan_two @chan_three"))
         return page((1, "vless://n@9.9.9.9:443#N"))
 
     adapter = TelegramAdapter(
@@ -160,7 +177,7 @@ def test_discovery_respects_max_new_channels():
 def test_discovery_names_are_lowercased():
     def fetch(channel, before):
         if channel == "seed_ch":
-            return page((10, "join @New_Channel"))
+            return page((10, "vless://a@1.1.1.1:443#A join @New_Channel"))
         return page((1, "vless://n@9.9.9.9:443#N"))
 
     adapter = TelegramAdapter(
@@ -169,6 +186,41 @@ def test_discovery_names_are_lowercased():
     res = adapter.fetch()
     assert "new_channel" in res.state_updates
     assert "New_Channel" not in res.state_updates
+
+
+def test_new_messages_without_configs_marks_invalid():
+    def fetch(channel, before):
+        return page((100, "old chatter"), (101, "new chatter no config"))
+
+    adapter = TelegramAdapter(
+        ["ch"], {"ch": ChannelState(last_id=100)}, fetch, make_cfg()
+    )
+    res = adapter.fetch()
+    assert res.state_updates["ch"].status == STATUS_INVALID
+    assert res.state_updates["ch"].last_id == 101
+
+
+def test_no_new_messages_stays_active():
+    def fetch(channel, before):
+        return page((100, "vless://a@1.1.1.1:443#A"), (101, "chatter"))
+
+    adapter = TelegramAdapter(
+        ["ch"], {"ch": ChannelState(last_id=101)}, fetch, make_cfg()
+    )
+    res = adapter.fetch()
+    assert res.state_updates["ch"].status == STATUS_ACTIVE
+
+
+def test_new_config_messages_stay_active():
+    def fetch(channel, before):
+        return page((100, "old"), (101, "vless://b@2.2.2.2:443#B"))
+
+    adapter = TelegramAdapter(
+        ["ch"], {"ch": ChannelState(last_id=100)}, fetch, make_cfg()
+    )
+    res = adapter.fetch()
+    assert res.state_updates["ch"].status == STATUS_ACTIVE
+    assert "vless://b@2.2.2.2:443#B" in res.configs
 
 
 def test_partial_pagination_failure_keeps_progress():

@@ -44,6 +44,17 @@ class State:
     run_count: int = 0
 
 
+def _prefer(a: ChannelState, b: ChannelState) -> ChannelState:
+    """Pick the more informative of two records for the same channel name."""
+    if a.last_id != b.last_id:
+        return a if a.last_id > b.last_id else b
+    a_active = a.status == STATUS_ACTIVE
+    b_active = b.status == STATUS_ACTIVE
+    if a_active != b_active:
+        return a if a_active else b
+    return a if a.fail_count <= b.fail_count else b
+
+
 def load_state(path: str) -> State:
     if not path or not os.path.exists(path):
         return State()
@@ -58,9 +69,12 @@ def load_state(path: str) -> State:
         channels: dict[str, ChannelState] = {}
         for name, data in raw_channels.items():
             try:
-                channels[name] = ChannelState.from_dict(data)
+                parsed = ChannelState.from_dict(data)
             except (TypeError, ValueError, AttributeError):
                 continue
+            key = name.lower()
+            existing = channels.get(key)
+            channels[key] = parsed if existing is None else _prefer(existing, parsed)
         return State(
             channels=channels,
             version=int(raw.get("version", 1)),

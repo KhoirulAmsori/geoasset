@@ -141,6 +141,7 @@ class TelegramAdapter:
         pages = 0
         seen_any = False
         failed = False
+        new_messages = False
         configs: list[str] = []
         candidates: list[str] = []
 
@@ -160,8 +161,11 @@ class TelegramAdapter:
                 max_id = page_max
             for m in msgs:
                 if m.id > last:
-                    configs.extend(extract_configs(m.text))
-                    candidates.extend(discover_usernames(m.text))
+                    new_messages = True
+                    found = extract_configs(m.text)
+                    if found:
+                        configs.extend(found)
+                        candidates.extend(discover_usernames(m.text))
             if page_min <= last:
                 break
             before = page_min
@@ -175,6 +179,8 @@ class TelegramAdapter:
             return _ChannelOutcome(name, configs, candidates, ChannelState(last, STATUS_INVALID, ""), f"{name}: fetch failed")
         if not seen_any:
             return _ChannelOutcome(name, configs, candidates, ChannelState(last, STATUS_INVALID, ""), "")
+        if new_messages and not configs:
+            return _ChannelOutcome(name, configs, candidates, ChannelState(max_id, STATUS_INVALID, ""), "")
         return _ChannelOutcome(
             name, configs, candidates, ChannelState(max_id, STATUS_ACTIVE, _now_iso()), ""
         )

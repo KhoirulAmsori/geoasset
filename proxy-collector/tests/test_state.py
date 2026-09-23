@@ -79,7 +79,53 @@ def test_round_trip_pruning_fields(tmp_path):
     assert loaded.channels["a"].retired_at == 7
 
 
-def test_apply_run_increments_run_count():
+def test_load_state_normalizes_case_duplicate_keys(tmp_path):
+    p = tmp_path / "channels.json"
+    p.write_text(
+        '{"run_count": 3, "channels": {'
+        '"AI_DUET": {"last_id": 0},'
+        '"ai_duet": {"last_id": 7, "status": "active", "last_ok": "t"}'
+        "}}",
+        encoding="utf-8",
+    )
+    st = load_state(str(p))
+    assert set(st.channels) == {"ai_duet"}
+    assert st.channels["ai_duet"].last_id == 7
+
+
+def test_load_state_merges_keeping_more_progress(tmp_path):
+    p = tmp_path / "channels.json"
+    p.write_text(
+        '{"channels": {'
+        '"X": {"last_id": 2, "fail_count": 4},'
+        '"x": {"last_id": 9, "fail_count": 1}'
+        "}}",
+        encoding="utf-8",
+    )
+    st = load_state(str(p))
+    assert st.channels["x"].last_id == 9
+
+
+def test_load_state_prefers_active_on_tie(tmp_path):
+    p = tmp_path / "channels.json"
+    p.write_text(
+        '{"channels": {'
+        '"Y": {"last_id": 5, "status": "invalid", "fail_count": 3},'
+        '"y": {"last_id": 5, "status": "active"}'
+        "}}",
+        encoding="utf-8",
+    )
+    st = load_state(str(p))
+    assert st.channels["y"].status == STATUS_ACTIVE
+
+
+def test_load_state_lowercases_single_uppercase_key(tmp_path):
+    p = tmp_path / "channels.json"
+    p.write_text('{"channels": {"MixedCase": {"last_id": 4}}}', encoding="utf-8")
+    st = load_state(str(p))
+    assert set(st.channels) == {"mixedcase"}
+    assert st.channels["mixedcase"].last_id == 4
+
     st = apply_run(State(run_count=4), {}, retire_after=10, retry_after=30)
     assert st.run_count == 5
 
