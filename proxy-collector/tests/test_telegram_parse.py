@@ -47,3 +47,9 @@ def test_discover_usernames_variants():
 
 def test_discover_usernames_ignores_short():
     assert discover_usernames("@abc t.me/xy") == []
+
+
+def test_discover_usernames_ignores_candidate_at_email_boundary():
+    # Regression: "@user" preceded by an alnum must not be captured as a channel
+    # (prevents harvested emails from spawning bogus discovery candidates).
+    assert discover_usernames("contact admin@gmail.com") == []

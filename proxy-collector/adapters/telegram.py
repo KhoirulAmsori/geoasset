@@ -12,7 +12,7 @@ from extract import extract_configs
 from state import STATUS_ACTIVE, STATUS_INVALID, ChannelState
 
 DISCOVER_RE = re.compile(
-    r"(?:@|%40|t\.me/|telegram\.me/)([A-Za-z0-9_]{5,})",
+    r"(?<![A-Za-z0-9_])(?:@|%40|t\.me/|telegram\.me/)([A-Za-z0-9_]{5,})",
     re.IGNORECASE,
 )
 
