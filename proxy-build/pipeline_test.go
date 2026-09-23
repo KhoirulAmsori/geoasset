@@ -69,6 +69,45 @@ func TestIdentityUnparseableIsEmpty(t *testing.T) {
 	}
 }
 
+func TestIdentityAliasHy2Normalized(t *testing.T) {
+	a := ProxyEntry{Scheme: "hy2", URL: "hy2://u@1.2.3.4:443#A"}
+	b := ProxyEntry{Scheme: "hysteria2", URL: "hysteria2://u@1.2.3.4:443#B"}
+	if a.Identity() != b.Identity() {
+		t.Fatalf("hy2 and hysteria2 must share identity: %q vs %q", a.Identity(), b.Identity())
+	}
+}
+
+func TestIdentityAliasSocksNormalized(t *testing.T) {
+	a := ProxyEntry{Scheme: "socks", URL: "socks://Og==:Og==@1.2.3.4:1080#A"}
+	b := ProxyEntry{Scheme: "socks5", URL: "socks5://Og==:Og==@1.2.3.4:1080#B"}
+	if a.Identity() != b.Identity() {
+		t.Fatalf("socks and socks5 must share identity: %q vs %q", a.Identity(), b.Identity())
+	}
+}
+
+func TestDedupeByAliasScheme(t *testing.T) {
+	a := ProxyEntry{Scheme: "hy2", URL: "hy2://u@1.2.3.4:443#A"}
+	b := ProxyEntry{Scheme: "hysteria2", URL: "hysteria2://u@1.2.3.4:443#B"}
+	if got := dedupeByIdentity([]ProxyEntry{a, b}); len(got) != 1 {
+		t.Fatalf("alias schemes must dedupe to 1, got %d", len(got))
+	}
+}
+
+func TestSetVmessNameUnpaddedPayload(t *testing.T) {
+	// Real node from docs/list2.txt: unpadded base64 payload (len%4==2).
+	raw := "vmess://eyJ2IjoiMiIsInBzIjoiU0cgXHVkODNjXHVkZGY4XHVkODNjXHVkZGVjIFx1MjUwNyBWTUVTUy1UQ1AtTlRMUyAtIEFTLVZVTFRSIFx1MjUwNyA0NS4zMi4xMjAuMTczIiwiYWRkIjoiNDUuMzIuMTIwLjE3MyIsInBvcnQiOjQ0MywiaWQiOiJYRVhFVklMIiwiYWlkIjowLCJzY3kiOiJhdXRvIiwibmV0IjoidGNwIiwidHlwZSI6Im5vbmUifQ"
+	if len(raw[len("vmess://"):])%4 == 0 {
+		t.Fatal("test fixture unexpectedly padded")
+	}
+	got := setName(raw, "vmess", "", "SG 1 - Vultr")
+	if got == raw {
+		t.Fatal("unpadded vmess payload must be renamed, got original")
+	}
+	if vmessName(got) != "SG 1 - Vultr" {
+		t.Fatalf("renamed ps = %q", vmessName(got))
+	}
+}
+
 func TestDedupeByIdentityDeterministic(t *testing.T) {
 	a := ProxyEntry{Scheme: "vless", URL: "vless://u@1.2.3.4:443#b"}
 	b := ProxyEntry{Scheme: "vless", URL: "vless://u@1.2.3.4:443#a"}

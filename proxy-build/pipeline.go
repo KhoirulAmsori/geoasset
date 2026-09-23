@@ -50,8 +50,23 @@ func schemeFromURL(raw string) string {
 	return ""
 }
 
+// schemeAliases maps alternate spellings of a protocol to one canonical name
+// so that the same endpoint is not treated as two different nodes.
+var schemeAliases = map[string]string{
+	"hy2":   "hysteria2",
+	"socks": "socks5",
+}
+
+func normalizeScheme(scheme string) string {
+	s := strings.ToLower(scheme)
+	if canonical, ok := schemeAliases[s]; ok {
+		return canonical
+	}
+	return s
+}
+
 func identityKey(scheme, host, port string) string {
-	return strings.ToLower(scheme) + "|" + strings.ToLower(host) + "|" + strings.ToLower(port)
+	return normalizeScheme(scheme) + "|" + strings.ToLower(host) + "|" + strings.ToLower(port)
 }
 
 func extractHostPort(scheme, line string) (string, string) {
@@ -114,6 +129,11 @@ func ssHostPort(line string) (string, string) {
 		return split(strings.SplitN(payload, "@", 2)[1])
 	}
 	if b, err := base64.StdEncoding.DecodeString(payload); err == nil {
+		decoded := string(b)
+		if at := strings.IndexByte(decoded, '@'); at != -1 {
+			return split(decoded[at+1:])
+		}
+	} else if b, err := base64.RawStdEncoding.DecodeString(payload); err == nil {
 		decoded := string(b)
 		if at := strings.IndexByte(decoded, '@'); at != -1 {
 			return split(decoded[at+1:])
@@ -488,6 +508,18 @@ func extractAddress(scheme, line string) string {
 				}
 				return host
 			}
+		} else if b, err := base64.RawStdEncoding.DecodeString(payload); err == nil {
+			decoded := string(b)
+			if at := strings.IndexByte(decoded, '@'); at != -1 {
+				host := decoded[at+1:]
+				if i := strings.IndexAny(host, "/#?"); i != -1 {
+					host = host[:i]
+				}
+				if strings.Contains(host, ":") {
+					return strings.SplitN(host, ":", 2)[0]
+				}
+				return host
+			}
 		}
 		return ""
 	default:
@@ -582,6 +614,9 @@ func setURLEndPointName(raw string, name string) string {
 func setVmessName(raw, name string) string {
 	payload := strings.TrimPrefix(raw, "vmess://")
 	decoded, err := base64.StdEncoding.DecodeString(payload)
+	if err != nil {
+		decoded, err = base64.RawStdEncoding.DecodeString(payload)
+	}
 	if err != nil {
 		return raw
 	}
