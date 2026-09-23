@@ -9,7 +9,7 @@ def make_cfg():
         collected_file="c", channels_state_file="s", seed_file="seed",
         subscriptions_file="sub", webpages_file="web", telegram_depth=3,
         concurrency=8, timeout=15, http_retry=2, max_new_channels=50,
-        min_collected=0, skip_push_flag="skip",
+        min_collected=0, skip_push_flag="skip", retire_after=10, retry_after=30,
     )
 
 

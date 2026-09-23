@@ -9,7 +9,7 @@ from adapters.telegram import TelegramAdapter
 from adapters.webpage import WebpageAdapter
 from config import Config, load_config
 from engine import run_collection
-from state import ChannelState, load_state
+from state import ChannelState, load_state, select_channels
 
 USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 
@@ -105,7 +105,7 @@ def main(argv: list[str] | None = None) -> int:
 
     state = load_state(cfg.channels_state_file)
     seed = load_lines(cfg.seed_file)
-    channels = sorted({c.lower() for c in seed} | {c.lower() for c in state.channels})
+    channels = select_channels(seed, state, cfg.retry_after)
     states = {
         name: state.channels.get(name, ChannelState())
         for name in channels
@@ -113,6 +113,10 @@ def main(argv: list[str] | None = None) -> int:
 
     def log(msg: str) -> None:
         print(msg, flush=True)
+
+    retired = len({c.lower() for c in seed} | {c.lower() for c in state.channels}) - len(channels)
+    if retired > 0:
+        log(f"skipping {retired} retired channels (retry every {cfg.retry_after} runs)")
 
     adapters = build_adapters(cfg, session, channels, states, log)
 

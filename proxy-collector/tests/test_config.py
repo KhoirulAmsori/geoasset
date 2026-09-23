@@ -30,7 +30,7 @@ def test_load_config_defaults(monkeypatch):
     for k in ("CollectedFile", "ChannelsStateFile", "SeedFile",
               "SubscriptionsFile", "WebpagesFile", "TelegramDepth",
               "Concurrency", "Timeout", "HttpRetry", "MaxNewChannels",
-              "MinCollected", "SkipPushFlag"):
+              "MinCollected", "SkipPushFlag", "RetireAfter", "RetryAfter"):
         monkeypatch.delenv(k, raising=False)
     cfg = config.load_config()
     assert cfg.collected_file == "collected.txt"
@@ -45,6 +45,8 @@ def test_load_config_defaults(monkeypatch):
     assert cfg.max_new_channels == 50
     assert cfg.min_collected == 0
     assert cfg.skip_push_flag == "skip_push.flag"
+    assert cfg.retire_after == 10
+    assert cfg.retry_after == 30
 
 
 def test_load_config_overrides(monkeypatch):

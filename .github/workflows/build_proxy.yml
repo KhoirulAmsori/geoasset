@@ -80,6 +80,8 @@ jobs:
           Timeout: 15
           MaxNewChannels: 50
           MinCollected: 0
+          RetireAfter: 10
+          RetryAfter: 30
           # Collector CWD is source/proxy-collector; point the flag at the path
           # proxy-build's push guard checks so a low-yield run suppresses push.
           SkipPushFlag: ../proxy-build/skip_push.flag

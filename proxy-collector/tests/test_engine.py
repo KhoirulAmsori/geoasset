@@ -12,6 +12,7 @@ def make_cfg(tmp_path, **over):
         telegram_depth=3, concurrency=8, timeout=15, http_retry=2,
         max_new_channels=50, min_collected=0,
         skip_push_flag=str(tmp_path / "skip_push.flag"),
+        retire_after=10, retry_after=30,
     )
     base.update(over)
     return Config(**base)
@@ -88,3 +89,33 @@ def test_one_adapter_ok_others_failed_returns_zero(tmp_path):
     a = FakeAdapter(FetchResult(configs=["x"]))
     b = FakeAdapter(FetchResult(configs=[], errors=["b down"]))
     assert run_collection(cfg, [a, b]) == 0
+
+
+def test_run_increments_run_count_and_tracks_invalid(tmp_path):
+    from state import STATUS_INVALID, load_state, save_state, State, ChannelState
+    cfg = make_cfg(tmp_path, retire_after=2)
+    save_state(cfg.channels_state_file, State(run_count=4, channels={"ch": ChannelState()}))
+    ad = FakeAdapter(FetchResult(
+        configs=["x"],
+        state_updates={"ch": ChannelState(status=STATUS_INVALID)},
+    ))
+    run_collection(cfg, [ad])
+    st = load_state(cfg.channels_state_file)
+    assert st.run_count == 5
+    assert st.channels["ch"].fail_count == 1
+    assert st.channels["ch"].retired_at == 0
+
+
+def test_run_retires_after_threshold(tmp_path):
+    from state import STATUS_INVALID, load_state, save_state, State, ChannelState
+    cfg = make_cfg(tmp_path, retire_after=1)
+    save_state(cfg.channels_state_file, State(run_count=4, channels={"ch": ChannelState()}))
+    ad = FakeAdapter(FetchResult(
+        configs=["x"],
+        state_updates={"ch": ChannelState(status=STATUS_INVALID)},
+    ))
+    run_collection(cfg, [ad])
+    st = load_state(cfg.channels_state_file)
+    assert st.run_count == 5
+    assert st.channels["ch"].retired_at != 0
+    assert st.channels["ch"].retired_at == st.run_count

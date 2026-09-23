@@ -33,6 +33,8 @@ class Config:
     max_new_channels: int
     min_collected: int
     skip_push_flag: str
+    retire_after: int
+    retry_after: int
 
 
 def load_config() -> Config:
@@ -49,6 +51,8 @@ def load_config() -> Config:
         max_new_channels=env_int("MaxNewChannels", 50),
         min_collected=env_int("MinCollected", 0),
         skip_push_flag=env_or("SkipPushFlag", "skip_push.flag"),
+        retire_after=env_int("RetireAfter", 10),
+        retry_after=env_int("RetryAfter", 30),
     )
     if cfg.telegram_depth < 1:
         cfg.telegram_depth = 1

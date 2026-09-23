@@ -3,9 +3,11 @@ from state import (
     STATUS_INVALID,
     ChannelState,
     State,
+    apply_run,
+    is_due,
     load_state,
-    merge_state,
     save_state,
+    select_channels,
 )
 
 
@@ -51,22 +53,99 @@ def test_round_trip(tmp_path):
     assert loaded.channels["dead"].status == STATUS_INVALID
 
 
-def test_merge_is_additive():
-    base = State(channels={"old": ChannelState(last_id=5)})
-    merged = merge_state(base, {"new": ChannelState(last_id=0)})
-    assert set(merged.channels) == {"old", "new"}
-    assert merged.channels["old"].last_id == 5
+def test_apply_run_is_additive():
+    st = apply_run(State(run_count=0, channels={"old": ChannelState(last_id=5)}),
+                   {"new": ChannelState(last_id=0)}, retire_after=10, retry_after=30)
+    assert set(st.channels) == {"old", "new"}
+    assert st.channels["old"].last_id == 5
 
 
-def test_merge_updates_existing():
-    base = State(channels={"a": ChannelState(last_id=1)})
-    merged = merge_state(base, {"a": ChannelState(last_id=9)})
-    assert merged.channels["a"].last_id == 9
+def test_apply_run_updates_existing():
+    base = State(run_count=0, channels={"a": ChannelState(last_id=1)})
+    st = apply_run(base, {"a": ChannelState(last_id=9)}, retire_after=10, retry_after=30)
+    assert st.channels["a"].last_id == 9
 
 
-def test_last_id_never_decreases_on_merge_contract():
-    base = State(channels={"a": ChannelState(last_id=9, last_ok="keep")})
-    merged = merge_state(base, {"a": ChannelState(last_id=3, status=STATUS_INVALID)})
-    assert merged.channels["a"].last_id == 9
-    assert merged.channels["a"].last_ok == "keep"
-    assert merged.channels["a"].status == STATUS_INVALID
+def test_round_trip_pruning_fields(tmp_path):
+    p = tmp_path / "channels.json"
+    st = State(
+        channels={"a": ChannelState(fail_count=3, retired_at=7)},
+        run_count=12,
+    )
+    save_state(str(p), st)
+    loaded = load_state(str(p))
+    assert loaded.run_count == 12
+    assert loaded.channels["a"].fail_count == 3
+    assert loaded.channels["a"].retired_at == 7
+
+
+def test_apply_run_increments_run_count():
+    st = apply_run(State(run_count=4), {}, retire_after=10, retry_after=30)
+    assert st.run_count == 5
+
+
+def test_apply_run_active_resets_fail_count_and_retirement():
+    base = State(run_count=1, channels={"a": ChannelState(fail_count=9, retired_at=1)})
+    st = apply_run(base, {"a": ChannelState(status=STATUS_ACTIVE)}, retire_after=10, retry_after=30)
+    assert st.channels["a"].fail_count == 0
+    assert st.channels["a"].retired_at == 0
+
+
+def test_apply_run_invalid_increments_fail_count():
+    base = State(run_count=1, channels={"a": ChannelState(fail_count=2)})
+    st = apply_run(base, {"a": ChannelState(status=STATUS_INVALID)}, retire_after=10, retry_after=30)
+    assert st.channels["a"].fail_count == 3
+    assert st.channels["a"].retired_at == 0
+
+
+def test_apply_run_retires_at_threshold():
+    base = State(run_count=1, channels={"a": ChannelState(fail_count=9)})
+    st = apply_run(base, {"a": ChannelState(status=STATUS_INVALID)}, retire_after=10, retry_after=30)
+    assert st.channels["a"].retired_at == st.run_count
+
+
+def test_apply_run_leaves_unscraped_channels_untouched():
+    base = State(run_count=5, channels={"gone": ChannelState(fail_count=11, retired_at=2)})
+    st = apply_run(base, {}, retire_after=10, retry_after=30)
+    assert st.channels["gone"].fail_count == 11
+    assert st.channels["gone"].retired_at == 2
+
+
+def test_apply_run_keeps_last_id_monotonic():
+    base = State(run_count=1, channels={"a": ChannelState(last_id=50, last_ok="keep")})
+    st = apply_run(base, {"a": ChannelState(last_id=10, status=STATUS_INVALID)}, retire_after=10, retry_after=30)
+    assert st.channels["a"].last_id == 50
+    assert st.channels["a"].last_ok == "keep"
+
+
+def test_is_due_never_retired():
+    st = State(run_count=100)
+    assert is_due(st, "a", retry_after=30) is True
+
+
+def test_is_due_retired_and_not_yet_due():
+    st = State(run_count=20, channels={"a": ChannelState(retired_at=10)})
+    assert is_due(st, "a", retry_after=30) is False
+
+
+def test_is_due_retired_and_due():
+    st = State(run_count=40, channels={"a": ChannelState(retired_at=10)})
+    assert is_due(st, "a", retry_after=30) is True
+
+
+def test_select_channels_skips_retired_seed():
+    st = State(run_count=20, channels={"deadseed": ChannelState(retired_at=10)})
+    got = select_channels(["deadseed", "good"], st, retry_after=30)
+    assert got == ["good"]
+
+
+def test_select_channels_includes_due_retired():
+    st = State(run_count=40, channels={"deadseed": ChannelState(retired_at=10)})
+    got = select_channels(["deadseed"], st, retry_after=30)
+    assert got == ["deadseed"]
+
+
+def test_select_channels_lowercases_and_dedupes():
+    st = State(run_count=0, channels={"Mixed": ChannelState()})
+    got = select_channels(["Mixed", "mixed"], st, retry_after=30)
+    assert got == ["mixed"]

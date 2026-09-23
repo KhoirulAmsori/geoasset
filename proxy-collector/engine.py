@@ -4,7 +4,7 @@ from typing import Callable
 from adapters.base import SourceAdapter
 from config import Config
 from extract import dedupe_sorted
-from state import load_state, merge_state, save_state
+from state import apply_run, load_state, save_state
 from util import atomic_write
 
 
@@ -39,7 +39,7 @@ def run_collection(
     for err in errors:
         log(f"error: {err}")
 
-    state = merge_state(state, updates)
+    state = apply_run(state, updates, cfg.retire_after, cfg.retry_after)
     state.updated = _now_iso()
 
     configs = dedupe_sorted(all_configs)
