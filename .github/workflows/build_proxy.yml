@@ -91,6 +91,11 @@ jobs:
           cp collected.txt ../proxy-build/collected.txt
 
       - name: Build proxy list
+        env:
+          # Scoped to this step: proxy-build's Timeout is milliseconds, while
+          # the collector step's Timeout is seconds. Without this the collector
+          # value (15) would be inherited as a 15ms dial timeout.
+          Timeout: 3000
         run: |
           cd source/proxy-build
           git clone --depth 1 -b asset https://github.com/${{ github.repository }} GEO
