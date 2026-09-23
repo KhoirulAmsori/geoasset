@@ -62,6 +62,34 @@ jobs:
             ./source/proxy-build/go.mod
             ./source/proxy-build/go.sum
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: source/proxy-collector/requirements.txt
+
+      - name: Collect proxy configs from Telegram
+        env:
+          # Scoped to this step: the collector's Timeout is seconds, while
+          # proxy-build's job-level Timeout is milliseconds.
+          CollectedFile: collected.txt
+          ChannelsStateFile: channels.json
+          TelegramDepth: 3
+          Concurrency: 8
+          Timeout: 15
+          MaxNewChannels: 50
+          MinCollected: 0
+        run: |
+          cd source/proxy-collector
+          git clone --depth 1 -b asset https://github.com/${{ github.repository }} ASSET 2>/dev/null || true
+          if [ -f ASSET/Proxy/channels.json ]; then
+            cp ASSET/Proxy/channels.json channels.json
+          fi
+          pip install -r requirements.txt
+          python main.py
+          cp collected.txt ../proxy-build/collected.txt
+
       - name: Build proxy list
         run: |
           cd source/proxy-build
@@ -69,6 +97,11 @@ jobs:
           for file in GEO/GEO/*.tar.gz; do
             tar -xzf "$file" --wildcards --transform='s:.*/::' -C Asset '*.mmdb'
           done
+
+          # Feed collector output into proxy-build as a local source
+          if [ -s collected.txt ]; then
+            grep -qxF collected.txt Asset/sources.txt || echo collected.txt >> Asset/sources.txt
+          fi
 
           # Run Go Build
           go build -v -o nodechecker .
@@ -114,6 +147,10 @@ jobs:
 
           mkdir -p asset/Proxy
           cp source/proxy-build/list.txt asset/Proxy/
+
+          if [ -f source/proxy-collector/channels.json ]; then
+            cp source/proxy-collector/channels.json asset/Proxy/channels.json
+          fi
 
       - name: Commit & push asset
         if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
