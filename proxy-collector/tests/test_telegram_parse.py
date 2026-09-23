@@ -53,3 +53,12 @@ def test_discover_usernames_ignores_candidate_at_email_boundary():
     # Regression: "@user" preceded by an alnum must not be captured as a channel
     # (prevents harvested emails from spawning bogus discovery candidates).
     assert discover_usernames("contact admin@gmail.com") == []
+
+
+def test_discover_usernames_ignores_blacklisted_handles():
+    text = "join @joinchat and t.me/telegram and @some_bot and @real_channel"
+    got = discover_usernames(text)
+    assert "real_channel" in got
+    assert "joinchat" not in got
+    assert "telegram" not in got
+    assert "some_bot" not in got

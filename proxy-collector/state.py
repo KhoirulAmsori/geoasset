@@ -39,19 +39,24 @@ def load_state(path: str) -> State:
     try:
         with open(path, encoding="utf-8") as f:
             raw = json.load(f)
-    except (OSError, ValueError):
+        if not isinstance(raw, dict):
+            return State()
+        raw_channels = raw.get("channels") or {}
+        if not isinstance(raw_channels, dict):
+            return State()
+        channels: dict[str, ChannelState] = {}
+        for name, data in raw_channels.items():
+            try:
+                channels[name] = ChannelState.from_dict(data)
+            except (TypeError, ValueError, AttributeError):
+                continue
+        return State(
+            channels=channels,
+            version=int(raw.get("version", 1)),
+            updated=str(raw.get("updated", "")),
+        )
+    except (OSError, ValueError, TypeError):
         return State()
-    channels: dict[str, ChannelState] = {}
-    for name, data in (raw.get("channels") or {}).items():
-        try:
-            channels[name] = ChannelState.from_dict(data)
-        except (TypeError, ValueError, AttributeError):
-            continue
-    return State(
-        channels=channels,
-        version=int(raw.get("version", 1)),
-        updated=str(raw.get("updated", "")),
-    )
 
 
 def save_state(path: str, state: State) -> None:
@@ -65,5 +70,14 @@ def save_state(path: str, state: State) -> None:
 
 def merge_state(base: State, updates: dict[str, ChannelState]) -> State:
     channels = dict(base.channels)
-    channels.update(updates)
+    for name, update in updates.items():
+        existing = channels.get(name)
+        if existing is None:
+            channels[name] = update
+            continue
+        channels[name] = ChannelState(
+            last_id=max(existing.last_id, update.last_id),
+            status=update.status,
+            last_ok=update.last_ok or existing.last_ok,
+        )
     return State(channels=channels, version=base.version, updated=base.updated)

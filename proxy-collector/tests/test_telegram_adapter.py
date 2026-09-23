@@ -155,3 +155,33 @@ def test_discovery_respects_max_new_channels():
     overflow = [c for c, s in discovered.items() if s.last_id == 0]
     assert len(backfilled) == 1
     assert len(overflow) == 2
+
+
+def test_discovery_names_are_lowercased():
+    def fetch(channel, before):
+        if channel == "seed_ch":
+            return page((10, "join @New_Channel"))
+        return page((1, "vless://n@9.9.9.9:443#N"))
+
+    adapter = TelegramAdapter(
+        ["seed_ch"], {"seed_ch": ChannelState(last_id=9)}, fetch, make_cfg()
+    )
+    res = adapter.fetch()
+    assert "new_channel" in res.state_updates
+    assert "New_Channel" not in res.state_updates
+
+
+def test_partial_pagination_failure_keeps_progress():
+    def fetch(channel, before):
+        if before is None:
+            return page((105, "vless://e@5.5.5.5:443#E"))
+        return None
+
+    adapter = TelegramAdapter(
+        ["ch"], {"ch": ChannelState(last_id=100)}, fetch, make_cfg()
+    )
+    res = adapter.fetch()
+    assert res.state_updates["ch"].last_id == 105
+    assert res.state_updates["ch"].status == STATUS_ACTIVE
+    assert "vless://e@5.5.5.5:443#E" in res.configs
+    assert res.errors

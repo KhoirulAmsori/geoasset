@@ -20,6 +20,24 @@ def test_load_corrupt_file_returns_empty(tmp_path):
     assert load_state(str(p)).channels == {}
 
 
+def test_load_valid_json_wrong_shape_returns_empty(tmp_path):
+    p = tmp_path / "list.json"
+    p.write_text('["bogus"]', encoding="utf-8")
+    assert load_state(str(p)).channels == {}
+
+
+def test_load_bad_version_does_not_crash(tmp_path):
+    p = tmp_path / "channels.json"
+    p.write_text('{"version": "abc", "channels": {}}', encoding="utf-8")
+    assert load_state(str(p)).channels == {}
+
+
+def test_load_channels_wrong_type_returns_empty(tmp_path):
+    p = tmp_path / "channels.json"
+    p.write_text('{"version": 1, "channels": ["x"]}', encoding="utf-8")
+    assert load_state(str(p)).channels == {}
+
+
 def test_round_trip(tmp_path):
     p = tmp_path / "channels.json"
     st = State(channels={
@@ -47,6 +65,8 @@ def test_merge_updates_existing():
 
 
 def test_last_id_never_decreases_on_merge_contract():
-    base = State(channels={"a": ChannelState(last_id=9)})
-    merged = merge_state(base, {"a": ChannelState(last_id=9)})
+    base = State(channels={"a": ChannelState(last_id=9, last_ok="keep")})
+    merged = merge_state(base, {"a": ChannelState(last_id=3, status=STATUS_INVALID)})
     assert merged.channels["a"].last_id == 9
+    assert merged.channels["a"].last_ok == "keep"
+    assert merged.channels["a"].status == STATUS_INVALID

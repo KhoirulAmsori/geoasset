@@ -80,6 +80,9 @@ jobs:
           Timeout: 15
           MaxNewChannels: 50
           MinCollected: 0
+          # Collector CWD is source/proxy-collector; point the flag at the path
+          # proxy-build's push guard checks so a low-yield run suppresses push.
+          SkipPushFlag: ../proxy-build/skip_push.flag
         run: |
           cd source/proxy-collector
           git clone --depth 1 -b asset https://github.com/${{ github.repository }} ASSET 2>/dev/null || true

@@ -74,3 +74,17 @@ def test_partial_failure_with_configs_returns_zero(tmp_path):
     cfg = make_cfg(tmp_path)
     ad = FakeAdapter(FetchResult(configs=["a"], errors=["one failed"]))
     assert run_collection(cfg, [ad]) == 0
+
+
+def test_all_adapters_failed_returns_one(tmp_path):
+    cfg = make_cfg(tmp_path)
+    a = FakeAdapter(FetchResult(configs=[], errors=["a down"]))
+    b = FakeAdapter(FetchResult(configs=[], errors=["b down"]))
+    assert run_collection(cfg, [a, b]) == 1
+
+
+def test_one_adapter_ok_others_failed_returns_zero(tmp_path):
+    cfg = make_cfg(tmp_path)
+    a = FakeAdapter(FetchResult(configs=["x"]))
+    b = FakeAdapter(FetchResult(configs=[], errors=["b down"]))
+    assert run_collection(cfg, [a, b]) == 0

@@ -58,13 +58,54 @@ def fetch_telegram_page(
         return body.decode("latin-1")
 
 
+def build_adapters(
+    cfg: Config,
+    session: requests.Session,
+    channels: list[str],
+    states: dict[str, ChannelState],
+    log,
+) -> list:
+    adapters: list = []
+    if channels:
+        adapters.append(
+            TelegramAdapter(
+                channels,
+                states,
+                lambda ch, before: fetch_telegram_page(session, cfg, ch, before),
+                cfg,
+                log=log,
+            )
+        )
+    sub_urls = load_lines(cfg.subscriptions_file)
+    if sub_urls:
+        adapters.append(
+            SubscriptionAdapter(
+                sub_urls,
+                lambda url: http_get(session, url, cfg.timeout, cfg.http_retry),
+                cfg,
+                log=log,
+            )
+        )
+    web_urls = load_lines(cfg.webpages_file)
+    if web_urls:
+        adapters.append(
+            WebpageAdapter(
+                web_urls,
+                lambda url: http_get(session, url, cfg.timeout, cfg.http_retry),
+                cfg,
+                log=log,
+            )
+        )
+    return adapters
+
+
 def main(argv: list[str] | None = None) -> int:
     cfg = load_config()
     session = requests.Session()
 
     state = load_state(cfg.channels_state_file)
     seed = load_lines(cfg.seed_file)
-    channels = sorted(set(seed) | set(state.channels))
+    channels = sorted({c.lower() for c in seed} | {c.lower() for c in state.channels})
     states = {
         name: state.channels.get(name, ChannelState())
         for name in channels
@@ -73,27 +114,9 @@ def main(argv: list[str] | None = None) -> int:
     def log(msg: str) -> None:
         print(msg, flush=True)
 
-    telegram = TelegramAdapter(
-        channels,
-        states,
-        lambda ch, before: fetch_telegram_page(session, cfg, ch, before),
-        cfg,
-        log=log,
-    )
-    subscriptions = SubscriptionAdapter(
-        load_lines(cfg.subscriptions_file),
-        lambda url: http_get(session, url, cfg.timeout, cfg.http_retry),
-        cfg,
-        log=log,
-    )
-    webpages = WebpageAdapter(
-        load_lines(cfg.webpages_file),
-        lambda url: http_get(session, url, cfg.timeout, cfg.http_retry),
-        cfg,
-        log=log,
-    )
+    adapters = build_adapters(cfg, session, channels, states, log)
 
-    return run_collection(cfg, [telegram, subscriptions, webpages], log=log)
+    return run_collection(cfg, adapters, log=log)
 
 
 if __name__ == "__main__":

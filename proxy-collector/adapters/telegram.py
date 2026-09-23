@@ -16,6 +16,13 @@ DISCOVER_RE = re.compile(
     re.IGNORECASE,
 )
 
+BLACKLISTED_HANDLES = {
+    "joinchat", "addstickers", "telegram", "share", "iv", "s", "proxy",
+    "socks", "mtproto", "telegrambot", "gmail", "youtube", "twitter",
+    "facebook", "instagram", "github",
+}
+BLACKLISTED_SUFFIXES = ("_bot",)
+
 
 @dataclass
 class Message:
@@ -42,7 +49,15 @@ def parse_messages(html: str) -> list[Message]:
 
 
 def discover_usernames(text: str) -> list[str]:
-    return [m.group(1) for m in DISCOVER_RE.finditer(text)]
+    out: list[str] = []
+    for match in DISCOVER_RE.finditer(text):
+        name = match.group(1).lower()
+        if name in BLACKLISTED_HANDLES:
+            continue
+        if name.endswith(BLACKLISTED_SUFFIXES):
+            continue
+        out.append(name)
+    return out
 
 
 def _now_iso() -> str:
@@ -89,7 +104,8 @@ class TelegramAdapter:
             candidates.extend(outcome.candidates)
 
         fresh: list[str] = []
-        for name in candidates:
+        for raw_name in candidates:
+            name = raw_name.lower()
             if name in self.known:
                 continue
             self.known.add(name)
@@ -151,8 +167,12 @@ class TelegramAdapter:
             before = page_min
 
         if failed:
-            error = f"{name}: fetch failed"
-            return _ChannelOutcome(name, configs, candidates, ChannelState(last, STATUS_INVALID, ""), error)
+            if seen_any and max_id > last:
+                error = f"{name}: partial fetch failed after progress"
+                return _ChannelOutcome(
+                    name, configs, candidates, ChannelState(max_id, STATUS_ACTIVE, _now_iso()), error
+                )
+            return _ChannelOutcome(name, configs, candidates, ChannelState(last, STATUS_INVALID, ""), f"{name}: fetch failed")
         if not seen_any:
             return _ChannelOutcome(name, configs, candidates, ChannelState(last, STATUS_INVALID, ""), "")
         return _ChannelOutcome(

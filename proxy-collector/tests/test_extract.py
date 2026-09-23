@@ -74,3 +74,46 @@ def test_decode_base64_plaintext_returns_none():
 
 def test_dedupe_sorted():
     assert dedupe_sorted(["b", "a", "b", "c"]) == ["a", "b", "c"]
+
+
+def test_splits_on_encoded_newline_between_configs():
+    text = "vless://a@1.1.1.1:443#A%0Avless://b@2.2.2.2:443#B"
+    assert extract_configs(text) == [
+        "vless://a@1.1.1.1:443#A",
+        "vless://b@2.2.2.2:443#B",
+    ]
+
+
+def test_splits_on_double_encoded_newline_between_configs():
+    text = "vless://a@1.1.1.1:443#A%250Avless://b@2.2.2.2:443#B"
+    assert extract_configs(text) == [
+        "vless://a@1.1.1.1:443#A",
+        "vless://b@2.2.2.2:443#B",
+    ]
+
+
+def test_drops_truncation_mid_host():
+    assert extract_configs("vless://user@1.2.3.…") == []
+
+
+def test_drops_truncation_before_host():
+    assert extract_configs("vless://verylonguuid…") == []
+
+
+def test_drops_truncated_vmess():
+    assert extract_configs("vmess://eyJhIjoxfQ…") == []
+
+
+def test_keeps_complete_config_with_truncation_marker():
+    assert extract_configs("vless://a@1.2.3.4:443#A…") == ["vless://a@1.2.3.4:443#A"]
+
+
+def test_extracts_naive_plus_https():
+    assert extract_configs("naive+https://u:p@host.example:443#N") == [
+        "naive+https://u:p@host.example:443#N"
+    ]
+
+
+def test_does_not_strip_trailing_comma():
+    # Spec §8.3 only lists …»`% as strippable; a comma is not a truncation marker.
+    assert extract_configs("vless://a@1.2.3.4:443#A,") == ["vless://a@1.2.3.4:443#A,"]
