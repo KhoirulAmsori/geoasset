@@ -63,9 +63,9 @@ jobs:
             ./source/proxy-build/go.sum
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           cache: pip
           cache-dependency-path: source/proxy-collector/requirements.txt
 
