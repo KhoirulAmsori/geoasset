@@ -25,6 +25,7 @@ type Config struct {
 	PreviousListFile     string
 	IncludedCountries    map[string]bool
 	ExcludedCountries    map[string]bool
+	ExcludedProtocols    map[string]bool
 	EnableDebug          bool
 
 	SpeedTestEnabled     bool
@@ -54,6 +55,7 @@ func DefaultConfig() Config {
 		PreviousListFile:     envOr("PreviousListFile", ""),
 		IncludedCountries:    envSet("IncludedCountry"),
 		ExcludedCountries:    envSet("ExcludedCountry"),
+		ExcludedProtocols:    envProtocolSet("ExcludedProtocol"),
 		EnableDebug:          envBool("EnableDebug", false),
 
 		SpeedTestEnabled:     envBool("SpeedTestEnabled", true),
@@ -111,6 +113,22 @@ func envSet(key string) map[string]bool {
 	if v, ok := os.LookupEnv(key); ok {
 		for _, part := range strings.Split(v, ",") {
 			c := strings.ToUpper(strings.TrimSpace(part))
+			if c != "" {
+				m[c] = true
+			}
+		}
+	}
+	return m
+}
+
+// envProtocolSet reads a comma-separated list of scheme names and normalizes
+// each through the scheme-alias table (hy2 -> hysteria2, socks -> socks5) so
+// that a user may write either spelling.
+func envProtocolSet(key string) map[string]bool {
+	m := map[string]bool{}
+	if v, ok := os.LookupEnv(key); ok {
+		for _, part := range strings.Split(v, ",") {
+			c := normalizeScheme(strings.TrimSpace(part))
 			if c != "" {
 				m[c] = true
 			}

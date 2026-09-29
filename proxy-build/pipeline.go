@@ -286,6 +286,16 @@ func filterPrevCountries(prev []PrevEntry) []PrevEntry {
 	return out
 }
 
+func filterPrevProtocols(prev []PrevEntry) []PrevEntry {
+	var out []PrevEntry
+	for _, p := range prev {
+		if protocolAllowed(schemeFromURL(p.URL)) {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 func buildTestSet(candidates []ProxyEntry, prev []PrevEntry) []ProxyEntry {
 	seen := map[string]bool{}
 	var out []ProxyEntry

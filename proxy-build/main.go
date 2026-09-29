@@ -69,13 +69,15 @@ func run() error {
 		return fmt.Errorf("read previous list: %w", err)
 	}
 	prev = filterPrevCountries(prev)
+	prev = filterPrevProtocols(prev)
 	logPrintf("previous list entries: %d", len(prev))
 
 	entries = filterCountries(entries)
+	entries = filterProtocols(entries)
 	if len(entries) == 0 && len(prev) == 0 {
-		return fmt.Errorf("no proxy remains after country filter")
+		return fmt.Errorf("no proxy remains after filters")
 	}
-	logPrintf("after country filter: %d", len(entries))
+	logPrintf("after country/protocol filter: %d", len(entries))
 
 	testSet := buildTestSet(entries, prev)
 	logPrintf("testing %d urls", len(testSet))
@@ -290,6 +292,23 @@ func filterCountries(entries []ProxyEntry) []ProxyEntry {
 	var out []ProxyEntry
 	for _, e := range entries {
 		if countryAllowed(e.CountryInfo.CountryCode) {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+func protocolAllowed(scheme string) bool {
+	if len(cfg.ExcludedProtocols) == 0 {
+		return true
+	}
+	return !cfg.ExcludedProtocols[normalizeScheme(scheme)]
+}
+
+func filterProtocols(entries []ProxyEntry) []ProxyEntry {
+	var out []ProxyEntry
+	for _, e := range entries {
+		if protocolAllowed(e.Scheme) {
 			out = append(out, e)
 		}
 	}

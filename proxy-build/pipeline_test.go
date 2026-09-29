@@ -304,6 +304,77 @@ func TestFilterPrevCountriesIncludedWhitelist(t *testing.T) {
 	}
 }
 
+func TestFilterProtocolsExcludesSocks5(t *testing.T) {
+	cfg.ExcludedProtocols = map[string]bool{"socks5": true}
+	defer func() { cfg.ExcludedProtocols = nil }()
+	entries := []ProxyEntry{
+		{Scheme: "socks5", URL: "socks5://Og==:Og==@1.2.3.4:1080"},
+		{Scheme: "socks", URL: "socks://Og==:Og==@1.2.3.4:1080"},
+		{Scheme: "http", URL: "http://1.2.3.4:8080"},
+		{Scheme: "vless", URL: "vless://u@1.2.3.4:443"},
+	}
+	got := filterProtocols(entries)
+	if len(got) != 2 {
+		t.Fatalf("expected 2 (http, vless), got %d: %+v", len(got), got)
+	}
+	for _, e := range got {
+		if e.Scheme == "socks5" || e.Scheme == "socks" {
+			t.Fatalf("socks alias must be filtered, got %+v", e)
+		}
+	}
+}
+
+func TestFilterProtocolsExcludesBothTargets(t *testing.T) {
+	cfg.ExcludedProtocols = map[string]bool{"http": true, "socks5": true}
+	defer func() { cfg.ExcludedProtocols = nil }()
+	entries := []ProxyEntry{
+		{Scheme: "http", URL: "http://1.2.3.4:8080"},
+		{Scheme: "https", URL: "https://1.2.3.4:9002"},
+		{Scheme: "socks", URL: "socks://Og==:Og==@1.2.3.4:1080"},
+		{Scheme: "ss", URL: "ss://YWVzOnB3@1.2.3.4:8388"},
+	}
+	got := filterProtocols(entries)
+	if len(got) != 2 || got[0].Scheme != "https" || got[1].Scheme != "ss" {
+		t.Fatalf("expected https+ss only, got %+v", got)
+	}
+}
+
+func TestFilterProtocolsEmptyExcludesNothing(t *testing.T) {
+	cfg.ExcludedProtocols = nil
+	entries := []ProxyEntry{{Scheme: "http", URL: "http://1.2.3.4:8080"}, {Scheme: "socks5", URL: "socks5://a@1.2.3.4:1"}}
+	if got := filterProtocols(entries); len(got) != 2 {
+		t.Fatalf("empty exclusion must keep everything, got %d", len(got))
+	}
+}
+
+func TestFilterPrevProtocolsDropsCarriedNode(t *testing.T) {
+	// Excluding a protocol must also drop it from the carry-forward set,
+	// otherwise an old live node would stay in list.txt forever.
+	cfg.ExcludedProtocols = map[string]bool{"socks5": true}
+	defer func() { cfg.ExcludedProtocols = nil }()
+	prev := []PrevEntry{
+		{Identity: "socks5|1.2.3.4|1080", URL: "socks5://Og==:Og==@1.2.3.4:1080#US 1 - Foo", Name: "US 1 - Foo", CC: "US"},
+		{Identity: "vless|5.6.7.8|443", URL: "vless://u@5.6.7.8:443#SG 1 - Bar", Name: "SG 1 - Bar", CC: "SG"},
+	}
+	got := filterPrevProtocols(prev)
+	if len(got) != 1 || got[0].CC != "SG" {
+		t.Fatalf("expected only the vless node, got %+v", got)
+	}
+}
+
+func TestEnvProtocolSetNormalizesAliases(t *testing.T) {
+	t.Setenv("ExcludedProtocol", "hy2, socks, HTTP")
+	got := envProtocolSet("ExcludedProtocol")
+	for _, want := range []string{"hysteria2", "socks5", "http"} {
+		if !got[want] {
+			t.Fatalf("expected %q in %v", want, got)
+		}
+	}
+	if got["hy2"] || got["socks"] {
+		t.Fatalf("aliases must be normalized away: %v", got)
+	}
+}
+
 func TestFilterPrevCountriesParityWithCandidates(t *testing.T) {
 	cfg.ExcludedCountries = nil
 	cfg.IncludedCountries = nil
