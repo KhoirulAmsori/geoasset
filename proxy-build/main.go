@@ -31,7 +31,13 @@ func main() {
 	cfg = DefaultConfig()
 	mihomoLog.SetLevel(mihomoLog.SILENT)
 
-	if err := run(); err != nil {
+	var err error
+	if len(os.Args) > 1 && os.Args[1] == "speed" {
+		err = runSpeedTest()
+	} else {
+		err = run()
+	}
+	if err != nil {
 		log.Fatalf("failed: %v", err)
 	}
 }

@@ -26,6 +26,15 @@ type Config struct {
 	IncludedCountries    map[string]bool
 	ExcludedCountries    map[string]bool
 	EnableDebug          bool
+
+	SpeedTestEnabled     bool
+	SpeedTestURL         string
+	SpeedTestMaxBytes    int64
+	SpeedTestTimeout     time.Duration
+	SpeedTestThreadCount int
+	SpeedTestMaxNodes    int
+	SpeedTestInput       string
+	SpeedTestReportBase  string
 }
 
 func DefaultConfig() Config {
@@ -45,6 +54,21 @@ func DefaultConfig() Config {
 		IncludedCountries:    envSet("IncludedCountry"),
 		ExcludedCountries:    envSet("ExcludedCountry"),
 		EnableDebug:          envBool("EnableDebug", false),
+
+		SpeedTestEnabled:     envBool("SpeedTestEnabled", true),
+		SpeedTestURL:         envOr("SpeedTestURL", "https://speed.cloudflare.com/__down?bytes=10000000"),
+		SpeedTestMaxBytes:    int64(envInt("SpeedTestMaxBytes", 3_000_000)),
+		SpeedTestTimeout:     time.Duration(envInt("SpeedTestTimeout", 5000)) * time.Millisecond,
+		SpeedTestThreadCount: envInt("SpeedTestThreadCount", 16),
+		SpeedTestMaxNodes:    envInt("SpeedTestMaxNodes", 0),
+		SpeedTestInput:       envOr("SpeedTestInput", "list.txt"),
+		SpeedTestReportBase:  envOr("SpeedTestReportBase", "speed"),
+	}
+	if cfg.SpeedTestThreadCount < 1 {
+		cfg.SpeedTestThreadCount = 1
+	}
+	if cfg.SpeedTestMaxBytes < 0 {
+		cfg.SpeedTestMaxBytes = 0
 	}
 	if cfg.RetryCount < 0 {
 		cfg.RetryCount = 0
