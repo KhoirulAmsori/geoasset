@@ -130,6 +130,8 @@ jobs:
           SpeedTestTimeout: 8000
           SpeedTestThreadCount: 16
           SpeedTestMaxNodes: 0
+          # Fallback when the primary probe origin rate-limits a node's exit IP.
+          SpeedTestFallbackURL: "https://proof.ovh.net/files/100Mb.dat"
         run: |
           cd source/proxy-build
           ./nodechecker speed
