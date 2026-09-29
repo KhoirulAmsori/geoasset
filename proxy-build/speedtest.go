@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -130,7 +131,15 @@ func measureOne(rawURL string, res *SpeedResult) {
 		if err != nil {
 			continue
 		}
-		sample, err := downloadThrough(p)
+
+		sample, err := downloadThrough(p, cfg.SpeedTestURL)
+		if err != nil && shouldFallback(err) && cfg.SpeedTestFallbackURL != "" {
+			// The probe origin throttled this node's exit IP (e.g. 429);
+			// retry against the fallback endpoint before giving up. Other
+			// failures (timeout, EOF, dial) are tunnel problems a different
+			// endpoint cannot fix, so they are not retried.
+			sample, err = downloadThrough(p, cfg.SpeedTestFallbackURL)
+		}
 		_ = p.Close()
 		if err != nil {
 			res.Error = shortErr(err)
@@ -162,14 +171,28 @@ func bytesPerSecOf(n, ms int64) int64 {
 	return n * 1000 / ms
 }
 
+// statusError is a non-2xx HTTP status from the probe origin — the only class
+// of failure a fallback endpoint can fix (e.g. 429 rate limits on the node's
+// exit IP).
+type statusError struct{ code int }
+
+func (e statusError) Error() string { return fmt.Sprintf("status %d", e.code) }
+
+// shouldFallback reports whether a probe failure is worth retrying against the
+// fallback endpoint: only non-2xx statuses from the probe origin qualify.
+func shouldFallback(err error) bool {
+	var st statusError
+	return errors.As(err, &st)
+}
+
 // downloadThrough dials the probe URL through the proxy, issues a GET and reads
 // the body until SpeedTestMaxBytes or SpeedTestTimeout is reached. Latency is
 // the time to first byte; the byte rate is measured over the body-read window
 // only, so a slow first byte does not inflate throughput.
-func downloadThrough(p constant.Proxy) (speedSample, error) {
+func downloadThrough(p constant.Proxy, probeURL string) (speedSample, error) {
 	var sample speedSample
 
-	meta, err := speedProbeMetadata(cfg.SpeedTestURL)
+	meta, err := speedProbeMetadata(probeURL)
 	if err != nil {
 		return sample, err
 	}
@@ -201,7 +224,7 @@ func downloadThrough(p constant.Proxy) (speedSample, error) {
 	}
 	defer client.CloseIdleConnections()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cfg.SpeedTestURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, probeURL, nil)
 	if err != nil {
 		return sample, fmt.Errorf("request failed")
 	}
@@ -216,7 +239,7 @@ func downloadThrough(p constant.Proxy) (speedSample, error) {
 
 	sample.latencyMS = time.Since(start).Milliseconds()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return sample, fmt.Errorf("status %d", resp.StatusCode)
+		return sample, statusError{code: resp.StatusCode}
 	}
 
 	limit := cfg.SpeedTestMaxBytes

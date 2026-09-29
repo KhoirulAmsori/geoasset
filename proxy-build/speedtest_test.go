@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -162,6 +163,31 @@ func TestJSONKeepsInputOrderWhileReportRanks(t *testing.T) {
 	}
 	if inputOrder[0].Name != "zslow" {
 		t.Fatalf("input order must be untouched, got %+v", inputOrder)
+	}
+}
+
+func TestShouldFallbackOnlyForStatusErrors(t *testing.T) {
+	if !shouldFallback(statusError{code: 429}) {
+		t.Fatal("status error must trigger fallback")
+	}
+	if !shouldFallback(fmt.Errorf("wrapped: %w", statusError{code: 503})) {
+		t.Fatal("wrapped status error must trigger fallback")
+	}
+	for _, err := range []error{
+		nil,
+		errors.New("request failed: EOF"),
+		errors.New("request failed: timeout"),
+		errors.New("dial failed"),
+	} {
+		if shouldFallback(err) {
+			t.Fatalf("%v must NOT trigger fallback", err)
+		}
+	}
+}
+
+func TestStatusErrorRendersLikeBefore(t *testing.T) {
+	if got := shortErr(statusError{code: 429}); got != "status 429" {
+		t.Fatalf("got %q", got)
 	}
 }
 

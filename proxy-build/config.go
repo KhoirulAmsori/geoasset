@@ -29,6 +29,7 @@ type Config struct {
 
 	SpeedTestEnabled     bool
 	SpeedTestURL         string
+	SpeedTestFallbackURL string
 	SpeedTestMaxBytes    int64
 	SpeedTestTimeout     time.Duration
 	SpeedTestThreadCount int
@@ -57,6 +58,7 @@ func DefaultConfig() Config {
 
 		SpeedTestEnabled:     envBool("SpeedTestEnabled", true),
 		SpeedTestURL:         envOr("SpeedTestURL", "https://speed.cloudflare.com/__down?bytes=10000000"),
+		SpeedTestFallbackURL: envOr("SpeedTestFallbackURL", "https://proof.ovh.net/files/100Mb.dat"),
 		SpeedTestMaxBytes:    int64(envInt("SpeedTestMaxBytes", 3_000_000)),
 		SpeedTestTimeout:     time.Duration(envInt("SpeedTestTimeout", 5000)) * time.Millisecond,
 		SpeedTestThreadCount: envInt("SpeedTestThreadCount", 16),
