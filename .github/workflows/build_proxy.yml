@@ -35,6 +35,14 @@ jobs:
       TestUrl: "https://www.youtube.com/generate_204"
       ExpectedStatus: "200-204"
       ConcurrentDNS: 32
+      # Comma-separated scheme names to drop from list.txt (both new candidates
+      # and carried-forward entries). Recognized: vmess, vless, trojan, ss, ssr,
+      # hysteria2 (alias hy2), hysteria, tuic, wireguard, anytls, socks5
+      # (alias socks), http, https, naive.
+      # NOTE: mihomo parses https:// share links as an http proxy with tls=true,
+      # so excluding "http" alone leaves https:// nodes in the list. List both
+      # to drop all plain web proxies: "http, https, socks5".
+      ExcludedProtocol: "http, https, socks5"
 
     steps:
       - name: Set variables
