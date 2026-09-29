@@ -119,6 +119,21 @@ jobs:
           # Run checker
           ./nodechecker
 
+      - name: Speed test active proxies
+        if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
+        env:
+          # Scoped to this step: speed test knobs (ms / bytes / concurrency).
+          SpeedTestEnabled: "true"
+          SpeedTestInput: list.txt
+          SpeedTestReportBase: speed
+          SpeedTestMaxBytes: 3000000
+          SpeedTestTimeout: 5000
+          SpeedTestThreadCount: 16
+          SpeedTestMaxNodes: 0
+        run: |
+          cd source/proxy-build
+          ./nodechecker speed
+
       - name: Prepare local repo for 'asset' branch
         if: ${{ !hashFiles('source/proxy-build/skip_push.flag') }}
         env:
@@ -157,6 +172,10 @@ jobs:
 
           mkdir -p asset/Proxy
           cp source/proxy-build/list.txt asset/Proxy/
+
+          if [ -f source/proxy-build/speed.txt ] && [ -f source/proxy-build/speed.json ]; then
+            cp source/proxy-build/speed.txt source/proxy-build/speed.json asset/Proxy/
+          fi
 
           if [ -f source/proxy-collector/channels.json ]; then
             cp source/proxy-collector/channels.json asset/Proxy/channels.json
