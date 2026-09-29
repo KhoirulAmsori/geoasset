@@ -134,8 +134,8 @@ jobs:
           SpeedTestEnabled: "true"
           SpeedTestInput: list.txt
           SpeedTestReportBase: speed
-          SpeedTestMaxBytes: 2000000
-          SpeedTestTimeout: 8000
+          SpeedTestMaxBytes: 5000000
+          SpeedTestTimeout: 20000
           SpeedTestThreadCount: 16
           SpeedTestMaxNodes: 0
           # Fallback when the primary probe origin rate-limits a node's exit IP.
