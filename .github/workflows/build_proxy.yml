@@ -126,8 +126,8 @@ jobs:
           SpeedTestEnabled: "true"
           SpeedTestInput: list.txt
           SpeedTestReportBase: speed
-          SpeedTestMaxBytes: 3000000
-          SpeedTestTimeout: 5000
+          SpeedTestMaxBytes: 2000000
+          SpeedTestTimeout: 8000
           SpeedTestThreadCount: 16
           SpeedTestMaxNodes: 0
         run: |
