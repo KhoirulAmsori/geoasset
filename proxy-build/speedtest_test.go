@@ -147,6 +147,24 @@ func TestShortErrStripsHTTPWrapper(t *testing.T) {
 	}
 }
 
+func TestJSONKeepsInputOrderWhileReportRanks(t *testing.T) {
+	// Simulate measureAll: results in input order (fast node listed first in
+	// the input must stay first in JSON even though the report ranks by speed).
+	slow := SpeedResult{Name: "zslow", BytesPerSec: 100, LatencyMS: 900}
+	fast := SpeedResult{Name: "afast", BytesPerSec: 9_000_000, LatencyMS: 50}
+	inputOrder := []SpeedResult{slow, fast}
+
+	ranked := make([]SpeedResult, len(inputOrder))
+	copy(ranked, inputOrder)
+	sortSpeedResults(ranked)
+	if ranked[0].Name != "afast" {
+		t.Fatalf("report must rank by speed, got %+v", ranked)
+	}
+	if inputOrder[0].Name != "zslow" {
+		t.Fatalf("input order must be untouched, got %+v", inputOrder)
+	}
+}
+
 func TestHostPortOf(t *testing.T) {
 	if got := hostPortOf("vless://u@1.2.3.4:443?x=1#n"); got != "1.2.3.4:443" {
 		t.Fatalf("got %q", got)

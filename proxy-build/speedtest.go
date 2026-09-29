@@ -47,8 +47,13 @@ func runSpeedTest() error {
 	}
 	logPrintf("speed test: %d nodes from %s", len(entries), cfg.SpeedTestInput)
 
-	results := measureAll(entries)
-	sortSpeedResults(results)
+	results := measureAll(entries) // input order, aligned with the input list
+
+	// The text report is ranked by speed; the JSON keeps the input order so
+	// consumers can align entries with list.txt by position.
+	ranked := make([]SpeedResult, len(results))
+	copy(ranked, results)
+	sortSpeedResults(ranked)
 
 	ok := 0
 	for _, r := range results {
@@ -59,14 +64,14 @@ func runSpeedTest() error {
 	logPrintf("speed test done: measured %d, ok %d, failed %d, time spent: %s",
 		len(results), ok, len(results)-ok, durationStr(time.Since(start)))
 
-	report := formatSpeedReport(results, cfg.SpeedTestURL)
+	report := formatSpeedReport(ranked, cfg.SpeedTestURL)
 	if err := osWriteFile(cfg.SpeedTestReportBase+".txt", []byte(report)); err != nil {
 		return err
 	}
 	if err := writeSpeedJSON(cfg.SpeedTestReportBase+".json", results); err != nil {
 		return err
 	}
-	logPrintf("wrote %s.txt and %s.json", cfg.SpeedTestReportBase, cfg.SpeedTestReportBase)
+	logPrintf("wrote %s.txt (ranked) and %s.json (input order)", cfg.SpeedTestReportBase, cfg.SpeedTestReportBase)
 	return nil
 }
 
