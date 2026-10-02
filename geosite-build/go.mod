@@ -1,6 +1,6 @@
 module github.com/Loyalsoldier/domain-list-custom
 
-go 1.26.0
+go 1.27.0
 
 require (
 	github.com/v2fly/v2ray-core/v5 v5.54.2
