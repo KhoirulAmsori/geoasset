@@ -73,9 +73,9 @@ jobs:
           cp asset/GEO/GeoLite2-Country-CSV_*/*.csv geolite2/
           cp asset/GEO/GeoLite2-Country-CSV_*/{GeoLite2-Country-Blocks-IPv4*,GeoLite2-Country-Locations-en}.csv geolite2/
           
-          # Salin aset untuk diterbitkan
-          cp geolite2/GeoLite2-ASN.mmdb ../Publish/GeoLite2-ASN.mmdb
-          cp geolite2/GeoLite2-Country.mmdb ../Publish/GeoLite2-Country.mmdb
+          # Salin aset untuk diterbitkan. Nama harus ASN.mmdb karena
+          # Path.ASN() di mihomo hanya mengenali nama itu.
+          cp geolite2/GeoLite2-ASN.mmdb ../Publish/ASN.mmdb
           
           # Jalankan pembangunan
           go mod tidy
@@ -170,3 +170,24 @@ jobs:
           file: Publish/*
           body: |
             ## Build Date: ${{ env.BUILDTIME }} ##
+
+            | Berkas | Dipakai saat |
+            | --- | --- |
+            | `geoip.metadb` | mode GeoIP default mihomo (`geodata-mode: false`), format Meta-geoip0 |
+            | `GeoIP.dat` | mode GeoIP `geodata-mode: true` |
+            | `GeoSite.dat` | aturan `GEOSITE` |
+            | `ASN.mmdb` | aturan `IPASN` |
+
+            Letakkan hanya satu database mmdb di folder config mihomo
+            (`~/.config/mihomo`). `Path.MMDB()` mengambil file pertama yang
+            cocok dari `Country.mmdb`, `geoip.db`, atau `geoip.metadb`, jadi
+            mmdb milik meta-rules-dat harus dihapus bila ingin memakai
+            `geoip.metadb` dari rilis ini.
+
+            ```yaml
+            geox-url:
+              geoip: "https://github.com/${{ github.repository }}/releases/download/latest/GeoIP.dat"
+              geosite: "https://github.com/${{ github.repository }}/releases/download/latest/GeoSite.dat"
+              mmdb: "https://github.com/${{ github.repository }}/releases/download/latest/geoip.metadb"
+              asn: "https://github.com/${{ github.repository }}/releases/download/latest/ASN.mmdb"
+            ```

@@ -103,21 +103,11 @@
       }
     },
     {
-      "type": "maxmindMMDB",
+      "type": "mihomoMetaDB",
       "action": "output",
       "args": {
         "outputDir": "../Publish",
-        "outputName": "Country.mmdb",
-        "overwriteList": [
-          "id",
-          "cn",
-          "private",
-          "cloudfront",
-          "facebook",
-          "google",
-          "twitter",
-          "telegram"
-        ]
+        "outputName": "geoip.metadb"
       }
     }
   ]
