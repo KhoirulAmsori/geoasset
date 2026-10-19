@@ -6,7 +6,16 @@
       "args": {
         "country": "geolite2/GeoLite2-Country-Locations-en.csv",
         "ipv4": "geolite2/GeoLite2-Country-Blocks-IPv4.csv",
-        "wantedList": ["id", "cn"]
+        "wantedList": ["id"]
+      }
+    },
+    {
+      "type": "text",
+      "action": "add",
+      "args": {
+        "name": "cn",
+        "ipOrCIDR": ["223.5.5.0/24", "223.6.6.0/24"],
+        "onlyIPType": "ipv4"
       }
     },
     {
@@ -92,9 +101,6 @@
         "onlyIPType": "ipv4"
       }
     },
-    // Peserta OpenIXP/IIX. nice.list dibuat workflow Build GEO Asset dari
-    // http://ixp.mikrotik.co.id/download/nice.rsc ; build lokal perlu membuat
-    // berkas itu lebih dulu.
     {
       "type": "text",
       "action": "add",
@@ -122,10 +128,6 @@
         "outputName": "geoip.metadb"
       }
     },
-    // Berkas .mrs untuk rule-providers mihomo (format: mrs, behavior:
-    // ipcidr). release asset bersifat datar, jadi hasilnya ditulis langsung
-    // ke Publish; nice.mrs menggantikan raven_nice.yaml. List lain tetap bisa
-    // diakses lewat aturan GEOIP, jadi tidak perlu ikut diterbitkan.
     {
       "type": "mihomoMRS",
       "action": "output",

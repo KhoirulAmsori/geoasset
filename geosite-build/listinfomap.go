@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	router "github.com/v2fly/v2ray-core/v5/app/router/routercommon"
@@ -102,6 +104,53 @@ func (lm *ListInfoMap) ToProto(excludeAttrs map[fileName]map[attribute]bool) *ro
 		protoList.Entry = append(protoList.Entry, listinfo.GeoSite)
 	}
 	return protoList
+}
+
+// Exclude membuang list yang namanya cocok pola dari hasil pembangunan.
+// Dipanggil setelah FlattenAndGenUniqueDomainList, jadi `include:` dan
+// `geosite:` sudah diurai lebih dulu dan pembuangan ini tidak meninggalkan
+// referensi yang menggantung di list lain.
+//
+// Pola dipisah koma dan mendukung wildcard '*', contoh: '*-cn'. List 'cn'
+// tidak pernah dibuang karena mihomo memverifikasi geodata dengan memuat
+// list cn (component/geodata Verify -> LoadGeoSiteMatcher("CN")); kalau cn
+// hilang, GeoSite.dat dianggap rusak lalu diunduh ulang terus-menerus.
+func (lm *ListInfoMap) Exclude(patterns string) error {
+	patterns = strings.TrimSpace(patterns)
+	if patterns == "" {
+		return nil
+	}
+
+	var excluded []string
+	for _, pattern := range strings.Split(patterns, ",") {
+		pattern = strings.ToUpper(strings.TrimSpace(pattern))
+		if pattern == "" {
+			continue
+		}
+		for name := range *lm {
+			match, err := path.Match(pattern, string(name))
+			if err != nil {
+				return fmt.Errorf("invalid excludelists pattern %q: %w", pattern, err)
+			}
+			if !match {
+				continue
+			}
+			if name == "CN" {
+				fmt.Println("Notice: list CN is kept, mihomo needs it to verify GeoSite.dat")
+				continue
+			}
+			delete(*lm, name)
+			excluded = append(excluded, string(name))
+		}
+	}
+
+	if len(excluded) == 0 {
+		fmt.Println("Notice: no list matched by excludelists")
+		return nil
+	}
+	sort.Strings(excluded)
+	fmt.Printf("Excluded %d list(s): %s\n", len(excluded), strings.Join(excluded, " "))
+	return nil
 }
 
 // ToPlainText returns a map of exported lists that user wants

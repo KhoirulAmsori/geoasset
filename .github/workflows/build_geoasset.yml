@@ -103,10 +103,15 @@ jobs:
           curl -sSL https://raw.githubusercontent.com/pengelana/blocklist/refs/heads/master/src/blacklist/crux_judol.txt > ../domain-list-community/data/raven_judol
           curl -sSL https://raw.githubusercontent.com/pengelana/blocklist/refs/heads/master/src/blacklist/judol_t.txt >> ../domain-list-community/data/raven_judol
           cp raven_nsfw ../domain-list-community/data/raven_nsfw
-
+          
+          # Ganti list cn dengan stub verifikasi. mihomo hanya mengecek entry
+          # "cn" ada di GeoSite.dat, isinya tidak diperiksa, jadi daftar CN
+          # penuh tidak perlu ikut diterbitkan.
+          cp cn ../domain-list-community/data/cn
+          
           # Jalankan pembangunan
           go mod tidy
-          go run ./ --datapath=../domain-list-community/data
+          go run ./ --datapath=../domain-list-community/data --excludelists='*-cn'
 
       - name: Upload release
         uses: svenstaro/upload-release-action@v2
@@ -127,6 +132,15 @@ jobs:
             | `GeoSite.dat` | aturan `GEOSITE` |
             | `ASN.mmdb` | aturan `IPASN` |
             | `nice.mrs` | rule-provider mihomo (`format: mrs`, `behavior: ipcidr`), daftar peserta OpenIXP/IIX |
+
+            List `cn` di `GeoSite.dat` (3 domain) dan entri `CN` di `GeoIP.dat`
+            plus `geoip.metadb` (2 CIDR AliDNS) sengaja cuma stub. mihomo
+            memverifikasi geodata dengan memuat list `cn` dan hanya mengecek
+            entry itu ada, isinya tidak diperiksa, jadi stub cukup untuk lolos
+            verifikasi tanpa menerbitkan daftar CN lengkap. Karena itu
+            `GEOSITE,CN` dan `GEOIP,CN` tidak layak dipakai untuk routing. List
+            China lain (`geolocation-cn`, `tld-cn`, `aws-cn`, `category-*-cn`)
+            tidak diterbitkan sama sekali.
 
             ```yaml
             geox-url:

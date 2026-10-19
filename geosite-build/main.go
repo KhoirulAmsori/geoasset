@@ -17,6 +17,7 @@ var (
 	exportLists  = flag.String("exportlists", "", "Lists to be exported in plaintext format, separated by ',' comma")
 	excludeAttrs = flag.String("excludeattrs", "cn@!cn@ads,geolocation-cn@!cn@ads,geolocation-!cn@cn@ads", "Exclude rules with certain attributes in certain lists, seperated by ',' comma, support multiple attributes in one list. Example: geolocation-!cn@cn@ads,geolocation-cn@!cn")
 	toGFWList    = flag.String("togfwlist", "geolocation-!cn", "List to be exported in GFWList format")
+	excludeLists = flag.String("excludelists", "", "List names to drop from the generated dat, separated by ',' comma, supports '*' wildcard. Example: '*-cn'. List 'cn' is always kept because mihomo verifies geodata by loading it")
 )
 
 func main() {
@@ -42,6 +43,13 @@ func main() {
 	}
 
 	if err := listInfoMap.FlattenAndGenUniqueDomainList(); err != nil {
+		fmt.Println("Failed:", err)
+		os.Exit(1)
+	}
+
+	// Pembuangan list dilakukan setelah flatten agar `include:` ke list yang
+	// dibuang sudah tersalin lebih dulu ke list induknya.
+	if err := listInfoMap.Exclude(*excludeLists); err != nil {
 		fmt.Println("Failed:", err)
 		os.Exit(1)
 	}

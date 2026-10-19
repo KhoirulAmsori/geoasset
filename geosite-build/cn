@@ -1,0 +1,12 @@
+# Stub untuk verifikasi geodata mihomo. mihomo menguji GeoSite.dat dengan
+# memuat list "cn" (component/geodata/utils.go -> LoadGeoSiteMatcher("CN"))
+# dan hanya melihat entry itu ada atau tidak, isinya tidak diperiksa.
+# Tiga domain CN asli di bawah sudah cukup untuk itu.
+#
+# Jangan dihapus dan jangan dibuat kosong lewat workflow: kalau list cn hilang,
+# GeoSite.dat dianggap rusak lalu diunduh ulang setiap start.
+# Ini bukan daftar domain CN lengkap. Daftar lengkapnya ada di upstream
+# domain-list-community (data/cn) dan tidak dipakai config mihomo di repo ini.
+baidu.com
+qq.com
+taobao.com

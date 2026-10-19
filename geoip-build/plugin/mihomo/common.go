@@ -10,8 +10,6 @@ import (
 	"go4.org/netipx"
 )
 
-// entryPrefixes mengembalikan CIDR milik entry. hanyaIPType membatasi hasil ke
-// satu keluarga alamat, memakai opsi lib yang sama seperti output maxmindMMDB.
 func entryPrefixes(entry *lib.Entry, onlyIPType lib.IPType) ([]netip.Prefix, error) {
 	var ignoreIPType lib.IgnoreIPOption
 	switch onlyIPType {
@@ -55,9 +53,7 @@ func mergedRanges(prefixes []netip.Prefix) ([]netipx.IPRange, error) {
 	return set.Ranges(), nil
 }
 
-// filterList memakai wantedList bila diisi; jika tidak, seluruh list di
-// container dipakai dikurangi excludedList. Nama selalu huruf besar agar
-// cocok dengan key container.
+//Nama selalu huruf besar agar cocok dengan key container.
 func filterList(container lib.Container, want, exclude []string) []string {
 	excludeMap := make(map[string]bool)
 	for _, item := range exclude {
