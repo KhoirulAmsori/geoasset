@@ -28,10 +28,13 @@ var cfg Config
 const maxSourceBytes = 32 << 20
 
 func main() {
-	cfg = DefaultConfig()
+	var err error
+	cfg, err = DefaultConfig()
+	if err != nil {
+		log.Fatalf("config: %v", err)
+	}
 	mihomoLog.SetLevel(mihomoLog.SILENT)
 
-	var err error
 	if len(os.Args) > 1 && os.Args[1] == "speed" {
 		err = runSpeedTest()
 	} else {
@@ -79,9 +82,18 @@ func run() error {
 	}
 	logPrintf("after country/protocol filter: %d", len(entries))
 
-	testSet := buildTestSet(entries, prev)
-	logPrintf("testing %d urls", len(testSet))
-	passed := testAll(testSet)
+	// Dua gelombang tes. Gelombang pertama: node dari list sebelumnya, yang
+	// memang diprioritaskan mergeOutput. Gelombang kedua: kandidat baru, tetapi
+	// hanya untuk identitas yang belum terbukti hidup — node carry-forward yang
+	// lolos tidak perlu dites ulang lewat varian URL yang sama persis.
+	prevSet, candSet := splitTestSets(entries, prev)
+	logPrintf("testing %d previous + %d candidate urls", len(prevSet), len(candSet))
+	passedPrev := testAll(prevSet)
+	settled := identitiesOf(passedPrev)
+	beforeSkip := len(candSet)
+	candSet = dropSettledIdentities(candSet, settled)
+	logPrintf("candidates skipped (identity already alive): %d", beforeSkip-len(candSet))
+	passed := append(passedPrev, testAll(candSet)...)
 
 	aliveURLs := make(map[string]bool, len(passed))
 	for _, p := range passed {
@@ -275,11 +287,21 @@ func parseToEntriesParallel(raw []string, res *CountryResolver) []ProxyEntry {
 	return out
 }
 
+// countryAllowed memutuskan apakah sebuah kode negara lolos filter.
+//
+// Node yang negaranya gagal dilokalisasi (cc kosong / "ZZ" — DNS sempat gagal,
+// blok IP baru yang belum ada di GeoLite2, atau host IPv6-only) tetap
+// dibiarkan ikut tes selama tidak ada filter negara sama sekali: tes koneksi
+// justru membuktikan node itu hidup, dan list tanpa GeoLite terbaru tidak
+// seharusnya kehilangan node cuma karena database kita ketinggalan. Begitu
+// include/exclude negara dipakai, node tanpa negara tidak bisa dibuktikan
+// masuk kriteria, jadi tetap dibuang.
 func countryAllowed(cc string) bool {
+	hasFilter := len(cfg.IncludedCountries) > 0 || len(cfg.ExcludedCountries) > 0
 	if cc == "" || cc == "ZZ" || cc == "Unknown" {
-		return false
+		return !hasFilter
 	}
-	if len(cfg.ExcludedCountries) > 0 && cfg.ExcludedCountries[cc] {
+	if cfg.ExcludedCountries[cc] {
 		return false
 	}
 	if len(cfg.IncludedCountries) > 0 && !cfg.IncludedCountries[cc] {
@@ -383,9 +405,21 @@ func testEntry(ctx context.Context, entry ProxyEntry) bool {
 	return passed
 }
 
+// attemptTimeout memberi attempt pertama durasi penuh (cold start: dial +
+// TLS handshake lewat node), sementara attempt-ulang dipangkas setengah karena
+// menyentuh node yang sudah "hangat". Untuk node mati murni, ini memangkas
+// worst-case per node dari (1+RetryCount)×Timeout menjadi sekitar separuhnya
+// tanpa mengurangi peluang node sehat yang hanya butuh satu percobaan ulang.
+func attemptTimeout(attempt int) time.Duration {
+	if attempt == 0 || cfg.Timeout < 2*time.Second {
+		return cfg.Timeout
+	}
+	return cfg.Timeout / 2
+}
+
 func testProxy(ctx context.Context, proxy constant.Proxy) {
 	for attempt := 0; attempt <= cfg.RetryCount; attempt++ {
-		nctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
+		nctx, cancel := context.WithTimeout(ctx, attemptTimeout(attempt))
 		_, err := proxy.URLTest(nctx, cfg.TestURL, cfg.ExpectedRanges)
 		cancel()
 		if err == nil || ctx.Err() != nil {

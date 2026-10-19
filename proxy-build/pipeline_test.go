@@ -175,15 +175,45 @@ func TestParsePrevListMissingFile(t *testing.T) {
 	}
 }
 
-func TestBuildTestSetDedup(t *testing.T) {
+func TestSplitTestSets(t *testing.T) {
 	cand := []ProxyEntry{{Scheme: "vless", URL: "vless://u@1.2.3.4:443"}}
 	prevDiff := []PrevEntry{{Identity: "vless|1.2.3.4|443", URL: "vless://old@1.2.3.4:443"}}
-	if got := buildTestSet(cand, prevDiff); len(got) != 2 {
-		t.Fatalf("expected 2, got %d", len(got))
+	prevSet, candSet := splitTestSets(cand, prevDiff)
+	if len(prevSet) != 1 || len(candSet) != 1 {
+		t.Fatalf("expected 1+1, got %d+%d", len(prevSet), len(candSet))
 	}
+	if prevSet[0].Scheme != "vless" || candSet[0].Scheme != "vless" {
+		t.Fatalf("scheme harus terisi supaya Identity() valid: %+v %+v", prevSet[0], candSet[0])
+	}
+
+	// URL identik di kedua sisi cukup dites sekali (sisi prev).
 	prevSame := []PrevEntry{{Identity: "vless|1.2.3.4|443", URL: "vless://u@1.2.3.4:443"}}
-	if got := buildTestSet(cand, prevSame); len(got) != 1 {
-		t.Fatalf("expected 1, got %d", len(got))
+	prevSet, candSet = splitTestSets(cand, prevSame)
+	if len(prevSet) != 1 || len(candSet) != 0 {
+		t.Fatalf("expected 1+0, got %d+%d", len(prevSet), len(candSet))
+	}
+
+	// Kandidat tanpa host:port yang bisa di-parse tidak dites (perilaku lama).
+	junk := []ProxyEntry{{Scheme: "vmess", URL: "vmess://!!!bukan-base64!!!"}}
+	_, candSet = splitTestSets(junk, nil)
+	if len(candSet) != 0 {
+		t.Fatalf("unparseable candidate must be skipped, got %+v", candSet)
+	}
+}
+
+func TestDropSettledIdentities(t *testing.T) {
+	alivePrev := ProxyEntry{URL: "vless://old@1.2.3.4:443", Scheme: "vless"}
+	settled := identitiesOf([]ProxyEntry{alivePrev})
+	if !settled["vless|1.2.3.4|443"] {
+		t.Fatalf("identitas prev tidak terdaftar: %v", settled)
+	}
+	cands := []ProxyEntry{
+		{URL: "vless://new@1.2.3.4:443", Scheme: "vless"}, // identitas sama → dibuang
+		{URL: "vless://u@9.9.9.9:443", Scheme: "vless"},   // beda → dites
+	}
+	got := dropSettledIdentities(cands, settled)
+	if len(got) != 1 || got[0].URL != cands[1].URL {
+		t.Fatalf("got %+v", got)
 	}
 }
 

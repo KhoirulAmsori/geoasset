@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -39,7 +40,12 @@ type Config struct {
 	SpeedTestReportBase  string
 }
 
-func DefaultConfig() Config {
+// DefaultConfig membaca seluruh knob dari environment variable. Satu-satunya
+// kegagalan yang mungkin dikembalikan adalah ExpectedStatus yang tidak bisa
+// diparse: dibiarkan lolos, rentang status menjadi kosong dan mihomo
+// (adapter.Proxy.URLTest) memperlakukan expectedStatus == nil sebagai "terima
+// status apa pun", sehingga proxy yang menjawab 407/500 pun dianggap hidup.
+func DefaultConfig() (Config, error) {
 	cfg := Config{
 		SourcesFile:          envOr("SourcesFile", "Asset/sources.txt"),
 		GeoIPCountryDB:       envOr("GeoLiteCountryDbPath", "Asset/GeoLite2-Country.mmdb"),
@@ -77,10 +83,12 @@ func DefaultConfig() Config {
 	if cfg.RetryCount < 0 {
 		cfg.RetryCount = 0
 	}
-	if parsed, err := utils.NewUnsignedRanges[uint16](cfg.ExpectedStatus); err == nil {
-		cfg.ExpectedRanges = parsed
+	parsed, err := utils.NewUnsignedRanges[uint16](cfg.ExpectedStatus)
+	if err != nil || len(parsed) == 0 {
+		return Config{}, fmt.Errorf("invalid ExpectedStatus %q (example of valid value: \"200-204\")", cfg.ExpectedStatus)
 	}
-	return cfg
+	cfg.ExpectedRanges = parsed
+	return cfg, nil
 }
 
 func envOr(key, fallback string) string {

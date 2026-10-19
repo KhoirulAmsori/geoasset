@@ -296,28 +296,65 @@ func filterPrevProtocols(prev []PrevEntry) []PrevEntry {
 	return out
 }
 
-func buildTestSet(candidates []ProxyEntry, prev []PrevEntry) []ProxyEntry {
-	seen := map[string]bool{}
-	var out []ProxyEntry
+// splitTestSets memecah pekerjaan tes menjadi dua gelombang: entri dari list
+// sebelumnya (yang diprioritaskan mergeOutput) dan kandidat baru. URL yang
+// identik di kedua sisi hanya dites sekali (dari sisi prev). Kandidat dengan
+// identitas yang prev-nya sudah terbukti hidup dibuang kemudian oleh
+// dropSettledIdentities, karena mergeOutput cukup satu URL hidup per identitas.
+func splitTestSets(candidates []ProxyEntry, prev []PrevEntry) (prevSet, candSet []ProxyEntry) {
+	prevURL := make(map[string]bool, len(prev))
+	seenPrev := make(map[string]bool, len(prev))
+	for _, p := range prev {
+		key := p.Identity + "|" + p.URL
+		if seenPrev[key] {
+			continue
+		}
+		seenPrev[key] = true
+		prevURL[p.URL] = true
+		prevSet = append(prevSet, ProxyEntry{URL: p.URL, Scheme: schemeFromURL(p.URL)})
+	}
+
+	seenCand := make(map[string]bool, len(candidates))
 	for _, c := range candidates {
+		if prevURL[c.URL] {
+			continue
+		}
 		id := c.Identity()
 		if id == "" {
 			continue
 		}
 		key := id + "|" + c.URL
-		if seen[key] {
+		if seenCand[key] {
 			continue
 		}
-		seen[key] = true
-		out = append(out, ProxyEntry{URL: c.URL})
+		seenCand[key] = true
+		candSet = append(candSet, ProxyEntry{URL: c.URL, Scheme: c.Scheme})
 	}
-	for _, p := range prev {
-		key := p.Identity + "|" + p.URL
-		if seen[key] {
+	return prevSet, candSet
+}
+
+// identitiesOf mengumpulkan identitas node dari hasil tes yang lulus, untuk
+// dipakai dropSettledIdentities.
+func identitiesOf(passed []ProxyEntry) map[string]bool {
+	out := make(map[string]bool, len(passed))
+	for _, p := range passed {
+		if id := p.Identity(); id != "" {
+			out[id] = true
+		}
+	}
+	return out
+}
+
+// dropSettledIdentities membuang kandidat yang identitasnya sudah punya bukti
+// hidup dari gelombang prev. Kandidat tanpa identitas (gagal parse host:port)
+// sudah disaring lebih awal oleh splitTestSets.
+func dropSettledIdentities(candidates []ProxyEntry, settled map[string]bool) []ProxyEntry {
+	var out []ProxyEntry
+	for _, c := range candidates {
+		if settled[c.Identity()] {
 			continue
 		}
-		seen[key] = true
-		out = append(out, ProxyEntry{URL: p.URL})
+		out = append(out, c)
 	}
 	return out
 }

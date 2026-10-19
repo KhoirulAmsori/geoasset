@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -43,8 +42,10 @@ func runSpeedTest() error {
 	if err != nil {
 		return fmt.Errorf("read speed test input: %w", err)
 	}
+	testedAll := true
 	if cfg.SpeedTestMaxNodes > 0 && len(entries) > cfg.SpeedTestMaxNodes {
 		entries = entries[:cfg.SpeedTestMaxNodes]
+		testedAll = false
 	}
 	logPrintf("speed test: %d nodes from %s", len(entries), cfg.SpeedTestInput)
 
@@ -73,7 +74,49 @@ func runSpeedTest() error {
 		return err
 	}
 	logPrintf("wrote %s.txt (ranked) and %s.json (input order)", cfg.SpeedTestReportBase, cfg.SpeedTestReportBase)
+
+	cullBySpeed(entries, results, testedAll)
 	return nil
+}
+
+// cullBySpeed memangkas list.txt dari node yang gagal lolos probe kecepatan.
+// HEAD liveness hanya membuktikan kontrol tunnel bisa lewat; node yang tidak
+// sanggup memindahkan data tetap menjadi false-positive di tangan pengguna.
+//
+// Pemangkasan dilewati (list dibiarkan utuh) bila:
+//   - tidak semua node dites (SpeedTestMaxNodes memotong), karena node yang
+//     tidak ikut tes akan ikut hilang, atau
+//   - jumlah survivor di bawah MinActiveProxies — sinyal probe-nya yang mati
+//     (rate limit / endpoint berubah), bukan node-nya.
+func cullBySpeed(entries []PrevEntry, results []SpeedResult, testedAll bool) {
+	if !testedAll || len(results) != len(entries) {
+		logPrintf("speed cull skipped: coverage incomplete (%d results / %d entries)",
+			len(results), len(entries))
+		return
+	}
+
+	var survivors []ProxyEntry
+	for i, e := range entries {
+		if results[i].Error == "" {
+			survivors = append(survivors, ProxyEntry{URL: e.URL})
+		}
+	}
+	dropped := len(entries) - len(survivors)
+	if dropped == 0 {
+		logPrintf("speed cull: nothing dropped")
+		return
+	}
+	if len(survivors) < cfg.MinActiveProxies {
+		logPrintf("speed cull skipped: only %d survivors, below MinActiveProxies %d (probe likely broken)",
+			len(survivors), cfg.MinActiveProxies)
+		return
+	}
+
+	if err := writeProxyList(cfg.SpeedTestInput, survivors, true); err != nil {
+		logPrintf("speed cull: failed rewriting %s: %v", cfg.SpeedTestInput, err)
+		return
+	}
+	logPrintf("speed cull: dropped %d node(s), list now %d", dropped, len(survivors))
 }
 
 func measureAll(entries []PrevEntry) []SpeedResult {
@@ -212,9 +255,11 @@ func downloadThrough(p constant.Proxy, probeURL string) (speedSample, error) {
 		},
 		DisableKeepAlives: true,
 		ForceAttemptHTTP2: false,
-		// Skip TLS verification: free nodes frequently have mismatched certs,
-		// mirroring the permissive checks used during the liveness pass.
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		// Sertifikat probe diverifikasi terhadap system roots. Hasil speed
+		// test sekarang menjadi gerbang list.txt, jadi node yang mem-MITM
+		// speed.cloudflare.com (menyodok halaman palsu ber-sertifikat sendiri)
+		// harus gagal, bukan lolos seperti sebelumnya saat InsecureSkipVerify
+		// aktif.
 	}
 	client := &http.Client{
 		Transport: transport,
