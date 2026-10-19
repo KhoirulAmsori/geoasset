@@ -144,25 +144,17 @@ func (m *mihomoMetaDBOut) Output(container lib.Container) error {
 // collect membaca seluruh list terpilih dan memetakan setiap CIDR ke daftar
 // nama list (huruf kecil) yang memuat CIDR tersebut.
 func (m *mihomoMetaDBOut) collect(container lib.Container) ([]netip.Prefix, map[netip.Prefix][]string, error) {
-	var ignoreIPType lib.IgnoreIPOption
-	switch m.OnlyIPType {
-	case lib.IPv4:
-		ignoreIPType = lib.IgnoreIPv6
-	case lib.IPv6:
-		ignoreIPType = lib.IgnoreIPv4
-	}
-
 	prefixes := make([]netip.Prefix, 0, 4096)
 	codesByPrefix := make(map[netip.Prefix][]string, 4096)
 
-	for _, name := range m.filterList(container) {
+	for _, name := range filterList(container, m.Want, m.Exclude) {
 		entry, found := container.GetEntry(name)
 		if !found {
 			log.Printf("❌ entry %s not found\n", name)
 			continue
 		}
 
-		cidrList, err := entry.MarshalText(ignoreIPType)
+		prefixList, err := entryPrefixes(entry, m.OnlyIPType)
 		if err != nil {
 			return nil, nil, fmt.Errorf("❌ [type %s | action %s] %w", m.Type, m.Action, err)
 		}
@@ -172,13 +164,7 @@ func (m *mihomoMetaDBOut) collect(container lib.Container) ([]netip.Prefix, map[
 		// di mihomo sudah di-ToLower saat dibaca dari config.
 		code := strings.ToLower(entry.GetName())
 
-		for _, cidr := range cidrList {
-			prefix, err := netip.ParsePrefix(cidr)
-			if err != nil {
-				return nil, nil, fmt.Errorf("❌ [type %s | action %s] entry %s has invalid CIDR %q: %w", m.Type, m.Action, name, cidr, err)
-			}
-			prefix = prefix.Masked()
-
+		for _, prefix := range prefixList {
 			if _, seen := codesByPrefix[prefix]; !seen {
 				prefixes = append(prefixes, prefix)
 			}
@@ -187,40 +173,6 @@ func (m *mihomoMetaDBOut) collect(container lib.Container) ([]netip.Prefix, map[
 	}
 
 	return prefixes, codesByPrefix, nil
-}
-
-// filterList memakai urutan mihomoMetaDB.wantedList bila diisi, jika tidak
-// maka seluruh list di container dipakai, dikurangi excludedList.
-func (m *mihomoMetaDBOut) filterList(container lib.Container) []string {
-	excludeMap := make(map[string]bool)
-	for _, exclude := range m.Exclude {
-		if exclude = strings.ToUpper(strings.TrimSpace(exclude)); exclude != "" {
-			excludeMap[exclude] = true
-		}
-	}
-
-	wantList := make([]string, 0, len(m.Want))
-	for _, want := range m.Want {
-		if want = strings.ToUpper(strings.TrimSpace(want)); want != "" && !excludeMap[want] {
-			wantList = append(wantList, want)
-		}
-	}
-	slices.Sort(wantList)
-	if len(wantList) > 0 {
-		return wantList
-	}
-
-	list := make([]string, 0, 300)
-	for entry := range container.Loop() {
-		name := entry.GetName()
-		if excludeMap[name] {
-			continue
-		}
-		list = append(list, name)
-	}
-	slices.Sort(list)
-
-	return list
 }
 
 // insertMerged menggabungkan kode baru dengan record network induk yang sudah

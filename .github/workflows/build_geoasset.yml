@@ -77,6 +77,12 @@ jobs:
           # Path.ASN() di mihomo hanya mengenali nama itu.
           cp geolite2/GeoLite2-ASN.mmdb ../Publish/ASN.mmdb
           
+          # Daftar peserta OpenIXP/IIX: nice.rsc -> CIDR murni untuk input 'nice'
+          curl -L --retry 5 --retry-delay 10 --max-time 300 -s -o nice.rsc http://ixp.mikrotik.co.id/download/nice.rsc
+          grep -oP 'address="\K[0-9./]+' nice.rsc | grep '/' | sort -u > nice.list
+          [ -s nice.list ] || { echo "nice.list kosong, unduhan nice.rsc gagal"; exit 1; }
+          wc -l nice.list
+
           # Jalankan pembangunan
           go mod tidy
           go build ./
@@ -102,63 +108,6 @@ jobs:
           go mod tidy
           go run ./ --datapath=../domain-list-community/data
 
-      - name: Build Sing-Box assets
-        run: |
-          # Kloning meta-rules-converter
-          for i in {1..3}; do git clone --depth 1 https://github.com/MetaCubeX/meta-rules-converter && break || sleep 15; done
-
-          # Folder untuk branch sing-box
-          mkdir -p sing-rule/geo/{geosite,geoip} sing-rule/asn
-
-          # Unduh dan konversi RSC ke JSON
-          curl -L --retry 5 --retry-delay 10 --max-time 300 -s -o nice.rsc http://ixp.mikrotik.co.id/download/nice.rsc
-          grep -oP 'address="\K[0-9./]+' nice.rsc | grep '/' | \
-          awk '
-          BEGIN {
-            print "{\n  \"version\": 3,\n  \"rules\": [\n    {\n      \"ip_cidr\": ["
-          }
-          {
-            ips[NR] = $0
-          }
-          END {
-               for (i=1; i<=NR; i++) {
-               printf "        \"%s\"", ips[i]
-               if (i<NR) { printf "," }
-               printf "\n"
-              }
-              print "      ]\n    }\n  ]\n}"
-          }' > ./sing-rule/geo/geosite/nice.json
-
-          # Pasang binari sing-box dan konversi
-          # curl -L --retry 5 --retry-delay 10 --max-time 300 -fsSL https://sing-box.app/install.sh | sh -s -- --beta
-          go install github.com/sagernet/sing-box/cmd/sing-box@latest
-          
-          # Pastikan PATH sudah berisi GOPATH/bin
-          export PATH="$(go env GOPATH)/bin:$PATH"
-
-          sing-box rule-set compile --output ./sing-rule/geo/geosite/nice.srs ./sing-rule/geo/geosite/nice.json
-          
-          # Jalankan pembangunan geo dan asn
-          cd meta-rules-converter
-          go run ./ geosite -f ../Publish/GeoSite.dat -o ../sing-rule/geo/geosite -t sing-box
-          go run ./ geoip -f ../Publish/GeoIP.dat -o ../sing-rule/geo/geoip -t sing-box
-          
-          cp ../geoip-build/geolite2/GeoLite2-ASN.mmdb .
-          go run ./ asn -o ../sing-rule/asn -t sing-box
-
-      - name: Push sing-box branch
-        run: |
-          cd sing-rule
-          
-          git init
-          git config --local user.name "github-actions[bot]"
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b sing-box
-          git add .
-          git commit -m "Released on ${{ env.BUILDTIME }}"
-          git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
-          git push -f -u origin sing-box
-
       - name: Upload release
         uses: svenstaro/upload-release-action@v2
         with:
@@ -177,6 +126,7 @@ jobs:
             | `GeoIP.dat` | mode GeoIP `geodata-mode: true` |
             | `GeoSite.dat` | aturan `GEOSITE` |
             | `ASN.mmdb` | aturan `IPASN` |
+            | `<list>.mrs` | rule-provider mihomo (`format: mrs`, `behavior: ipcidr`), satu berkas per list GeoIP |
 
             Letakkan hanya satu database mmdb di folder config mihomo
             (`~/.config/mihomo`). `Path.MMDB()` mengambil file pertama yang
@@ -190,4 +140,17 @@ jobs:
               geosite: "https://github.com/${{ github.repository }}/releases/download/latest/GeoSite.dat"
               mmdb: "https://github.com/${{ github.repository }}/releases/download/latest/geoip.metadb"
               asn: "https://github.com/${{ github.repository }}/releases/download/latest/ASN.mmdb"
+            ```
+
+            Contoh rule-provider:
+
+            ```yaml
+            rule-providers:
+              OpenIXP-IIX:
+                type: http
+                url: "https://github.com/${{ github.repository }}/releases/download/latest/nice.mrs"
+                format: mrs
+                behavior: ipcidr
+                interval: 86400
+                path: "./rule_provider/nice.mrs"
             ```

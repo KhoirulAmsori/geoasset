@@ -92,6 +92,18 @@
         "onlyIPType": "ipv4"
       }
     },
+    // Peserta OpenIXP/IIX. nice.list dibuat workflow Build GEO Asset dari
+    // http://ixp.mikrotik.co.id/download/nice.rsc ; build lokal perlu membuat
+    // berkas itu lebih dulu.
+    {
+      "type": "text",
+      "action": "add",
+      "args": {
+        "name": "nice",
+        "uri": "./nice.list",
+        "onlyIPType": "ipv4"
+      }
+    }
   ],
   "output": [
     {
@@ -108,6 +120,17 @@
       "args": {
         "outputDir": "../Publish",
         "outputName": "geoip.metadb"
+      }
+    },
+    // Satu berkas .mrs per list untuk rule-providers mihomo
+    // (format: mrs, behavior: ipcidr). release asset bersifat datar, jadi
+    // berkasnya ditulis langsung ke Publish. nice.mrs menggantikan
+    // raven_nice.yaml.
+    {
+      "type": "mihomoMRS",
+      "action": "output",
+      "args": {
+        "outputDir": "../Publish"
       }
     }
   ]
