@@ -122,15 +122,16 @@
         "outputName": "geoip.metadb"
       }
     },
-    // Satu berkas .mrs per list untuk rule-providers mihomo
-    // (format: mrs, behavior: ipcidr). release asset bersifat datar, jadi
-    // berkasnya ditulis langsung ke Publish. nice.mrs menggantikan
-    // raven_nice.yaml.
+    // Berkas .mrs untuk rule-providers mihomo (format: mrs, behavior:
+    // ipcidr). release asset bersifat datar, jadi hasilnya ditulis langsung
+    // ke Publish; nice.mrs menggantikan raven_nice.yaml. List lain tetap bisa
+    // diakses lewat aturan GEOIP, jadi tidak perlu ikut diterbitkan.
     {
       "type": "mihomoMRS",
       "action": "output",
       "args": {
-        "outputDir": "../Publish"
+        "outputDir": "../Publish",
+        "wantedList": ["nice"]
       }
     }
   ]
