@@ -95,11 +95,10 @@ jobs:
           
           cd geosite-build
           
-          # Pengecualian domain di oisd-small dan oisd-nsfw-small 
-          curl -sSL $OISD_SMALL | perl -ne 'if(/^server=\/([^\/]+)\//){$d=$1;if($d!~/^(googlesyndication\.com|pagead2\.googlesyndication\.com|gambar123\.com)$/){print "$d\n"}}' > ../domain-list-community/data/oisd-small
-
-          exclude=$(paste -sd'|' exclude_list.txt)
-          curl -sSL $OISD_NSFW_SMALL | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' | grep -vE "$exclude" > ../domain-list-community/data/oisd-nsfw-small
+          EXCLUDE_OISD_SMALL=$(paste -sd'|' exclude_oisd_small.txt)
+          EXCLUDE_OISD_NSFW_SMALL=$(paste -sd'|' exclude_oisd_nsfw_small.txt)
+          curl -sSL $OISD_SMALL | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' | grep -vE "$EXCLUDE_OISD_SMALL" > ../domain-list-community/data/oisd-small
+          curl -sSL $OISD_NSFW_SMALL | perl -ne '/^server=\/([^\/]+)\// && print "$1\n"' | grep -vE "$EXCLUDE_OISD_NSFW_SMALL" > ../domain-list-community/data/oisd-nsfw-small
           cp raven_nsfw ../domain-list-community/data/raven_nsfw
           
           # Ganti list cn dengan stub verifikasi. mihomo hanya mengecek entry
