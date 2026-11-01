@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	github.com/metacubex/mihomo v1.19.31
 	github.com/oschwald/geoip2-golang v1.13.0
-	golang.org/x/sync v0.23.0
+	golang.org/x/sync v0.24.0
 )
 
 require (
